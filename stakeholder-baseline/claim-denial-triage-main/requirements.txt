@@ -1,0 +1,6 @@
+# No third-party dependencies.
+#
+# The baseline runs on the Python 3.9+ standard library alone:
+# argparse, json, dataclasses, datetime, functools, pathlib, textwrap, unittest.
+#
+# Nothing to install. `python run_baseline.py --input examples/` works on a clean checkout.

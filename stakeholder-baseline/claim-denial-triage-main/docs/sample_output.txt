@@ -1,0 +1,85 @@
+$ python run_baseline.py --input examples/test2_medical_necessity.json --as-of 2026-09-06
+
+==============================================================================
+CLAIM DENIAL TRIAGE REPORT
+==============================================================================
+Claim ID          : CLM-2026-005097
+Patient Account   : PA-90455
+Payer             : Blue Cross Blue Shield of Arizona (BCBS_AZ)
+Date of Service   : 2026-06-02
+Remittance Date   : 2026-07-11
+Evaluated On      : 2026-09-06
+
+Billed $1,450.00   Paid $0.00   Denied $1,450.00   Recoverable $1,450.00
+
+PRIMARY DISPOSITION : APPEAL_WITH_DOCUMENTATION
+PRIMARY ROOT CAUSE  : MEDICAL_NECESSITY
+
+------------------------------------------------------------------------------
+FINDING 1 - line 1 - CPT 70553 - $1,450.00
+------------------------------------------------------------------------------
+Denial code   : CO-50  RARC M127
+Group meaning : Contractual Obligation - provider writes off, cannot bill the
+                patient
+Payer says    : Non-covered service because the payer does not deem it a
+                medical necessity.
+Root cause    : MEDICAL_NECESSITY
+Disposition   : APPEAL_WITH_DOCUMENTATION  (confidence: high)
+Deadline      : 2027-01-07 (123 days remaining)
+Why           : Medical necessity denials are overturned on clinical evidence,
+                not on claim corrections.
+
+Required actions:
+  1. Locate the Blue Cross Blue Shield of Arizona medical policy for CPT 70553
+     and map the chart findings to its coverage criteria.
+  2. Attach clinical_note, progress_notes to the appeal.
+  3. File a Provider Claim Dispute via Availity provider portal.
+
+==============================================================================
+DRAFT APPEAL LETTER
+==============================================================================
+
+[PRACTICE LETTERHEAD]
+
+September 06, 2026
+
+Blue Cross Blue Shield of Arizona
+Attn: Provider Claim Dispute Unit
+
+RE: Request for Provider Claim Dispute
+
+    Claim ID:          CLM-2026-005097
+    Patient Account:   PA-90455
+    Date of Service:   2026-06-02
+    Remittance Date:   2026-07-11
+    Billed Amount:     $1,450.00
+    Amount in Dispute: $1,450.00
+
+To the review team,
+
+The remittance dated 2026-07-11 returned CO-50 on service line 1 (CPT 70553):
+"Non-covered service because the payer does not deem it a medical necessity."
+
+The service was ordered and performed to address a documented clinical
+presentation. The enclosed record establishes the indication, the findings,
+and the treatment decision, and we ask that it be reviewed against the plan's
+coverage criteria for this procedure.
+
+Enclosures:
+  - clinical note
+  - progress notes
+
+Please reprocess the claim and issue a corrected remittance. The billing
+office is available for any additional information required.
+
+Sincerely,
+
+[NAME], [TITLE]
+[PRACTICE NAME] - Revenue Cycle
+
+-- DRAFT: requires biller review and signature before submission --
+
+==============================================================================
+End of report. Human review required before any payer submission.
+==============================================================================
+Processed 1 claim(s). Output written to outputs/

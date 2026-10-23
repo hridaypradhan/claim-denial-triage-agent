@@ -1,0 +1,12 @@
+{
+  "note": "Ground-truth labels for the example set. The baseline is scored on exact match of root_cause and disposition. Labels reflect standard revenue-cycle handling for each denial pattern.",
+  "as_of": "2026-09-06",
+  "claims": {
+    "CLM-2026-004812": { "root_cause": "AUTHORIZATION", "disposition": "CORRECT_AND_RESUBMIT" },
+    "CLM-2026-005097": { "root_cause": "MEDICAL_NECESSITY", "disposition": "APPEAL_WITH_DOCUMENTATION" },
+    "CLM-2026-005311": { "root_cause": "CODING", "disposition": "CORRECT_AND_RESUBMIT" },
+    "CLM-2026-005644": { "root_cause": "NON_COVERED_BENEFIT", "disposition": "BILL_PATIENT" },
+    "CLM-2025-009930": { "root_cause": "TIMELY_FILING", "disposition": "WRITE_OFF" },
+    "CLM-2026-005882": { "root_cause": "CODING", "disposition": "MANUAL_REVIEW" }
+  }
+}

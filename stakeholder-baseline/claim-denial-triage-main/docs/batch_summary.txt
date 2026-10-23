@@ -1,0 +1,12 @@
+$ python run_baseline.py --input examples/ --as-of 2026-09-06 --quiet
+
+CLAIM              ROOT CAUSE             DISPOSITION                RECOVERABLE
+--------------------------------------------------------------------------------
+CLM-2025-009930    TIMELY_FILING          WRITE_OFF                        $0.00
+CLM-2026-004812    AUTHORIZATION          CORRECT_AND_RESUBMIT           $480.00
+CLM-2026-005097    MEDICAL_NECESSITY      APPEAL_WITH_DOCUMENTATION    $1,450.00
+CLM-2026-005311    CODING                 CORRECT_AND_RESUBMIT           $245.00
+CLM-2026-005644    NON_COVERED_BENEFIT    BILL_PATIENT                     $0.00
+CLM-2026-005882    CODING                 MANUAL_REVIEW                    $0.00
+--------------------------------------------------------------------------------
+TOTAL (6 claims)                                                       $2,175.00

@@ -1,0 +1,24 @@
+{
+  "claim_id": "CLM-2025-009930",
+  "patient_account": "PA-51277",
+  "payer": "MEDICARE_B",
+  "date_of_service": "2025-08-19",
+  "remit_date": "2025-11-10",
+  "billed_amount": 320.00,
+  "paid_amount": 0.00,
+  "place_of_service": "11",
+  "rendering_provider_npi": "1568490211",
+  "denials": [
+    { "group_code": "CO", "carc": "29", "rarc": [], "amount": 320.00, "service_line": 1 }
+  ],
+  "service_lines": [
+    { "line": 1, "cpt": "20610", "modifiers": ["RT"], "units": 1, "charge": 320.00, "icd10": ["M17.11"] }
+  ],
+  "encounter": {
+    "prior_auth_number": null,
+    "referral_on_file": false,
+    "proof_of_timely_filing": false,
+    "documentation_attached": ["clinical_note"],
+    "eligibility_verified_on": "2025-08-15"
+  }
+}

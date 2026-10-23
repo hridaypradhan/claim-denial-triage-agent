@@ -1,0 +1,53 @@
+{
+  "source_note": "Appeal and corrected-claim windows are contract-specific. The values below are illustrative defaults used by the baseline so that deadline math is demonstrable. In deployment these come from the practice's payer contract matrix.",
+  "default": {
+    "display_name": "Unlisted payer",
+    "appeal_window_days": 90,
+    "corrected_claim_window_days": 180,
+    "retro_auth_window_days": 0,
+    "first_level_appeal": "Reconsideration",
+    "submission_channel": "payer provider portal"
+  },
+  "payers": {
+    "AETNA": {
+      "display_name": "Aetna Commercial",
+      "appeal_window_days": 180,
+      "corrected_claim_window_days": 365,
+      "retro_auth_window_days": 14,
+      "first_level_appeal": "Reconsideration",
+      "submission_channel": "Availity provider portal"
+    },
+    "UHC": {
+      "display_name": "UnitedHealthcare Commercial",
+      "appeal_window_days": 180,
+      "corrected_claim_window_days": 365,
+      "retro_auth_window_days": 5,
+      "first_level_appeal": "Claim Reconsideration",
+      "submission_channel": "UHC Provider Portal"
+    },
+    "BCBS_AZ": {
+      "display_name": "Blue Cross Blue Shield of Arizona",
+      "appeal_window_days": 180,
+      "corrected_claim_window_days": 365,
+      "retro_auth_window_days": 7,
+      "first_level_appeal": "Provider Claim Dispute",
+      "submission_channel": "Availity provider portal"
+    },
+    "CIGNA": {
+      "display_name": "Cigna Healthcare",
+      "appeal_window_days": 180,
+      "corrected_claim_window_days": 180,
+      "retro_auth_window_days": 0,
+      "first_level_appeal": "Provider Payment Review",
+      "submission_channel": "Cigna for Health Care Professionals portal"
+    },
+    "MEDICARE_B": {
+      "display_name": "Medicare Part B (MAC)",
+      "appeal_window_days": 120,
+      "corrected_claim_window_days": 365,
+      "retro_auth_window_days": 0,
+      "first_level_appeal": "Redetermination",
+      "submission_channel": "MAC portal or CMS-20027 form"
+    }
+  }
+}

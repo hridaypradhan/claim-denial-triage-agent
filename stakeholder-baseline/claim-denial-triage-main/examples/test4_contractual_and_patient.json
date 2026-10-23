@@ -1,0 +1,26 @@
+{
+  "claim_id": "CLM-2026-005644",
+  "patient_account": "PA-64980",
+  "payer": "CIGNA",
+  "date_of_service": "2026-07-21",
+  "remit_date": "2026-08-14",
+  "billed_amount": 305.00,
+  "paid_amount": 147.60,
+  "place_of_service": "11",
+  "rendering_provider_npi": "1720384455",
+  "denials": [
+    { "group_code": "CO", "carc": "45", "rarc": [], "amount": 62.40, "service_line": 1 },
+    { "group_code": "PR", "carc": "204", "rarc": ["N425"], "amount": 95.00, "service_line": 2 }
+  ],
+  "service_lines": [
+    { "line": 1, "cpt": "99213", "modifiers": [], "units": 1, "charge": 210.00, "icd10": ["I10"] },
+    { "line": 2, "cpt": "17110", "modifiers": [], "units": 1, "charge": 95.00, "icd10": ["B07.9"] }
+  ],
+  "encounter": {
+    "prior_auth_number": null,
+    "referral_on_file": false,
+    "abn_signed": true,
+    "documentation_attached": ["clinical_note", "signed_waiver"],
+    "eligibility_verified_on": "2026-07-18"
+  }
+}

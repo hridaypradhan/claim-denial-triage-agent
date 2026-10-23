@@ -1,0 +1,23 @@
+{
+  "claim_id": "CLM-2026-004812",
+  "patient_account": "PA-88213",
+  "payer": "AETNA",
+  "date_of_service": "2026-05-14",
+  "remit_date": "2026-06-20",
+  "billed_amount": 480.00,
+  "paid_amount": 0.00,
+  "place_of_service": "11",
+  "rendering_provider_npi": "1568490211",
+  "denials": [
+    { "group_code": "CO", "carc": "197", "rarc": [], "amount": 480.00, "service_line": 1 }
+  ],
+  "service_lines": [
+    { "line": 1, "cpt": "97110", "modifiers": ["GP"], "units": 3, "charge": 480.00, "icd10": ["M25.561"] }
+  ],
+  "encounter": {
+    "prior_auth_number": "AUTH-7741289",
+    "referral_on_file": true,
+    "documentation_attached": ["therapy_plan_of_care"],
+    "eligibility_verified_on": "2026-05-10"
+  }
+}
