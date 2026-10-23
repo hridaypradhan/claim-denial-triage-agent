@@ -19,12 +19,13 @@ venv/
 .coverage
 htmlcov/
 
-# Generated runtime artifacts
-tmp/
-output/
-outputs/
-traces/
-logs/
+# Generated runtime artifacts at the repository root
+/tmp/
+/output/
+/outputs/
+/baseline/outputs/
+/traces/
+/logs/
 
 # Editors
 .vscode/
