@@ -33,4 +33,5 @@ logs/
 # Operating system
 .DS_Store
 Thumbs.db
-desktop.ini
+.local-output/
+*.log
