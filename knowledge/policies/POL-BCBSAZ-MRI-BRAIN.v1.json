@@ -1,0 +1,72 @@
+{
+  "source_id": "POL-BCBSAZ-MRI-BRAIN",
+  "source_type": "medical_policy",
+  "version": "1",
+  "synthetic": true,
+  "synthetic_notice": "Synthetic policy written for this project. It is modeled on the general structure of public advanced-imaging policies but is not the text or position of Blue Cross Blue Shield of Arizona.",
+  "title": "Advanced Imaging: MRI of the Brain",
+  "payer": "BCBS_AZ",
+  "procedure_codes": ["70551", "70552", "70553"],
+  "effective_from": "2026-01-01",
+  "effective_to": null,
+  "criteria": [
+    {
+      "criterion_id": "A",
+      "summary": "Headache with at least one documented neurologic red-flag sign",
+      "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P3"
+    },
+    {
+      "criterion_id": "B",
+      "summary": "Focused neurologic examination documented before the imaging order",
+      "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P4"
+    },
+    {
+      "criterion_id": "C",
+      "summary": "Contrast indication documented: suspected mass, infection, inflammation, or demyelination",
+      "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P5"
+    },
+    {
+      "criterion_id": "D",
+      "summary": "Prior non-contrast imaging was non-diagnostic for the clinical question",
+      "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P6"
+    }
+  ],
+  "criteria_formula": "A AND B AND (C OR D)",
+  "passages": [
+    {
+      "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P1",
+      "section": "1. Scope",
+      "text": "This policy applies to outpatient professional claims for magnetic resonance imaging of the brain, CPT 70551, 70552, and 70553, with dates of service on or after January 1, 2026."
+    },
+    {
+      "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P2",
+      "section": "2. Coverage statement",
+      "text": "MRI of the brain is considered medically necessary when criteria 3.1 and 3.2 are met. For CPT 70553 (without contrast, followed by with contrast), criterion 3.3 or criterion 3.4 must also be met."
+    },
+    {
+      "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P3",
+      "section": "3.1 Clinical presentation",
+      "text": "The member has headache accompanied by at least one neurologic red-flag sign documented in the medical record, such as new diplopia, papilledema, focal motor or sensory deficit, or new-onset seizure."
+    },
+    {
+      "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P4",
+      "section": "3.2 Examination",
+      "text": "A focused neurologic examination, including cranial nerve assessment, is documented by the ordering clinician on or before the date the imaging is ordered."
+    },
+    {
+      "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P5",
+      "section": "3.3 Contrast indication",
+      "text": "The record documents a clinical suspicion that requires contrast enhancement, such as a suspected intracranial mass, infection, inflammatory process, or demyelinating disease."
+    },
+    {
+      "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P6",
+      "section": "3.4 Prior imaging",
+      "text": "Prior non-contrast CT or MRI of the head was performed and was non-diagnostic for the clinical question that prompted the current order."
+    },
+    {
+      "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P7",
+      "section": "4. Documentation",
+      "text": "Documentation supporting each applicable criterion must be available in the medical record on request. Absence of documentation for a required criterion does not establish that the criterion was not met."
+    }
+  ]
+}

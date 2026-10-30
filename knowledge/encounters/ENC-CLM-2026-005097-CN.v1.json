@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-005097-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-005097",
+  "document_type": "clinical_note",
+  "note_date": "2026-05-27",
+  "author_role": "Ordering primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-005097-CN@v1#L1",
+      "text": "Chief complaint: headache for three weeks, worse in the morning."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-005097-CN@v1#L2",
+      "text": "History: patient reports intermittent double vision beginning about ten days ago. No prior history of migraine. No recent head trauma."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-005097-CN@v1#L3",
+      "text": "Neurologic exam: alert and oriented. Cranial nerves II through XII assessed; mild limitation of left lateral gaze with horizontal diplopia on left gaze. Strength 5/5 in all extremities. Sensation intact. Gait normal."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-005097-CN@v1#L4",
+      "text": "Fundoscopic exam limited; unable to fully assess optic discs in clinic."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-005097-CN@v1#L5",
+      "text": "Assessment: headache with new diplopia (R51.9, H53.2). Neurologic red-flag present."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-005097-CN@v1#L6",
+      "text": "Plan: order MRI brain. Referral to neurology placed. Return precautions reviewed."
+    }
+  ]
+}

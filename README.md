@@ -15,20 +15,41 @@ This project is designed to produce a review package for an accounts-receivable 
 The completed system will use a hybrid architecture:
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[Denied claim] --> B[Validate input]
-    B --> C[Deterministic baseline]
-    C --> D{Evidence-dependent?}
-    D -- No --> H[Deterministic safety validation]
-    D -- Yes --> E[Bounded LLM agent]
-    E <--> F[Read-only evidence tools]
-    F --> G[Policy and encounter evidence]
-    E --> H
-    H --> I{Supported outcome?}
-    I -- No --> J[Manual review]
-    I -- Yes --> K[Report or grounded appeal draft]
-    J --> L[Human review]
+    B --> C[Deterministic baseline rules]
+    C --> D{Rule-decidable?}
+    D -- Yes --> S[Deterministic structural checks]
+    D -- "No: policy missing or inapplicable" --> J[Manual review]
+    D -- "No: evidence-dependent" --> E[Initialize case state]
+
+    subgraph Agent["Bounded LLM agent: at most 6 planning turns and 10 tool calls"]
+        E --> P[Plan next step]
+        P --> T[Call tool]
+        T --> U[Update criteria assessments]
+        U -- Missing evidence --> P
+        U -- Supported decision --> R[Decision or MANUAL_REVIEW]
+        U -- Budget exhausted --> R
+    end
+
+    T <--> F[Common dispatcher for read-only tools]
+    F --> G[(Policy, encounter, and eligibility evidence)]
+
+    R --> S
+    S -- Rule-only finding --> O{Outcome?}
+    S -- Evidence-dependent finding --> V[Semantic check: tool-less LLM verifier]
+    V --> O
+    O -- Not appealable --> K[Report only]
+    O -- Critical failure --> J
+    O -- Eligible appeal --> W[Draft appeal from verified evidence]
+    W --> X{Draft supported?}
+    X -- Yes --> L[Report: PENDING_REVIEW]
+    X -- No --> J
     K --> L
+    J --> L
+    L -.-> Q[(Audit trace saved separately)]
+    L --> H[Human review: edit, approve, or reject]
+    H --> Z[Save outputs]
 ```
 
 The model will be used only where evidence interpretation is necessary. Exact and safety-critical behavior—including input validation, deadline arithmetic, permitted dispositions, citation checks, and final approval state—remains under deterministic control.
@@ -52,6 +73,16 @@ The frozen stakeholder baseline currently provides:
 
 The unchanged comparison baseline is preserved under [`baseline/`](baseline/) and tagged as `baseline-v1`.
 
+### Knowledge corpus v0
+
+The [`knowledge/`](knowledge/) directory contains the first frozen evidence snapshot for the planned retrieval tools:
+
+- A [manifest](knowledge/manifest.json) listing every source with its version, payer, procedure codes or claim ID, effective dates, and origin.
+- One synthetic medical policy for brain MRI (CPT 70551–70553) under the `BCBS_AZ` payer profile, with criteria combined as `A AND B AND (C OR D)`. It is not the payer's actual policy.
+- Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
+
+Every passage has a stable citation ID such as `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in [decision 0001](docs/decisions/0001-retrieval-method.md). No retrieval tool reads this corpus yet.
+
 ### Project scaffolding
 
 The repository also contains the ownership boundaries for the planned system:
@@ -61,7 +92,7 @@ The repository also contains the ownership boundaries for the planned system:
 - [`src/claim_agent/agent/`](src/claim_agent/agent/) — bounded agent state and orchestration.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
-- [`knowledge/`](knowledge/) — versioned policies and synthetic evidence.
+- [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v0 above; eligibility records not yet added).
 - [`datasets/`](datasets/) — development, held-out, and labeling artifacts.
 - [`evaluation/`](evaluation/) — metrics, fault injection, and comparison harnesses.
 
