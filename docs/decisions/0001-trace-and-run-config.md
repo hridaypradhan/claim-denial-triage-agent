@@ -25,7 +25,7 @@ To do that, the runtime must write a fixed trace format (`TraceEvent`) and recor
 | 1 | Which fields are required on every event? | Eight fields are always required. The rest are required only for certain event types (see [TraceEvent fields](#traceevent-fields)). |
 | 2 | Is append-only JSON Lines required? | Yes. Each run writes one UTF-8 `.jsonl` file with one event per line, and lines are never edited. |
 | 3 | Store full prompts and evidence, or reference them? | Reference them. Store the prompt version and a hash of the rendered prompt, and the evidence passage IDs. Store the model's structured response in full. |
-| 4 | What must be excluded or redacted? | Secrets, credentials, request headers, environment variables, and local machine paths. Claim content stays out of traces (see [Redaction and data safety](#redaction-and-data-safety)). |
+| 4 | What must be excluded or redacted? | Secrets, credentials, request headers, environment variables, and local machine paths are never written. Only fields on a fixed allowlist of synthetic claim fields may appear; every other claim value is redacted (see [Redaction and data safety](#redaction-and-data-safety)). |
 | 5 | Timestamps, or sequence numbers only? | Both are written. Ordering and deterministic tests use `sequence_number` only. Timestamps and durations are left out of exact-match comparisons. |
 | 6 | Who calculates cost? | The evaluation harness, from token counts and a versioned price table. The runtime records tokens only. |
 | 7 | Which terminal and manual-review reason codes? | A fixed list (see [Terminal reasons](#terminal-reasons)). Each run ends with exactly one terminal event. |
@@ -60,7 +60,7 @@ To do that, the runtime must write a fixed trace format (`TraceEvent`) and recor
 
 | Field | Required on | Notes |
 |---|---|---|
-| `request_id` | `MODEL_REQUESTED`, `MODEL_RESPONDED`, `MODEL_OUTPUT_REJECTED`, `REPAIR_ATTEMPTED`, `TOOL_REQUESTED`, `TOOL_RETURNED` | Pairs a request with its response |
+| `request_id` | `MODEL_REQUESTED`, `MODEL_RESPONDED`, `MODEL_OUTPUT_REJECTED`, `REPAIR_ATTEMPTED`, `TOOL_REQUESTED`, `TOOL_RETURNED` | Pairs a request with its response. See [Request IDs during repair](#request-ids-during-repair) |
 | `model_id` | `MODEL_REQUESTED`, `MODEL_RESPONDED` | Exact pinned model version |
 | `prompt_version` | `MODEL_REQUESTED` | Frozen prompt version |
 | `elapsed_ms` | `MODEL_RESPONDED`, `TOOL_RETURNED`, terminal events | Model latency, tool latency, or total run time |
@@ -78,12 +78,12 @@ Fields that do not apply to an event are omitted, not set to `null`. `null` alwa
 
 | Event type | Component | Payload must include |
 |---|---|---|
-| `RUN_STARTED` | `AGENT_RUNTIME` | The full `AgentRunConfig`, `config_sha256`, `route_decision_id` (#5), and an optional `evaluation_context` with `experiment_id` and `repeat_index` |
+| `RUN_STARTED` | `AGENT_RUNTIME` | The full `AgentRunConfig`, `config_sha256` (see [how it is calculated](#how-config_sha256-is-calculated)), `route_decision_id` (#5), and an optional `evaluation_context` with `experiment_id` and `repeat_index` |
 | `MODEL_REQUESTED` | `MODEL_CLIENT` | `call_index`, `prompt_sha256`, the evidence `passage_ids` included in context, and `repair_attempt` (0 if this is not a repair) |
-| `MODEL_RESPONDED` | `MODEL_CLIENT` | The structured response: the requested tool calls, or a proposed decision |
+| `MODEL_RESPONDED` | `MODEL_CLIENT` | The structured response: the requested tool calls, or a proposed decision. Tool arguments are filtered through the [claim-field allowlist](#claim-field-allowlist) |
 | `MODEL_OUTPUT_REJECTED` | `AGENT_RUNTIME` | `rejection_code` and the schema errors |
-| `REPAIR_ATTEMPTED` | `AGENT_RUNTIME` | `repair_index` and the rejected `request_id` it repairs |
-| `TOOL_REQUESTED` | `TOOL_DISPATCHER` | `tool_call_index`, `tool_name`, and `tool_args` |
+| `REPAIR_ATTEMPTED` | `AGENT_RUNTIME` | `repair_index` and `rejected_request_id` |
+| `TOOL_REQUESTED` | `TOOL_DISPATCHER` | `tool_call_index`, `tool_name`, and `tool_args`, filtered through the [claim-field allowlist](#claim-field-allowlist) |
 | `TOOL_RETURNED` | `TOOL_DISPATCHER` | The `ToolResult` fields from #3: `status`, `error_code`, and `source_ids`, but not full passage text |
 | `DECISION_PROPOSED` | `AGENT_RUNTIME` | The `AgentDecision` from #6, with `citation_ids` |
 | `VALIDATION_RETURNED` | `SAFETY_VALIDATOR` | The `ValidationResult` from #6: `passed`, the check results, and the escalation reasons |
@@ -91,6 +91,18 @@ Fields that do not apply to an event are omitted, not set to `null`. `null` alwa
 | `MANUAL_REVIEW` | `AGENT_RUNTIME` | `manual_review_reasons` (one or more), `approval_state` (always `PENDING_REVIEW`), and `counters` |
 
 `counters` records how many model calls, tool calls, repairs, and total steps were used: `model_calls`, `tool_calls`, `repairs`, `total_steps`.
+
+### Request IDs during repair
+
+Every model call gets its own new `request_id`, including a repair call. A repair never reuses the ID of the call it is fixing.
+
+| Event | `request_id` means | Link to the rejected call |
+|---|---|---|
+| `MODEL_OUTPUT_REJECTED` | The call whose output was rejected | — |
+| `REPAIR_ATTEMPTED` | The **new** repair call that is about to be made | `payload.rejected_request_id` holds the ID of the rejected call |
+| `MODEL_REQUESTED` and `MODEL_RESPONDED` for the repair | The new repair call (same ID as `REPAIR_ATTEMPTED`) | `payload.repair_attempt` is 1 or higher on `MODEL_REQUESTED` |
+
+For example, if call `REQ-M2` is rejected, the events are `MODEL_OUTPUT_REJECTED` with `request_id: "REQ-M2"`, then `REPAIR_ATTEMPTED` with `request_id: "REQ-M3"` and `rejected_request_id: "REQ-M2"`, then `MODEL_REQUESTED` and `MODEL_RESPONDED` with `request_id: "REQ-M3"`. Following `rejected_request_id` from each repair back to the original call gives the full repair chain.
 
 ## Terminal reasons
 
@@ -135,11 +147,59 @@ All of these fields are frozen before the held-out evaluation. A repeat run must
 | `timeout_seconds` | int | Total wall-clock time for the run |
 | `knowledge_snapshot_id` | string | Frozen knowledge corpus version |
 
+### How `config_sha256` is calculated
+
+The runtime and the evaluation harness must produce the same hash for the same config. Both use this exact method:
+
+1. Take the `AgentRunConfig` object with all of its fields, including fields whose value is `null`.
+2. Serialize it as JSON with keys sorted alphabetically at every level, no spaces (`,` between items and `:` between key and value), and non-ASCII characters written as-is, not escaped.
+3. Encode the result as UTF-8 bytes with no trailing newline.
+4. Hash the bytes with SHA-256 and write the result as 64 lowercase hexadecimal characters.
+
+Numbers are written exactly as stored. For example, `0` stays `0` and is not changed to `0.0`, and floats are never rounded before hashing.
+
+In Python this is:
+
+```python
+hashlib.sha256(
+    json.dumps(config, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+).hexdigest()
+```
+
+A shared test will use one fixed config and its expected hash, so both the runtime and the harness can be checked against the same value.
+
 ## Redaction and data safety
 
 - **Never written:** API keys, tokens, authorization headers, environment variables, provider endpoint URLs containing credentials, and local file paths or usernames.
-- **Referenced, not copied:** the rendered prompt (`prompt_version` plus `prompt_sha256`), evidence text (`passage_ids` and `source_ids` only), and claim content (`case_id` only).
-- **Stored in full:** the model's structured response and the validation results. These are needed for error analysis and contain only synthetic case facts.
+- **Referenced, not copied:** the rendered prompt (`prompt_version` plus `prompt_sha256`), evidence text (`passage_ids` and `source_ids` only), and the claim record itself (`case_id` only).
+- **Allowlisted claim fields only:** a trace may contain individual claim values only if they are on the allowlist below. This applies everywhere claim values can appear, including `tool_args` in `TOOL_REQUESTED` and the tool calls inside `MODEL_RESPONDED`.
+- **Stored in full:** the model's structured response and the validation results, after the allowlist is applied. These are needed for error analysis.
+
+### Claim-field allowlist
+
+These are the only claim fields a trace may contain. They are needed to tell which policy and which service line a tool call was about.
+
+| Field | Example |
+|---|---|
+| `case_id` | `CLM-2026-005097` |
+| `payer` | `BCBS_AZ` |
+| `date_of_service` | `2026-06-02` |
+| `service_line` | `1` |
+| `cpt` | `70553` |
+| `modifiers` | `["59"]` |
+| `icd10` | `["R51.9"]` |
+| `group_code`, `carc`, `rarc` | `CO`, `50`, `["M128"]` |
+
+Knowledge identifiers (`knowledge_snapshot_id`, `policy_id`, `passage_id`, `source_ids`) are not claim fields and are always allowed.
+
+Everything else is excluded. This includes patient account numbers, names, dates of birth, member IDs, provider NPIs, billed and paid amounts, and free text copied from encounter notes or policies.
+
+### How the allowlist is enforced
+
+- The runtime filters tool arguments before writing `TOOL_REQUESTED` or `MODEL_RESPONDED`. Any argument that is not on the allowlist keeps its key, and its value is replaced with the string `"[REDACTED]"`. This shows that the argument existed without recording its value.
+- Free-text arguments, such as a search query, are always written as `"[REDACTED]"`.
+- The evaluation harness checks every trace before scoring. A trace that contains a claim value outside the allowlist fails the check and is reported as a data-safety defect.
+- Adding a field to the allowlist requires a new version of this document.
 - All data is synthetic. If real patient, provider, or payer data is ever found in a trace, the trace is deleted and the source of the data is fixed.
 - Text from retrieved policy or clinical passages is untrusted data. It never appears in trace fields that drive behavior.
 
@@ -169,7 +229,7 @@ All of these fields are frozen before the held-out evaluation. A repeat run must
 - [`evaluation/examples/trace_success.jsonl`](../../evaluation/examples/trace_success.jsonl): a medical-necessity case that is resolved and passes validation.
 - [`evaluation/examples/trace_budget_exhausted.jsonl`](../../evaluation/examples/trace_budget_exhausted.jsonl): an ambiguous CO-16 case. The model output is rejected once and repaired, then the run reaches the model-call limit and ends in manual review.
 
-Model names, tool names, passage IDs, and the values inside `AgentDecision` and `ValidationResult` in these examples are placeholders. They will be updated when #3 and #6 are frozen.
+Model names, tool names, passage IDs, hash values, and the values inside `AgentDecision` and `ValidationResult` in these examples are placeholders. They will be updated when #3 and #6 are frozen.
 
 ## Open points for reviewers
 
