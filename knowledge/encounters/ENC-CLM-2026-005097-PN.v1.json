@@ -1,0 +1,32 @@
+{
+  "source_id": "ENC-CLM-2026-005097-PN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-005097",
+  "document_type": "progress_notes",
+  "note_date": "2026-05-30",
+  "author_role": "Neurology consultant",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-005097-PN@v1#L1",
+      "text": "Reason for consult: three weeks of progressive headache with new horizontal diplopia, referred by primary care."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-005097-PN@v1#L2",
+      "text": "Exam: partial left sixth cranial nerve palsy confirmed. Mild bilateral optic disc blurring on dilated fundoscopy, concerning for early papilledema."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-005097-PN@v1#L3",
+      "text": "No prior head CT or MRI on record."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-005097-PN@v1#L4",
+      "text": "Impression: findings raise concern for a space-occupying intracranial lesion with raised intracranial pressure. Contrast-enhanced imaging is needed to characterize a possible mass."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-005097-PN@v1#L5",
+      "text": "Plan: MRI brain without and with contrast (CPT 70553), to be performed on an expedited basis."
+    }
+  ]
+}
