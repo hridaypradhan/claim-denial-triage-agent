@@ -79,13 +79,6 @@ Primary ownership means coordinating design, implementation, tests, and document
 - A fake dispatcher for Hriday's offline vertical slice.
 - Tests for success, missing data, unavailable documents, no match, incompatible policy, malformed request, transient failure, and timeout.
 
-**Open questions (need agreement before implementation)**
-
-- `calculate_deadline` tool wrapper: proposed that Silas wraps it in the dispatcher and Neha owns the deadline arithmetic. Needs Neha's agreement.
-- Retry ownership: decide whether the dispatcher or the agent loop performs the one bounded retry for transient failures, given that retries count toward the tool-call budget. Record the result as an architecture decision with Hriday.
-- Document inventory: decide whether the per-claim document inventory comes from the knowledge manifest or from Sachin's case files.
-- Untrusted text: decide whether tool results mark retrieved policy and note text as untrusted data, or whether that is handled only in Hriday's prompts.
-
 **Does not own**
 
 - The agent’s decision, planning loop, or tool-selection prompt.
@@ -163,9 +156,6 @@ Primary ownership means coordinating design, implementation, tests, and document
 | Policy, encounter, and eligibility tools | Silas | Evaluation provenance requirements from Sachin |
 | Fake dispatcher for the offline vertical slice | Silas | Tool contracts from Neha; consumer review from Hriday |
 | Policy corpus selection and source metadata | Silas | Payer/procedure coverage needs from Sachin |
-| `calculate_deadline` tool wrapper | Open — proposed Silas | Deadline arithmetic from Neha |
-| Transient-failure retry ownership | Open — Silas and Hriday | Architecture decision record |
-| Per-claim document inventory | Open — Silas or Sachin | Agreement between both owners |
 | Fake model and offline vertical slice | Hriday | Fake dispatcher from Silas; validators from Neha |
 | Hosted-model runtime and prompts | Hriday | Stable tool and decision contracts |
 | Final validators and review package | Neha | Agent decision from Hriday; resolvable sources from Silas |
@@ -174,6 +164,8 @@ Primary ownership means coordinating design, implementation, tests, and document
 | End-to-end evaluation report | Sachin | Frozen versions of all components |
 | Public README accuracy | PR author | Reviewer verifies public claims and commands |
 | This team guide | Affected owner | All affected owners approve scope/process changes |
+
+Unassigned cross-team work—currently the `calculate_deadline` tool wrapper, transient-failure retry ownership, the per-claim document inventory, and untrusted-text handling in tool results—is tracked in GitHub issues and added to this table only after the affected owners agree.
 
 If work does not clearly fit one row, open an issue and assign an owner before implementation. Do not assume another workstream will cover it.
 
@@ -289,7 +281,7 @@ Hold two brief progress syncs and one integration demonstration per week. Each o
 3. Implement the baseline adapter and deterministic router.
 4. Implement the scripted fake model and fake dispatcher.
 5. Add the offline vertical-slice integration test.
-6. Select the initial payer/procedure policy subset (Silas).
+6. ~~Select the initial payer/procedure policy subset~~ — done: BCBS_AZ brain MRI (knowledge corpus v0). Next: add a second payer/procedure pair and an effective-date test case (Silas).
 7. Draft the dataset annotation rubric.
 
 Do not replace fake boundaries with hosted-model calls or production retrieval until the offline vertical slice passes.

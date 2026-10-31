@@ -78,7 +78,7 @@ The unchanged comparison baseline is preserved under [`baseline/`](baseline/) an
 The [`knowledge/`](knowledge/) directory contains the first frozen evidence snapshot for the planned retrieval tools:
 
 - A [manifest](knowledge/manifest.json) listing every source with its version, payer, procedure codes or claim ID, effective dates, and origin.
-- One synthetic medical policy for brain MRI (CPT 70551–70553) under the `BCBS_AZ` payer profile, with criteria combined as `A AND B AND (C OR D)`. It is not the payer's actual policy.
+- One synthetic medical policy for brain MRI (CPT 70551–70553) under the `BCBS_AZ` payer profile, with a criteria formula for each procedure code (`A AND B` for 70551 and 70552; `A AND B AND (C OR D)` for 70553). It is not the payer's actual policy.
 - Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
 
 Every passage has a stable citation ID such as `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in [decision 0001](docs/decisions/0001-retrieval-method.md). No retrieval tool reads this corpus yet.
@@ -159,6 +159,27 @@ Expected result:
 
 ```text
 Ran 9 tests
+OK
+```
+
+## Run the knowledge corpus tests
+
+These check that the manifest, source files, passage IDs, criteria, and per-procedure formulas in [`knowledge/`](knowledge/) are consistent:
+
+```bash
+python -m unittest discover -s tests/tools -p "test*.py" -v
+```
+
+PowerShell equivalent:
+
+```powershell
+py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
+```
+
+Expected result:
+
+```text
+Ran 6 tests
 OK
 ```
 

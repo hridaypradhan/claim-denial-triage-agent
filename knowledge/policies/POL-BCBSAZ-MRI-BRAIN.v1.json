@@ -31,7 +31,11 @@
       "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P6"
     }
   ],
-  "criteria_formula": "A AND B AND (C OR D)",
+  "criteria_formulas": {
+    "70551": "A AND B",
+    "70552": "A AND B",
+    "70553": "A AND B AND (C OR D)"
+  },
   "passages": [
     {
       "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P1",
