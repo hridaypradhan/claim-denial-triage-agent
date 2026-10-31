@@ -39,4 +39,4 @@ Use option 2.
 - Citation validation can resolve every ID with a dictionary lookup over the frozen snapshot.
 - Policy-matching errors become measurable: a wrong-payer or wrong-date passage cannot be returned by design, so any occurrence is a tool defect.
 - Paraphrased queries may rank the right passage lower. Returning the full criteria list with every result limits the impact; retrieval relevance will be measured on the development set.
-- The status names `NO_MATCH`, `AMBIGUOUS_POLICY`, and `DOCUMENT_UNAVAILABLE` are proposals for the `ToolResult` error-code enum and need Neha's approval in contract v0.1.
+- The status names `NO_MATCH`, `AMBIGUOUS_POLICY`, and `DOCUMENT_UNAVAILABLE` are proposals for the `ToolResult` error-code enum. Final approval is deferred to issue #3 (contract v0.1). If the names change there, this record is updated in a follow-up pull request.

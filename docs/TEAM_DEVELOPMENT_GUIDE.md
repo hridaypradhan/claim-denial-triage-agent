@@ -165,7 +165,7 @@ Primary ownership means coordinating design, implementation, tests, and document
 | Public README accuracy | PR author | Reviewer verifies public claims and commands |
 | This team guide | Affected owner | All affected owners approve scope/process changes |
 
-Unassigned cross-team work—currently the `calculate_deadline` tool wrapper, transient-failure retry ownership, the per-claim document inventory, and untrusted-text handling in tool results—is tracked in GitHub issues and added to this table only after the affected owners agree.
+The following cross-team work remains unassigned: the `calculate_deadline` tool wrapper, transient-failure retry ownership, the per-claim document inventory, and untrusted-text handling in tool results. Each must be recorded in a GitHub issue before implementation and added to this table only after the affected owners agree.
 
 If work does not clearly fit one row, open an issue and assign an owner before implementation. Do not assume another workstream will cover it.
 
