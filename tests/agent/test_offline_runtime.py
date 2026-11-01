@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import Mock
 
 from claim_agent.agent.offline_runtime import OfflineAgentRuntime
 from claim_agent.agent.runtime_budget import RuntimeBudgetLimits
@@ -540,6 +541,194 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
         self.assertEqual(result.budget_usage.repair_attempts_used, 1)
         self.assertEqual(len(model_client.received_requests), 2)
         self.assertEqual(len(decision_validator.received_decisions), 2)
+
+    def test_runtime_timeout_stops_after_slow_model_response(self) -> None:
+        """Elapsed runtime capacity should end in explicit manual review."""
+
+        model_client = ScriptedModelClient(
+            [
+                ScriptedModelOutput(response_text="""
+                    {
+                        "action": "propose_decision",
+                        "decision": {
+                            "recommended_disposition": "APPEAL"
+                        }
+                    }
+                    """)
+            ]
+        )
+        monotonic_clock = Mock(
+            side_effect=[
+                100.0,
+                100.0,
+                101.0,
+            ]
+        )
+        runtime = OfflineAgentRuntime(
+            model_client=model_client,
+            tool_dispatcher=ScriptedToolDispatcher([]),
+            decision_validator=ScriptedDecisionValidator([]),
+            budget_limits=RuntimeBudgetLimits(
+                max_model_calls=1,
+                max_tool_calls=1,
+                max_repair_attempts=0,
+                max_total_steps=2,
+                max_runtime_seconds=0.5,
+            ),
+            allowed_tool_names=("retrieve_medical_policy",),
+            monotonic_clock=monotonic_clock,
+        )
+
+        result = runtime.run(
+            run_id="run-timeout",
+            system_instructions="Return a structured decision.",
+            task_context="Review one synthetic denial.",
+        )
+
+        self.assertEqual(
+            result.final_state.phase,
+            RuntimePhase.MANUAL_REVIEW,
+        )
+        self.assertEqual(
+            result.final_state.terminal_reason,
+            "runtime_timeout",
+        )
+        self.assertEqual(result.budget_usage.model_calls_used, 1)
+        self.assertEqual(len(model_client.received_requests), 1)
+
+    def test_failed_tool_observation_can_lead_to_manual_review(
+        self,
+    ) -> None:
+        """Missing policy evidence should remain visible to the next turn."""
+
+        model_client = ScriptedModelClient(
+            [
+                ScriptedModelOutput(response_text="""
+                    {
+                        "action": "call_tool",
+                        "tool_name": "retrieve_medical_policy",
+                        "tool_arguments": {
+                            "payer": "UNKNOWN_PAYER",
+                            "procedure_code": "70553"
+                        }
+                    }
+                    """),
+                ScriptedModelOutput(response_text="""
+                    {
+                        "action": "request_manual_review",
+                        "reason": "No applicable policy evidence was found."
+                    }
+                    """),
+            ]
+        )
+        tool_dispatcher = ScriptedToolDispatcher(
+            [
+                ExpectedToolCall(
+                    tool_name="retrieve_medical_policy",
+                    tool_arguments={
+                        "payer": "UNKNOWN_PAYER",
+                        "procedure_code": "70553",
+                    },
+                    observation=OfflineToolObservation(
+                        succeeded=False,
+                        error_code="NO_MATCH",
+                    ),
+                )
+            ]
+        )
+        runtime = OfflineAgentRuntime(
+            model_client=model_client,
+            tool_dispatcher=tool_dispatcher,
+            decision_validator=ScriptedDecisionValidator([]),
+            budget_limits=make_test_limits(),
+            allowed_tool_names=("retrieve_medical_policy",),
+        )
+
+        result = runtime.run(
+            run_id="run-missing-policy",
+            system_instructions="Do not guess missing policy evidence.",
+            task_context="Review one synthetic MRI denial.",
+        )
+
+        self.assertEqual(
+            result.final_state.phase,
+            RuntimePhase.MANUAL_REVIEW,
+        )
+        self.assertEqual(
+            result.final_state.terminal_reason,
+            "model_requested_manual_review",
+        )
+        self.assertIn(
+            "NO_MATCH",
+            model_client.received_requests[1].task_context,
+        )
+        self.assertEqual(len(tool_dispatcher.recorded_calls), 1)
+
+    def test_exhausted_model_budget_stops_before_another_call(
+        self,
+    ) -> None:
+        """A tool observation cannot authorize an extra planning call."""
+
+        model_client = ScriptedModelClient(
+            [
+                ScriptedModelOutput(response_text="""
+                    {
+                        "action": "call_tool",
+                        "tool_name": "retrieve_medical_policy",
+                        "tool_arguments": {
+                            "payer": "BCBS_AZ",
+                            "procedure_code": "70553"
+                        }
+                    }
+                    """)
+            ]
+        )
+        tool_dispatcher = ScriptedToolDispatcher(
+            [
+                ExpectedToolCall(
+                    tool_name="retrieve_medical_policy",
+                    tool_arguments={
+                        "payer": "BCBS_AZ",
+                        "procedure_code": "70553",
+                    },
+                    observation=OfflineToolObservation(
+                        succeeded=True,
+                        payload={"policy_title": "Synthetic MRI policy"},
+                        source_ids=("POLICY-1",),
+                    ),
+                )
+            ]
+        )
+        runtime = OfflineAgentRuntime(
+            model_client=model_client,
+            tool_dispatcher=tool_dispatcher,
+            decision_validator=ScriptedDecisionValidator([]),
+            budget_limits=RuntimeBudgetLimits(
+                max_model_calls=1,
+                max_tool_calls=1,
+                max_repair_attempts=0,
+                max_total_steps=2,
+            ),
+            allowed_tool_names=("retrieve_medical_policy",),
+        )
+
+        result = runtime.run(
+            run_id="run-model-budget",
+            system_instructions="Use retrieved evidence.",
+            task_context="Review one synthetic MRI denial.",
+        )
+
+        self.assertEqual(
+            result.final_state.phase,
+            RuntimePhase.MANUAL_REVIEW,
+        )
+        self.assertEqual(
+            result.final_state.terminal_reason,
+            "model_budget_exhausted",
+        )
+        self.assertEqual(result.budget_usage.model_calls_used, 1)
+        self.assertEqual(result.budget_usage.tool_calls_used, 1)
+        self.assertEqual(len(model_client.received_requests), 1)
 
 
 if __name__ == "__main__":

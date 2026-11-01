@@ -148,6 +148,21 @@ class RuntimeBudgetTests(unittest.TestCase):
                 max_total_steps=3,
             )
 
+    def test_runtime_timeout_must_be_positive(self) -> None:
+        """A nonpositive time budget would make every run unusable."""
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "max_runtime_seconds",
+        ):
+            RuntimeBudgetLimits(
+                max_model_calls=1,
+                max_tool_calls=1,
+                max_repair_attempts=0,
+                max_total_steps=2,
+                max_runtime_seconds=0,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

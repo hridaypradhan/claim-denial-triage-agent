@@ -126,6 +126,7 @@ def run_scripted_demo() -> Mapping[str, object]:
             max_tool_calls=1,
             max_repair_attempts=1,
             max_total_steps=3,
+            max_runtime_seconds=30.0,
         ),
         allowed_tool_names=(POLICY_TOOL_NAME,),
     )

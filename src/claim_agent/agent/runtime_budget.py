@@ -1,9 +1,9 @@
 """Deterministic execution budgets for one agent run.
 
 Budgets place hard limits on model calls, tool calls, repair attempts, and the
-combined number of external actions. When a limit is exhausted, the future
-runtime loop will convert the budget error into an explicit manual-review
-result.
+combined number of external actions. A separate elapsed-time limit bounds the
+whole run. When a limit is exhausted, the runtime converts that condition into
+an explicit manual-review result.
 """
 
 from __future__ import annotations
@@ -38,6 +38,7 @@ class RuntimeBudgetLimits:
     max_tool_calls: int
     max_repair_attempts: int
     max_total_steps: int
+    max_runtime_seconds: float = 30.0
 
     def __post_init__(self) -> None:
         """Reject limits that would create an unusable runtime configuration."""
@@ -57,6 +58,9 @@ class RuntimeBudgetLimits:
 
         if self.max_repair_attempts > self.max_model_calls:
             raise ValueError("max_repair_attempts cannot exceed max_model_calls")
+
+        if self.max_runtime_seconds <= 0:
+            raise ValueError("max_runtime_seconds must be greater than zero")
 
 
 @dataclass(frozen=True)

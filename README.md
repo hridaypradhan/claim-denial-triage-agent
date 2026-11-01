@@ -59,7 +59,7 @@ The agent package now provides an offline vertical slice for developing and veri
 - A provider-independent model interface and deterministic scripted model.
 - Strict parsing of permitted structured model actions.
 - Explicit runtime phases and controlled state transitions.
-- Model-call, tool-call, repair, and total-step budgets.
+- Model-call, tool-call, repair, total-step, and elapsed-time budgets.
 - Repeated planning after allowlisted read-only tool observations.
 - Budget-limited correction of malformed or validation-rejected output; the
   demonstration permits one attempt.

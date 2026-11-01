@@ -7,9 +7,10 @@ review.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Mapping, Optional, Tuple
+from typing import Callable, Mapping, Optional, Tuple
 
 from claim_agent.agent.action_parser import (
     ModelOutputParseError,
@@ -91,8 +92,9 @@ class OfflineAgentRuntime:
         decision_validator: DecisionValidatorPort,
         budget_limits: RuntimeBudgetLimits,
         allowed_tool_names: Tuple[str, ...],
+        monotonic_clock: Callable[[], float] = time.monotonic,
     ) -> None:
-        """Store replaceable boundaries, limits, and the tool allowlist."""
+        """Store boundaries, limits, allowlist, and an injectable clock."""
 
         if any(not tool_name.strip() for tool_name in allowed_tool_names):
             raise ValueError(
@@ -109,6 +111,7 @@ class OfflineAgentRuntime:
         self._decision_validator = decision_validator
         self._budget_limits = budget_limits
         self._allowed_tool_names = allowed_tool_names
+        self._monotonic_clock = monotonic_clock
 
     def run(
         self,
@@ -127,6 +130,7 @@ class OfflineAgentRuntime:
         budget_usage = RuntimeBudgetUsage()
         runtime_trace = InMemoryRuntimeTrace(run_id=run_id)
         current_task_context = task_context
+        runtime_started_at = self._monotonic_clock()
 
         runtime_trace.record(
             "RUN_STARTED",
@@ -140,6 +144,15 @@ class OfflineAgentRuntime:
         )
 
         while True:
+            timeout_result = self._timeout_result_if_expired(
+                runtime_started_at=runtime_started_at,
+                runtime_state=runtime_state,
+                budget_usage=budget_usage,
+                runtime_trace=runtime_trace,
+            )
+            if timeout_result is not None:
+                return timeout_result
+
             try:
                 budget_usage = budget_usage.record_model_call(
                     self._budget_limits
@@ -176,6 +189,16 @@ class OfflineAgentRuntime:
                     ),
                 },
             )
+
+            timeout_result = self._timeout_result_if_expired(
+                runtime_started_at=runtime_started_at,
+                runtime_state=runtime_state,
+                budget_usage=budget_usage,
+                runtime_trace=runtime_trace,
+            )
+            if timeout_result is not None:
+                return timeout_result
+
             # Keep the exact response so validation repair can show the model
             # which rejected decision it must correct.
             current_response_text = model_response.response_text
@@ -213,6 +236,16 @@ class OfflineAgentRuntime:
                 current_response_text = (
                     repair_outcome.repaired_response_text
                 )
+
+                timeout_result = self._timeout_result_if_expired(
+                    runtime_started_at=runtime_started_at,
+                    runtime_state=runtime_state,
+                    budget_usage=budget_usage,
+                    runtime_trace=runtime_trace,
+                )
+                if timeout_result is not None:
+                    return timeout_result
+
                 try:
                     parsed_action = parse_model_action(
                         repair_outcome.repaired_response_text
@@ -249,6 +282,15 @@ class OfflineAgentRuntime:
                 )
 
             if parsed_action.action_type is RuntimeActionType.CALL_TOOL:
+                timeout_result = self._timeout_result_if_expired(
+                    runtime_started_at=runtime_started_at,
+                    runtime_state=runtime_state,
+                    budget_usage=budget_usage,
+                    runtime_trace=runtime_trace,
+                )
+                if timeout_result is not None:
+                    return timeout_result
+
                 try:
                     tool_outcome = execute_tool_action(
                         action=parsed_action,
@@ -281,6 +323,15 @@ class OfflineAgentRuntime:
                 budget_usage = tool_outcome.budget_usage
                 current_task_context = tool_outcome.task_context
 
+                timeout_result = self._timeout_result_if_expired(
+                    runtime_started_at=runtime_started_at,
+                    runtime_state=runtime_state,
+                    budget_usage=budget_usage,
+                    runtime_trace=runtime_trace,
+                )
+                if timeout_result is not None:
+                    return timeout_result
+
                 # The next loop iteration gives the model the new observation.
                 continue
 
@@ -289,6 +340,7 @@ class OfflineAgentRuntime:
                 current_response_text=current_response_text,
                 system_instructions=system_instructions,
                 current_task_context=current_task_context,
+                runtime_started_at=runtime_started_at,
                 runtime_state=runtime_state,
                 budget_usage=budget_usage,
                 runtime_trace=runtime_trace,
@@ -300,6 +352,7 @@ class OfflineAgentRuntime:
         current_response_text: str,
         system_instructions: str,
         current_task_context: str,
+        runtime_started_at: float,
         runtime_state: AgentRuntimeState,
         budget_usage: RuntimeBudgetUsage,
         runtime_trace: InMemoryRuntimeTrace,
@@ -312,6 +365,15 @@ class OfflineAgentRuntime:
         """
 
         while True:
+            timeout_result = self._timeout_result_if_expired(
+                runtime_started_at=runtime_started_at,
+                runtime_state=runtime_state,
+                budget_usage=budget_usage,
+                runtime_trace=runtime_trace,
+            )
+            if timeout_result is not None:
+                return timeout_result
+
             runtime_state = runtime_state.transition_to(
                 RuntimePhase.PROPOSING_DECISION
             )
@@ -334,6 +396,15 @@ class OfflineAgentRuntime:
                 "VALIDATION_RETURNED",
                 {"status": validation_result.status.value},
             )
+
+            timeout_result = self._timeout_result_if_expired(
+                runtime_started_at=runtime_started_at,
+                runtime_state=runtime_state,
+                budget_usage=budget_usage,
+                runtime_trace=runtime_trace,
+            )
+            if timeout_result is not None:
+                return timeout_result
 
             if (
                 validation_result.status
@@ -404,6 +475,15 @@ class OfflineAgentRuntime:
             budget_usage = repair_outcome.budget_usage
             current_response_text = repair_outcome.repaired_response_text
 
+            timeout_result = self._timeout_result_if_expired(
+                runtime_started_at=runtime_started_at,
+                runtime_state=runtime_state,
+                budget_usage=budget_usage,
+                runtime_trace=runtime_trace,
+            )
+            if timeout_result is not None:
+                return timeout_result
+
             try:
                 parsed_action = parse_model_action(current_response_text)
             except ModelOutputParseError as repair_parse_error:
@@ -447,6 +527,37 @@ class OfflineAgentRuntime:
             # The loop validates the corrected decision. A second REPAIRABLE
             # result cannot cause another model call because the shared repair
             # budget permits only one attempt.
+
+    def _timeout_result_if_expired(
+        self,
+        runtime_started_at: float,
+        runtime_state: AgentRuntimeState,
+        budget_usage: RuntimeBudgetUsage,
+        runtime_trace: InMemoryRuntimeTrace,
+    ) -> Optional[OfflineRuntimeResult]:
+        """Return manual review when the elapsed-time budget is exhausted.
+
+        The injected monotonic clock makes this boundary deterministic in
+        tests. Synchronous model and tool calls cannot be interrupted midway;
+        the runtime detects an overrun immediately after either call returns.
+        Production adapters remain responsible for their own request timeout.
+        """
+
+        elapsed_seconds = self._monotonic_clock() - runtime_started_at
+        if elapsed_seconds < self._budget_limits.max_runtime_seconds:
+            return None
+
+        return self._finish_manual_review(
+            runtime_state=runtime_state,
+            budget_usage=budget_usage,
+            runtime_trace=runtime_trace,
+            terminal_reason="runtime_timeout",
+            problem_message=(
+                "Cannot continue because the runtime timeout budget "
+                f"of {self._budget_limits.max_runtime_seconds:g} seconds "
+                "was exhausted."
+            ),
+        )
 
     @staticmethod
     def _finish_manual_review(
