@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import unittest
 
-from claim_agent.agent.action_parser import RuntimeActionType
+from claim_agent.agent.action_parser import (
+    RuntimeActionType,
+    parse_model_action,
+)
 from claim_agent.agent.repair_execution import (
     execute_repair_model_call,
 )
@@ -85,8 +88,12 @@ class RepairExecutionTests(unittest.TestCase):
             outcome.runtime_state.phase,
             RuntimePhase.REPAIRING,
         )
+        repaired_action = parse_model_action(
+            outcome.repaired_response_text
+        )
+
         self.assertEqual(
-            outcome.repaired_action.action_type,
+            repaired_action.action_type,
             RuntimeActionType.PROPOSE_DECISION,
         )
         self.assertEqual(outcome.budget_usage.model_calls_used, 2)

@@ -9,10 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Tuple
 
-from claim_agent.agent.action_parser import (
-    ParsedModelAction,
-    parse_model_action,
-)
 from claim_agent.agent.model_interface import ModelClient, ModelRequest
 from claim_agent.agent.repair_context import build_repair_context
 from claim_agent.agent.runtime_budget import (
@@ -34,7 +30,6 @@ class RepairExecutionOutcome:
 
     runtime_state: AgentRuntimeState
     budget_usage: RuntimeBudgetUsage
-    repaired_action: ParsedModelAction
     repaired_response_text: str
     repair_task_context: str
 
@@ -106,12 +101,9 @@ def execute_repair_model_call(
         },
     )
 
-    repaired_action = parse_model_action(repair_response.response_text)
-
     return RepairExecutionOutcome(
         runtime_state=repairing_state,
         budget_usage=updated_budget_usage,
-        repaired_action=repaired_action,
         repaired_response_text=repair_response.response_text,
         repair_task_context=repair_task_context,
     )
