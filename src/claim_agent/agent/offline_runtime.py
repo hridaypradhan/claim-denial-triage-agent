@@ -13,6 +13,7 @@ from typing import Mapping, Optional, Tuple
 
 from claim_agent.agent.action_parser import (
     ModelOutputParseError,
+    ParsedModelAction,
     RuntimeActionType,
     parse_model_action,
 )
@@ -283,153 +284,169 @@ class OfflineAgentRuntime:
                 # The next loop iteration gives the model the new observation.
                 continue
 
-            while True:
-                runtime_state = runtime_state.transition_to(
-                    RuntimePhase.PROPOSING_DECISION
+            return self._validate_decision_with_repair(
+                parsed_action=parsed_action,
+                current_response_text=current_response_text,
+                system_instructions=system_instructions,
+                current_task_context=current_task_context,
+                runtime_state=runtime_state,
+                budget_usage=budget_usage,
+                runtime_trace=runtime_trace,
+            )
+
+    def _validate_decision_with_repair(
+        self,
+        parsed_action: ParsedModelAction,
+        current_response_text: str,
+        system_instructions: str,
+        current_task_context: str,
+        runtime_state: AgentRuntimeState,
+        budget_usage: RuntimeBudgetUsage,
+        runtime_trace: InMemoryRuntimeTrace,
+    ) -> OfflineRuntimeResult:
+        """Validate a proposed decision with at most one correction attempt.
+
+        The shared repair budget enforces the one-attempt limit. A corrected
+        decision always returns through deterministic validation before the run
+        can complete.
+        """
+
+        while True:
+            runtime_state = runtime_state.transition_to(
+                RuntimePhase.PROPOSING_DECISION
+            )
+            runtime_trace.record(
+                "DECISION_PROPOSED",
+                {
+                    "decision_field_count": len(
+                        parsed_action.decision_payload
+                    )
+                },
+            )
+
+            runtime_state = runtime_state.transition_to(
+                RuntimePhase.VALIDATING
+            )
+            validation_result = self._decision_validator.validate(
+                parsed_action.decision_payload
+            )
+            runtime_trace.record(
+                "VALIDATION_RETURNED",
+                {"status": validation_result.status.value},
+            )
+
+            if (
+                validation_result.status
+                is OfflineValidationStatus.ACCEPTED
+            ):
+                completed_state = runtime_state.transition_to(
+                    RuntimePhase.COMPLETED,
+                    terminal_reason="decision_accepted",
                 )
                 runtime_trace.record(
-                    "DECISION_PROPOSED",
-                    {
-                        "decision_field_count": len(
-                            parsed_action.decision_payload
-                        )
-                    },
+                    "RUN_COMPLETED",
+                    {"terminal_reason": "decision_accepted"},
                 )
 
-                runtime_state = runtime_state.transition_to(
-                    RuntimePhase.VALIDATING
-                )
-                validation_result = self._decision_validator.validate(
-                    parsed_action.decision_payload
-                )
-                runtime_trace.record(
-                    "VALIDATION_RETURNED",
-                    {"status": validation_result.status.value},
+                return OfflineRuntimeResult(
+                    final_state=completed_state,
+                    budget_usage=budget_usage,
+                    trace_entries=runtime_trace.entries,
+                    validated_decision=(
+                        validation_result.validated_decision
+                    ),
                 )
 
-                if (
-                    validation_result.status
-                    is OfflineValidationStatus.ACCEPTED
-                ):
-                    completed_state = runtime_state.transition_to(
-                        RuntimePhase.COMPLETED,
-                        terminal_reason="decision_accepted",
-                    )
-                    runtime_trace.record(
-                        "RUN_COMPLETED",
-                        {"terminal_reason": "decision_accepted"},
-                    )
-
-                    return OfflineRuntimeResult(
-                        final_state=completed_state,
-                        budget_usage=budget_usage,
-                        trace_entries=runtime_trace.entries,
-                        validated_decision=(
-                            validation_result.validated_decision
-                        ),
-                    )
-
-                problem_messages = (
-                    validation_result.problem_messages
-                    or (
-                        "Deterministic validation did not accept "
-                        "the decision.",
-                    )
+            problem_messages = (
+                validation_result.problem_messages
+                or (
+                    "Deterministic validation did not accept "
+                    "the decision.",
                 )
-                problem_message = "; ".join(problem_messages)
+            )
+            problem_message = "; ".join(problem_messages)
 
-                if (
-                    validation_result.status
-                    is OfflineValidationStatus.MANUAL_REVIEW
-                ):
-                    return self._finish_manual_review(
-                        runtime_state=runtime_state,
-                        budget_usage=budget_usage,
-                        runtime_trace=runtime_trace,
-                        terminal_reason=(
-                            "decision_requires_manual_review"
-                        ),
-                        problem_message=problem_message,
-                    )
-
-                try:
-                    repair_outcome = execute_repair_model_call(
-                        model_client=self._model_client,
-                        budget_limits=self._budget_limits,
-                        budget_usage=budget_usage,
-                        runtime_state=runtime_state,
-                        runtime_trace=runtime_trace,
-                        system_instructions=system_instructions,
-                        task_context=current_task_context,
-                        rejected_output=current_response_text,
-                        problem_messages=problem_messages,
-                        allowed_tool_names=self._allowed_tool_names,
-                    )
-                except RuntimeBudgetExceededError as budget_error:
-                    return self._finish_manual_review(
-                        runtime_state=runtime_state,
-                        budget_usage=budget_usage,
-                        runtime_trace=runtime_trace,
-                        terminal_reason="repair_budget_exhausted",
-                        problem_message=str(budget_error),
-                    )
-
-                runtime_state = repair_outcome.runtime_state
-                budget_usage = repair_outcome.budget_usage
-                current_response_text = (
-                    repair_outcome.repaired_response_text
+            if (
+                validation_result.status
+                is OfflineValidationStatus.MANUAL_REVIEW
+            ):
+                return self._finish_manual_review(
+                    runtime_state=runtime_state,
+                    budget_usage=budget_usage,
+                    runtime_trace=runtime_trace,
+                    terminal_reason="decision_requires_manual_review",
+                    problem_message=problem_message,
                 )
 
-                try:
-                    parsed_action = parse_model_action(
-                        current_response_text
-                    )
-                except ModelOutputParseError as repair_parse_error:
-                    return self._finish_manual_review(
-                        runtime_state=runtime_state,
-                        budget_usage=budget_usage,
-                        runtime_trace=runtime_trace,
-                        terminal_reason="repair_output_invalid",
-                        problem_message=str(repair_parse_error),
-                    )
+            try:
+                repair_outcome = execute_repair_model_call(
+                    model_client=self._model_client,
+                    budget_limits=self._budget_limits,
+                    budget_usage=budget_usage,
+                    runtime_state=runtime_state,
+                    runtime_trace=runtime_trace,
+                    system_instructions=system_instructions,
+                    task_context=current_task_context,
+                    rejected_output=current_response_text,
+                    problem_messages=problem_messages,
+                    allowed_tool_names=self._allowed_tool_names,
+                )
+            except RuntimeBudgetExceededError as budget_error:
+                return self._finish_manual_review(
+                    runtime_state=runtime_state,
+                    budget_usage=budget_usage,
+                    runtime_trace=runtime_trace,
+                    terminal_reason="repair_budget_exhausted",
+                    problem_message=str(budget_error),
+                )
 
-                if (
-                    parsed_action.action_type
-                    is RuntimeActionType.REQUEST_MANUAL_REVIEW
-                ):
-                    return self._finish_manual_review(
-                        runtime_state=runtime_state,
-                        budget_usage=budget_usage,
-                        runtime_trace=runtime_trace,
-                        terminal_reason=(
-                            "repair_requested_manual_review"
-                        ),
-                        problem_message=(
-                            parsed_action.manual_review_reason
-                            or "The repair requested manual review."
-                        ),
-                    )
+            runtime_state = repair_outcome.runtime_state
+            budget_usage = repair_outcome.budget_usage
+            current_response_text = repair_outcome.repaired_response_text
 
-                if (
-                    parsed_action.action_type
-                    is not RuntimeActionType.PROPOSE_DECISION
-                ):
-                    return self._finish_manual_review(
-                        runtime_state=runtime_state,
-                        budget_usage=budget_usage,
-                        runtime_trace=runtime_trace,
-                        terminal_reason=(
-                            "invalid_validation_repair_action"
-                        ),
-                        problem_message=(
-                            "A validation repair must return a "
-                            "proposed decision."
-                        ),
-                    )
+            try:
+                parsed_action = parse_model_action(current_response_text)
+            except ModelOutputParseError as repair_parse_error:
+                return self._finish_manual_review(
+                    runtime_state=runtime_state,
+                    budget_usage=budget_usage,
+                    runtime_trace=runtime_trace,
+                    terminal_reason="repair_output_invalid",
+                    problem_message=str(repair_parse_error),
+                )
 
-                # The loop validates the corrected decision. A second
-                # REPAIRABLE result cannot cause another model call because
-                # the shared repair budget permits only one attempt.
+            if (
+                parsed_action.action_type
+                is RuntimeActionType.REQUEST_MANUAL_REVIEW
+            ):
+                return self._finish_manual_review(
+                    runtime_state=runtime_state,
+                    budget_usage=budget_usage,
+                    runtime_trace=runtime_trace,
+                    terminal_reason="repair_requested_manual_review",
+                    problem_message=(
+                        parsed_action.manual_review_reason
+                        or "The repair requested manual review."
+                    ),
+                )
+
+            if (
+                parsed_action.action_type
+                is not RuntimeActionType.PROPOSE_DECISION
+            ):
+                return self._finish_manual_review(
+                    runtime_state=runtime_state,
+                    budget_usage=budget_usage,
+                    runtime_trace=runtime_trace,
+                    terminal_reason="invalid_validation_repair_action",
+                    problem_message=(
+                        "A validation repair must return a proposed decision."
+                    ),
+                )
+
+            # The loop validates the corrected decision. A second REPAIRABLE
+            # result cannot cause another model call because the shared repair
+            # budget permits only one attempt.
 
     @staticmethod
     def _finish_manual_review(
