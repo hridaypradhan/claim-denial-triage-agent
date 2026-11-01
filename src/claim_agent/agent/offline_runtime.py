@@ -24,6 +24,7 @@ from claim_agent.agent.runtime_budget import (
 from claim_agent.agent.runtime_ports import (
     DecisionValidatorPort,
     OfflineValidationStatus,
+    ToolDispatcherPort,
 )
 from claim_agent.agent.runtime_state import AgentRuntimeState, RuntimePhase
 from claim_agent.agent.runtime_trace import (
@@ -58,10 +59,14 @@ class OfflineRuntimeResult:
         """Protect an accepted decision from later modification."""
 
         if not self.final_state.is_terminal:
-            raise ValueError("OfflineRuntimeResult requires a terminal final_state")
+            raise ValueError(
+                "OfflineRuntimeResult requires a terminal final_state"
+            )
 
         if self.validated_decision is not None:
-            protected_decision = MappingProxyType(dict(self.validated_decision))
+            protected_decision = MappingProxyType(
+                dict(self.validated_decision)
+            )
             object.__setattr__(
                 self,
                 "validated_decision",
@@ -75,14 +80,28 @@ class OfflineAgentRuntime:
     def __init__(
         self,
         model_client: ModelClient,
+        tool_dispatcher: ToolDispatcherPort,
         decision_validator: DecisionValidatorPort,
         budget_limits: RuntimeBudgetLimits,
+        allowed_tool_names: Tuple[str, ...],
     ) -> None:
-        """Store the replaceable boundaries and fixed limits for one runner."""
+        """Store replaceable boundaries, limits, and the tool allowlist."""
+
+        if any(not tool_name.strip() for tool_name in allowed_tool_names):
+            raise ValueError(
+                "allowed_tool_names cannot contain blank values"
+            )
+
+        if len(set(allowed_tool_names)) != len(allowed_tool_names):
+            raise ValueError(
+                "allowed_tool_names cannot contain duplicates"
+            )
 
         self._model_client = model_client
+        self._tool_dispatcher = tool_dispatcher
         self._decision_validator = decision_validator
         self._budget_limits = budget_limits
+        self._allowed_tool_names = allowed_tool_names
 
     def run(
         self,
@@ -117,7 +136,7 @@ class OfflineAgentRuntime:
             request_id=request_id,
             system_instructions=system_instructions,
             task_context=task_context,
-            allowed_tool_names=(),
+            allowed_tool_names=self._allowed_tool_names,
         )
 
         runtime_trace.record(
@@ -129,7 +148,9 @@ class OfflineAgentRuntime:
             "MODEL_RESPONDED",
             {
                 "request_id": model_response.request_id,
-                "provider_request_id": (model_response.provider_request_id or ""),
+                "provider_request_id": (
+                    model_response.provider_request_id or ""
+                ),
             },
         )
 
@@ -167,7 +188,9 @@ class OfflineAgentRuntime:
                 ),
             )
 
-        runtime_state = runtime_state.transition_to(RuntimePhase.PROPOSING_DECISION)
+        runtime_state = runtime_state.transition_to(
+            RuntimePhase.PROPOSING_DECISION
+        )
         runtime_trace.record(
             "DECISION_PROPOSED",
             {"decision_field_count": len(parsed_action.decision_payload)},

@@ -9,6 +9,7 @@ from claim_agent.agent.runtime_ports import (
     OfflineValidationResult,
     OfflineValidationStatus,
 )
+from claim_agent.agent.offline_runtime import OfflineAgentRuntime
 from claim_agent.agent.runtime_state import RuntimePhase
 from claim_agent.agent.scripted_model import (
     ScriptedModelClient,
@@ -16,8 +17,8 @@ from claim_agent.agent.scripted_model import (
 )
 from claim_agent.agent.scripted_ports import (
     ScriptedDecisionValidator,
+    ScriptedToolDispatcher,
 )
-from claim_agent.agent.offline_runtime import OfflineAgentRuntime
 
 
 def make_test_limits() -> RuntimeBudgetLimits:
@@ -37,7 +38,10 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
     def test_accepted_decision_completes_run(self) -> None:
         """A validated MRI decision should reach successful completion."""
 
-        model_client = ScriptedModelClient([ScriptedModelOutput(response_text="""
+        model_client = ScriptedModelClient(
+            [
+                ScriptedModelOutput(
+                    response_text="""
                     {
                         "action": "propose_decision",
                         "decision": {
@@ -45,7 +49,10 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
                             "rationale": "Evidence remains incomplete."
                         }
                     }
-                    """)])
+                    """
+                )
+            ]
+        )
         decision_validator = ScriptedDecisionValidator(
             [
                 OfflineValidationResult(
@@ -59,8 +66,10 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
         )
         runtime = OfflineAgentRuntime(
             model_client=model_client,
+            tool_dispatcher=ScriptedToolDispatcher([]),
             decision_validator=decision_validator,
             budget_limits=make_test_limits(),
+            allowed_tool_names=("retrieve_medical_policy",),
         )
 
         result = runtime.run(
@@ -102,17 +111,25 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
     def test_model_can_request_manual_review(self) -> None:
         """The model may stop when required evidence is unavailable."""
 
-        model_client = ScriptedModelClient([ScriptedModelOutput(response_text="""
+        model_client = ScriptedModelClient(
+            [
+                ScriptedModelOutput(
+                    response_text="""
                     {
                         "action": "request_manual_review",
                         "reason": "The applicable policy was not found."
                     }
-                    """)])
+                    """
+                )
+            ]
+        )
         decision_validator = ScriptedDecisionValidator([])
         runtime = OfflineAgentRuntime(
             model_client=model_client,
+            tool_dispatcher=ScriptedToolDispatcher([]),
             decision_validator=decision_validator,
             budget_limits=make_test_limits(),
+            allowed_tool_names=("retrieve_medical_policy",),
         )
 
         result = runtime.run(
@@ -148,8 +165,10 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
         decision_validator = ScriptedDecisionValidator([])
         runtime = OfflineAgentRuntime(
             model_client=model_client,
+            tool_dispatcher=ScriptedToolDispatcher([]),
             decision_validator=decision_validator,
             budget_limits=make_test_limits(),
+            allowed_tool_names=("retrieve_medical_policy",),
         )
 
         result = runtime.run(
@@ -170,6 +189,40 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
         self.assertEqual(
             result.trace_entries[-1].details["terminal_reason"],
             "model_output_invalid",
+        )
+
+    def test_model_request_receives_runtime_tool_allowlist(self) -> None:
+        """Only configured read-only tools should be exposed to the model."""
+
+        model_client = ScriptedModelClient(
+            [
+                ScriptedModelOutput(
+                    response_text="""
+                    {
+                        "action": "request_manual_review",
+                        "reason": "No evidence has been retrieved yet."
+                    }
+                    """
+                )
+            ]
+        )
+        runtime = OfflineAgentRuntime(
+            model_client=model_client,
+            tool_dispatcher=ScriptedToolDispatcher([]),
+            decision_validator=ScriptedDecisionValidator([]),
+            budget_limits=make_test_limits(),
+            allowed_tool_names=("retrieve_medical_policy",),
+        )
+
+        runtime.run(
+            run_id="run-4",
+            system_instructions="Use only allowlisted tools.",
+            task_context="Review one synthetic MRI denial.",
+        )
+
+        self.assertEqual(
+            model_client.received_requests[0].allowed_tool_names,
+            ("retrieve_medical_policy",),
         )
 
 
