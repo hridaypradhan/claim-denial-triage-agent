@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Iterable, Optional
 
 from claim_agent.agent.model_interface import ModelRequest, ModelResponse
 
@@ -29,8 +29,8 @@ class ScriptedModelOutput:
     """
 
     response_text: str
-    input_token_count: int | None = None
-    output_token_count: int | None = None
+    input_token_count: Optional[int] = None
+    output_token_count: Optional[int] = None
 
 
 class ScriptedModelClient:

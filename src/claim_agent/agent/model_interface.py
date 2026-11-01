@@ -9,7 +9,7 @@ model in later project phases.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, runtime_checkable
 
 
 @dataclass(frozen=True)
@@ -62,9 +62,9 @@ class ModelResponse:
 
     request_id: str
     response_text: str
-    input_token_count: int | None = None
-    output_token_count: int | None = None
-    provider_request_id: str | None = None
+    input_token_count: Optional[int] = None
+    output_token_count: Optional[int] = None
+    provider_request_id: Optional[str] = None
 
     def __post_init__(self) -> None:
         """Reject malformed response metadata before it reaches the runtime."""
