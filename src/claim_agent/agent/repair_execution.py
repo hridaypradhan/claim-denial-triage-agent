@@ -20,8 +20,6 @@ from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace
 
 # TODO(#6): Replace plain validation problem strings with the approved
 # ValidationResult problem contract.
-# TODO(#9): Integrate this repair operation into malformed-output and
-# repairable-validation paths in OfflineAgentRuntime.
 
 
 @dataclass(frozen=True)

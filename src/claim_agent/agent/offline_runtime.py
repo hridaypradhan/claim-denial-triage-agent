@@ -17,6 +17,9 @@ from claim_agent.agent.action_parser import (
     parse_model_action,
 )
 from claim_agent.agent.model_interface import ModelClient, ModelRequest
+from claim_agent.agent.repair_execution import (
+    execute_repair_model_call,
+)
 from claim_agent.agent.runtime_budget import (
     RuntimeBudgetExceededError,
     RuntimeBudgetLimits,
@@ -39,8 +42,7 @@ from claim_agent.agent.tool_execution import (
 
 # TODO(#5): Replace the free-form task_context input with an adapter around the
 # approved BaselineFinding and RouteDecision contracts.
-# TODO(#9): Add bounded repair for malformed output and repairable validation
-# results after the repeated tool-planning loop is stable.
+# TODO(#9): Integrate bounded repair for REPAIRABLE validation results.
 
 
 @dataclass(frozen=True)
@@ -176,15 +178,59 @@ class OfflineAgentRuntime:
             )
 
             try:
-                parsed_action = parse_model_action(model_response.response_text)
-            except ModelOutputParseError as error:
-                return self._finish_manual_review(
-                    runtime_state=runtime_state,
-                    budget_usage=budget_usage,
-                    runtime_trace=runtime_trace,
-                    terminal_reason="model_output_invalid",
-                    problem_message=str(error),
+                parsed_action = parse_model_action(
+                    model_response.response_text
                 )
+            except ModelOutputParseError as initial_parse_error:
+                try:
+                    repair_outcome = execute_repair_model_call(
+                        model_client=self._model_client,
+                        budget_limits=self._budget_limits,
+                        budget_usage=budget_usage,
+                        runtime_state=runtime_state,
+                        runtime_trace=runtime_trace,
+                        system_instructions=system_instructions,
+                        task_context=current_task_context,
+                        rejected_output=model_response.response_text,
+                        problem_messages=(
+                            str(initial_parse_error),
+                        ),
+                        allowed_tool_names=self._allowed_tool_names,
+                    )
+                except RuntimeBudgetExceededError as budget_error:
+                    return self._finish_manual_review(
+                        runtime_state=runtime_state,
+                        budget_usage=budget_usage,
+                        runtime_trace=runtime_trace,
+                        terminal_reason="repair_budget_exhausted",
+                        problem_message=str(budget_error),
+                    )
+
+                runtime_state = repair_outcome.runtime_state
+                budget_usage = repair_outcome.budget_usage
+
+                try:
+                    parsed_action = parse_model_action(
+                        repair_outcome.repaired_response_text
+                    )
+                except ModelOutputParseError as repair_parse_error:
+                    return self._finish_manual_review(
+                        runtime_state=runtime_state,
+                        budget_usage=budget_usage,
+                        runtime_trace=runtime_trace,
+                        terminal_reason="repair_output_invalid",
+                        problem_message=str(repair_parse_error),
+                    )
+
+                # Tool execution begins from PLANNING. Decision and
+                # manual-review actions can transition directly from REPAIRING.
+                if (
+                    parsed_action.action_type
+                    is RuntimeActionType.CALL_TOOL
+                ):
+                    runtime_state = runtime_state.transition_to(
+                        RuntimePhase.PLANNING
+                    )
 
             if parsed_action.action_type is RuntimeActionType.REQUEST_MANUAL_REVIEW:
                 return self._finish_manual_review(

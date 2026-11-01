@@ -146,13 +146,38 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
             "MANUAL_REVIEW",
         )
 
-    def test_malformed_model_output_stops_safely(self) -> None:
-        """Invalid JSON must not be interpreted as an executable action."""
+    def test_malformed_model_output_receives_one_repair(self) -> None:
+        """Invalid JSON may receive one budgeted correction attempt."""
 
         model_client = ScriptedModelClient(
-            [ScriptedModelOutput(response_text='{"action": "propose_decision"')]
+            [
+                ScriptedModelOutput(
+                    response_text='{"action": "propose_decision"'
+                ),
+                ScriptedModelOutput(
+                    response_text="""
+                    {
+                        "action": "propose_decision",
+                        "decision": {
+                            "recommended_disposition": "MANUAL_REVIEW",
+                            "rationale": "Required evidence is missing."
+                        }
+                    }
+                    """
+                ),
+            ]
         )
-        decision_validator = ScriptedDecisionValidator([])
+        decision_validator = ScriptedDecisionValidator(
+            [
+                OfflineValidationResult(
+                    status=OfflineValidationStatus.ACCEPTED,
+                    validated_decision={
+                        "recommended_disposition": "MANUAL_REVIEW",
+                        "rationale": "Required evidence is missing.",
+                    },
+                )
+            ]
+        )
         runtime = OfflineAgentRuntime(
             model_client=model_client,
             tool_dispatcher=ScriptedToolDispatcher([]),
@@ -169,17 +194,57 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
 
         self.assertEqual(
             result.final_state.phase,
+            RuntimePhase.COMPLETED,
+        )
+        self.assertEqual(result.budget_usage.model_calls_used, 2)
+        self.assertEqual(result.budget_usage.repair_attempts_used, 1)
+        self.assertEqual(result.budget_usage.total_steps_used, 2)
+        self.assertIn(
+            "REPAIR_ATTEMPTED",
+            [
+                entry.event_name
+                for entry in result.trace_entries
+            ],
+        )
+
+    def test_invalid_repair_output_stops_for_manual_review(self) -> None:
+        """A second malformed response must not trigger another repair."""
+
+        model_client = ScriptedModelClient(
+            [
+                ScriptedModelOutput(
+                    response_text='{"action": "propose_decision"'
+                ),
+                ScriptedModelOutput(
+                    response_text='{"action": "propose_decision"'
+                ),
+            ]
+        )
+        runtime = OfflineAgentRuntime(
+            model_client=model_client,
+            tool_dispatcher=ScriptedToolDispatcher([]),
+            decision_validator=ScriptedDecisionValidator([]),
+            budget_limits=make_test_limits(),
+            allowed_tool_names=("retrieve_medical_policy",),
+        )
+
+        result = runtime.run(
+            run_id="run-invalid-repair",
+            system_instructions="Return valid structured output.",
+            task_context="Review one synthetic claim.",
+        )
+
+        self.assertEqual(
+            result.final_state.phase,
             RuntimePhase.MANUAL_REVIEW,
         )
         self.assertEqual(
             result.final_state.terminal_reason,
-            "model_output_invalid",
+            "repair_output_invalid",
         )
-        self.assertEqual(result.budget_usage.model_calls_used, 1)
-        self.assertEqual(
-            result.trace_entries[-1].details["terminal_reason"],
-            "model_output_invalid",
-        )
+        self.assertEqual(result.budget_usage.model_calls_used, 2)
+        self.assertEqual(result.budget_usage.repair_attempts_used, 1)
+        self.assertEqual(len(model_client.received_requests), 2)
 
     def test_model_request_receives_runtime_tool_allowlist(self) -> None:
         """Only configured read-only tools should be exposed to the model."""
