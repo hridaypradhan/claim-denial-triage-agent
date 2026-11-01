@@ -7,6 +7,9 @@ untrusted model text and executable runtime behavior.
 
 from __future__ import annotations
 
+# TODO(#6): Validate proposed decisions through the approved AgentDecision
+# contract instead of keeping decision_payload as an opaque mapping.
+
 import json
 from dataclasses import dataclass, field
 from enum import Enum

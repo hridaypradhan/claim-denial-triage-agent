@@ -7,6 +7,9 @@ entries into the schema approved through issue #7.
 
 from __future__ import annotations
 
+# TODO(#7): Add an adapter that converts these internal entries into the
+# approved TraceEvent schema and append-only JSON Lines storage format.
+
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Mapping, Optional, Tuple
