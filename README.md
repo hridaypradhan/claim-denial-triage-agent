@@ -2,7 +2,7 @@
 
 A hybrid agentic AI system for evidence-grounded triage of denied outpatient medical claims. The project combines a deterministic Python core with bounded LLM tool use, evidence retrieval, safety validation, and human review.
 
-> **Project status:** Active academic capstone. The deterministic stakeholder baseline is runnable and tested. The agentic extension currently has a repository skeleton but is not yet implemented.
+> **Project status:** Active academic capstone. The deterministic stakeholder baseline and a scripted offline agent-runtime vertical slice are runnable and tested. Production contracts, retrieval tools, safety validators, durable traces, and hosted-model integration remain in progress.
 
 ## Problem
 
@@ -52,20 +52,38 @@ The frozen stakeholder baseline currently provides:
 
 The unchanged comparison baseline is preserved under [`baseline/`](baseline/) and tagged as `baseline-v1`.
 
-### Project scaffolding
+### Scripted offline agent runtime
 
-The repository also contains the ownership boundaries for the planned system:
+The agent package now provides an offline vertical slice for developing and verifying runtime behavior before production integrations are available:
+
+- A provider-independent model interface and deterministic scripted model.
+- Strict parsing of permitted structured model actions.
+- Explicit runtime phases and controlled state transitions.
+- Model-call, tool-call, repair, total-step, and elapsed-time budgets.
+- Repeated planning after allowlisted read-only tool observations.
+- Budget-limited correction of malformed or validation-rejected output; the
+  demonstration permits one attempt.
+- Deterministic decision validation through a temporary scripted boundary.
+- Append-only in-memory trace entries and explicit terminal reasons.
+- Conservative `MANUAL_REVIEW` results when the runtime cannot continue safely.
+- A command-line demonstration and an end-to-end integration test using only synthetic data.
+
+This vertical slice establishes runtime control flow; it is not a production claim-review system. Its temporary tool, input, decision, validation, and trace boundaries will be replaced or adapted after issues #3, #5, #6, and #7 deliver the approved shared contracts.
+
+### Remaining project scaffolding
+
+The repository also contains ownership boundaries and placeholders for the remaining system:
 
 - [`src/claim_agent/contracts/`](src/claim_agent/contracts/) — shared data contracts.
 - [`src/claim_agent/tools/`](src/claim_agent/tools/) — typed, read-only evidence tools.
-- [`src/claim_agent/agent/`](src/claim_agent/agent/) — bounded agent state and orchestration.
+- [`src/claim_agent/agent/`](src/claim_agent/agent/) — implemented scripted offline runtime and future production adapters.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
 - [`knowledge/`](knowledge/) — versioned policies and synthetic evidence.
 - [`datasets/`](datasets/) — development, held-out, and labeling artifacts.
 - [`evaluation/`](evaluation/) — metrics, fault injection, and comparison harnesses.
 
-These directories are scaffolding only unless listed under the implemented baseline above.
+Directories other than the implemented baseline and scripted agent runtime remain scaffolding unless explicitly documented otherwise.
 
 ## Safety boundaries
 
@@ -78,14 +96,14 @@ These directories are scaffolding only unless listed under the implemented basel
 
 ## Requirements
 
-The baseline requires:
+The baseline and scripted offline runtime require:
 
 - Python 3.9 or newer.
 - No third-party packages.
 - No model API key.
 - No network connection.
 
-The agentic extension will introduce separate dependencies later. Those dependencies will not be added to the frozen baseline.
+Future production integrations may introduce separate dependencies. Those dependencies will not be added to the frozen baseline.
 
 ## Setup
 
@@ -130,6 +148,42 @@ Expected result:
 Ran 9 tests
 OK
 ```
+
+## Run the offline agent tests
+
+The agent runtime uses a `src` layout. From the repository root, expose that directory to Python and run the component and integration suites:
+
+```bash
+PYTHONPATH=src python -m unittest discover -s tests/agent -p "test*.py" -q
+PYTHONPATH=src python -m unittest discover -s tests/integration -p "test*.py" -q
+```
+
+In PowerShell:
+
+```powershell
+$env:PYTHONPATH = '.\src'
+python -m unittest discover -s '.\tests\agent' -p 'test*.py' -q
+python -m unittest discover -s '.\tests\integration' -p 'test*.py' -q
+```
+
+These tests use scripted model, tool, and validation boundaries. They do not require network access or model credentials.
+
+## Run the offline agent demonstration
+
+The demonstration runs a synthetic medical-necessity denial through policy retrieval, evidence-context updating, decision proposal, deterministic validation, and trace emission:
+
+```bash
+PYTHONPATH=src python -m claim_agent.agent.offline_runner --pretty
+```
+
+In PowerShell:
+
+```powershell
+$env:PYTHONPATH = '.\src'
+python -m claim_agent.agent.offline_runner --pretty
+```
+
+The JSON output reports the terminal phase, reason, accepted decision, consumed budgets, and ordered trace-event names. All model, tool, and validation responses in this demonstration are predefined fixtures rather than production services.
 
 ## Run one reproducible example
 
@@ -185,7 +239,8 @@ These limitations define the work assigned to the agentic extension; they are no
 - [ ] Wrap deterministic baseline behavior behind stable interfaces.
 - [ ] Implement a validated common tool dispatcher.
 - [ ] Add versioned payer-policy, encounter-note, and eligibility retrieval.
-- [ ] Implement a bounded planning loop with structured model outputs.
+- [x] Implement a bounded planning loop with structured model outputs behind scripted offline boundaries.
+- [ ] Replace scripted runtime boundaries with approved production adapters.
 - [ ] Add criterion-level evidence assessment and resolvable citations.
 - [ ] Add deterministic safety and deadline verification.
 - [ ] Generate appeal drafts only from verified evidence.

@@ -265,12 +265,12 @@ Hold two brief progress syncs and one integration demonstration per week. Each o
 
 ## Immediate shared backlog
 
-1. Decide the agent-side schema library.
-2. Define contract version `0.1` and contract rejection tests.
-3. Implement the baseline adapter and deterministic router.
-4. Implement the scripted fake model and fake dispatcher.
-5. Add the offline vertical-slice integration test.
-6. Select the initial payer/procedure policy subset.
-7. Draft the dataset annotation rubric.
+- [ ] Decide the agent-side schema library.
+- [ ] Define contract version `0.1` and contract rejection tests.
+- [ ] Implement the baseline adapter and deterministic router.
+- [x] Implement the scripted fake model and fake dispatcher.
+- [x] Add the offline vertical-slice integration test.
+- [ ] Select the initial payer/procedure policy subset.
+- [ ] Draft the dataset annotation rubric.
 
 Do not replace fake boundaries with hosted-model calls or production retrieval until the offline vertical slice passes.
