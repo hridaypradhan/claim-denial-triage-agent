@@ -14,10 +14,10 @@ from typing import Callable, Mapping, Optional, Tuple
 
 from claim_agent.agent.action_parser import (
     ModelOutputParseError,
-    ParsedModelAction,
     RuntimeActionType,
     parse_model_action,
 )
+from claim_agent.agent.decision_execution import execute_decision_with_repair
 from claim_agent.agent.model_interface import ModelClient, ModelRequest
 from claim_agent.agent.repair_execution import (
     RepairModelBoundaryError,
@@ -30,7 +30,6 @@ from claim_agent.agent.runtime_budget import (
 )
 from claim_agent.agent.runtime_ports import (
     DecisionValidatorPort,
-    OfflineValidationStatus,
     ToolDispatcherPort,
 )
 from claim_agent.agent.runtime_state import AgentRuntimeState, RuntimePhase
@@ -351,7 +350,14 @@ class OfflineAgentRuntime:
                 # The next loop iteration gives the model the new observation.
                 continue
 
-            return self._validate_decision_with_repair(
+            return execute_decision_with_repair(
+                model_client=self._model_client,
+                decision_validator=self._decision_validator,
+                budget_limits=self._budget_limits,
+                allowed_tool_names=self._allowed_tool_names,
+                timeout_result_if_expired=self._timeout_result_if_expired,
+                finish_manual_review=self._finish_manual_review,
+                result_factory=OfflineRuntimeResult,
                 parsed_action=parsed_action,
                 current_response_text=current_response_text,
                 system_instructions=system_instructions,
@@ -361,194 +367,6 @@ class OfflineAgentRuntime:
                 budget_usage=budget_usage,
                 runtime_trace=runtime_trace,
             )
-
-    def _validate_decision_with_repair(
-        self,
-        parsed_action: ParsedModelAction,
-        current_response_text: str,
-        system_instructions: str,
-        current_task_context: str,
-        runtime_started_at: float,
-        runtime_state: AgentRuntimeState,
-        budget_usage: RuntimeBudgetUsage,
-        runtime_trace: InMemoryRuntimeTrace,
-    ) -> OfflineRuntimeResult:
-        """Validate a proposed decision with at most one correction attempt.
-
-        The shared repair budget enforces the one-attempt limit. A corrected
-        decision always returns through deterministic validation before the run
-        can complete.
-        """
-
-        while True:
-            timeout_result = self._timeout_result_if_expired(
-                runtime_started_at=runtime_started_at,
-                runtime_state=runtime_state,
-                budget_usage=budget_usage,
-                runtime_trace=runtime_trace,
-            )
-            if timeout_result is not None:
-                return timeout_result
-
-            runtime_state = runtime_state.transition_to(RuntimePhase.PROPOSING_DECISION)
-            runtime_trace.record(
-                "DECISION_PROPOSED",
-                {"decision_field_count": len(parsed_action.decision_payload)},
-            )
-
-            runtime_state = runtime_state.transition_to(RuntimePhase.VALIDATING)
-            # TODO(#3, #6): Hriday must pass accumulated EvidencePassage IDs
-            # into deterministic validation after Silas and Neha approve the
-            # retrieval and validation contracts.
-            try:
-                validation_result = self._decision_validator.validate(
-                    parsed_action.decision_payload
-                )
-            except Exception as error:
-                # Deterministic validation is a runtime boundary. An
-                # unexpected implementation failure must not approve or lose
-                # the proposed claim decision.
-                runtime_trace.record(
-                    "VALIDATION_FAILED",
-                    {
-                        "error_type": type(error).__name__,
-                    },
-                )
-                return self._finish_manual_review(
-                    runtime_state=runtime_state,
-                    budget_usage=budget_usage,
-                    runtime_trace=runtime_trace,
-                    terminal_reason="validation_boundary_error",
-                    problem_message=(
-                        "The validation boundary raised " f"{type(error).__name__}."
-                    ),
-                )
-
-            runtime_trace.record(
-                "VALIDATION_RETURNED",
-                {"status": validation_result.status.value},
-            )
-
-            timeout_result = self._timeout_result_if_expired(
-                runtime_started_at=runtime_started_at,
-                runtime_state=runtime_state,
-                budget_usage=budget_usage,
-                runtime_trace=runtime_trace,
-            )
-            if timeout_result is not None:
-                return timeout_result
-
-            if validation_result.status is OfflineValidationStatus.ACCEPTED:
-                completed_state = runtime_state.transition_to(
-                    RuntimePhase.COMPLETED,
-                    terminal_reason="decision_accepted",
-                )
-                runtime_trace.record(
-                    "RUN_COMPLETED",
-                    {"terminal_reason": "decision_accepted"},
-                )
-
-                return OfflineRuntimeResult(
-                    final_state=completed_state,
-                    budget_usage=budget_usage,
-                    trace_entries=runtime_trace.entries,
-                    validated_decision=(validation_result.validated_decision),
-                )
-
-            problem_messages = validation_result.problem_messages or (
-                "Deterministic validation did not accept " "the decision.",
-            )
-            problem_message = "; ".join(problem_messages)
-
-            if validation_result.status is OfflineValidationStatus.MANUAL_REVIEW:
-                return self._finish_manual_review(
-                    runtime_state=runtime_state,
-                    budget_usage=budget_usage,
-                    runtime_trace=runtime_trace,
-                    terminal_reason="decision_requires_manual_review",
-                    problem_message=problem_message,
-                )
-
-            try:
-                repair_outcome = execute_repair_model_call(
-                    model_client=self._model_client,
-                    budget_limits=self._budget_limits,
-                    budget_usage=budget_usage,
-                    runtime_state=runtime_state,
-                    runtime_trace=runtime_trace,
-                    system_instructions=system_instructions,
-                    task_context=current_task_context,
-                    rejected_output=current_response_text,
-                    problem_messages=problem_messages,
-                    allowed_tool_names=self._allowed_tool_names,
-                )
-            except RepairModelBoundaryError as error:
-                return self._finish_manual_review(
-                    runtime_state=error.runtime_state,
-                    budget_usage=error.budget_usage,
-                    runtime_trace=runtime_trace,
-                    terminal_reason="model_boundary_error",
-                    problem_message=str(error),
-                )
-            except RuntimeBudgetExceededError as budget_error:
-                return self._finish_manual_review(
-                    runtime_state=runtime_state,
-                    budget_usage=budget_usage,
-                    runtime_trace=runtime_trace,
-                    terminal_reason="repair_budget_exhausted",
-                    problem_message=str(budget_error),
-                )
-
-            runtime_state = repair_outcome.runtime_state
-            budget_usage = repair_outcome.budget_usage
-            current_response_text = repair_outcome.repaired_response_text
-
-            timeout_result = self._timeout_result_if_expired(
-                runtime_started_at=runtime_started_at,
-                runtime_state=runtime_state,
-                budget_usage=budget_usage,
-                runtime_trace=runtime_trace,
-            )
-            if timeout_result is not None:
-                return timeout_result
-
-            try:
-                parsed_action = parse_model_action(current_response_text)
-            except ModelOutputParseError as repair_parse_error:
-                return self._finish_manual_review(
-                    runtime_state=runtime_state,
-                    budget_usage=budget_usage,
-                    runtime_trace=runtime_trace,
-                    terminal_reason="repair_output_invalid",
-                    problem_message=str(repair_parse_error),
-                )
-
-            if parsed_action.action_type is RuntimeActionType.REQUEST_MANUAL_REVIEW:
-                return self._finish_manual_review(
-                    runtime_state=runtime_state,
-                    budget_usage=budget_usage,
-                    runtime_trace=runtime_trace,
-                    terminal_reason="repair_requested_manual_review",
-                    problem_message=(
-                        parsed_action.manual_review_reason
-                        or "The repair requested manual review."
-                    ),
-                )
-
-            if parsed_action.action_type is not RuntimeActionType.PROPOSE_DECISION:
-                return self._finish_manual_review(
-                    runtime_state=runtime_state,
-                    budget_usage=budget_usage,
-                    runtime_trace=runtime_trace,
-                    terminal_reason="invalid_validation_repair_action",
-                    problem_message=(
-                        "A validation repair must return a proposed decision."
-                    ),
-                )
-
-            # The loop validates the corrected decision. A second REPAIRABLE
-            # result cannot cause another model call because the shared repair
-            # budget permits only one attempt.
 
     def _timeout_result_if_expired(
         self,
