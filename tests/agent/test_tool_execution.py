@@ -114,6 +114,17 @@ class ToolExecutionTests(unittest.TestCase):
                 "PHASE_CHANGED",
             ],
         )
+        self.assertEqual(
+            trace.entries[0].details["tool_arguments"],
+            {
+                "payer": "BCBS_AZ",
+                "procedure_code": "70553",
+            },
+        )
+        self.assertEqual(
+            trace.entries[1].details["source_ids"],
+            ["POL-BCBSAZ-MRI-BRAIN@v1"],
+        )
 
     def test_tool_outside_allowlist_is_rejected(self) -> None:
         """The model cannot call a tool the runtime did not expose."""

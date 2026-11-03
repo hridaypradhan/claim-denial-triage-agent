@@ -9,6 +9,7 @@ from claim_agent.agent.action_parser import (
     parse_model_action,
 )
 from claim_agent.agent.repair_execution import (
+    RepairModelBoundaryError,
     execute_repair_model_call,
 )
 from claim_agent.agent.runtime_budget import (
@@ -184,6 +185,50 @@ class RepairExecutionTests(unittest.TestCase):
 
         self.assertEqual(model_client.received_requests, ())
         self.assertEqual(trace.entries, ())
+
+    def test_model_boundary_error_preserves_repair_state_and_budget(self) -> None:
+        """A failed repair request should retain its consumed capacity."""
+
+        class FailingRepairModelClient:
+            """Simulate a model provider failing during a repair request."""
+
+            def generate_response(self, request: object) -> object:
+                """Raise instead of returning a repaired model response."""
+
+                raise TimeoutError("The synthetic repair request timed out.")
+
+        trace = InMemoryRuntimeTrace(run_id="run-1")
+
+        with self.assertRaises(RepairModelBoundaryError) as raised_error:
+            execute_repair_model_call(
+                model_client=FailingRepairModelClient(),
+                budget_limits=make_repair_limits(),
+                budget_usage=RuntimeBudgetUsage(
+                    model_calls_used=1,
+                    total_steps_used=1,
+                ),
+                runtime_state=make_planning_state(),
+                runtime_trace=trace,
+                system_instructions="Return one permitted JSON action.",
+                task_context="Review the synthetic MRI denial.",
+                rejected_output="not valid JSON",
+                problem_messages=("Model output must be valid JSON.",),
+                allowed_tool_names=("retrieve_medical_policy",),
+            )
+
+        boundary_error = raised_error.exception
+        self.assertEqual(
+            boundary_error.runtime_state.phase,
+            RuntimePhase.REPAIRING,
+        )
+        self.assertEqual(boundary_error.budget_usage.model_calls_used, 2)
+        self.assertEqual(boundary_error.budget_usage.repair_attempts_used, 1)
+        self.assertEqual(boundary_error.budget_usage.total_steps_used, 2)
+        self.assertIsInstance(boundary_error.original_error, TimeoutError)
+        self.assertEqual(
+            [entry.event_name for entry in trace.entries],
+            ["REPAIR_ATTEMPTED", "MODEL_REQUESTED", "MODEL_FAILED"],
+        )
 
 
 if __name__ == "__main__":

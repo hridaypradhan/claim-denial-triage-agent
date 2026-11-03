@@ -22,6 +22,26 @@ from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace
 # ValidationResult problem contract.
 
 
+class RepairModelBoundaryError(RuntimeError):
+    """Carry consumed runtime values when a repair model call fails."""
+
+    def __init__(
+        self,
+        runtime_state: AgentRuntimeState,
+        budget_usage: RuntimeBudgetUsage,
+        original_error: Exception,
+    ) -> None:
+        """Preserve the repair phase and all consumed budget capacity."""
+
+        self.runtime_state = runtime_state
+        self.budget_usage = budget_usage
+        self.original_error = original_error
+
+        super().__init__(
+            "The repair model boundary raised " f"{type(original_error).__name__}."
+        )
+
+
 @dataclass(frozen=True)
 class RepairExecutionOutcome:
     """Values produced by one completed repair model call."""
@@ -51,9 +71,7 @@ def execute_repair_model_call(
     model.
     """
 
-    updated_budget_usage = budget_usage.record_repair_model_call(
-        budget_limits
-    )
+    updated_budget_usage = budget_usage.record_repair_model_call(budget_limits)
     repairing_state = runtime_state.transition_to(RuntimePhase.REPAIRING)
     repair_task_context = build_repair_context(
         task_context=task_context,
@@ -85,16 +103,30 @@ def execute_repair_model_call(
         },
     )
 
-    repair_response = model_client.generate_response(
-        repair_request
-    )
+    try:
+        repair_response = model_client.generate_response(repair_request)
+    except Exception as error:
+        # The repair attempt has already consumed its model, repair, and
+        # total-step budgets. Preserve those values when the boundary fails.
+        runtime_trace.record(
+            "MODEL_FAILED",
+            {
+                "request_id": request_id,
+                "error_type": type(error).__name__,
+                "is_repair": True,
+            },
+        )
+        raise RepairModelBoundaryError(
+            runtime_state=repairing_state,
+            budget_usage=updated_budget_usage,
+            original_error=error,
+        ) from error
+
     runtime_trace.record(
         "MODEL_RESPONDED",
         {
             "request_id": repair_response.request_id,
-            "provider_request_id": (
-                repair_response.provider_request_id or ""
-            ),
+            "provider_request_id": (repair_response.provider_request_id or ""),
             "is_repair": True,
         },
     )

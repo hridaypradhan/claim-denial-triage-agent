@@ -20,6 +20,7 @@ from claim_agent.agent.action_parser import (
 )
 from claim_agent.agent.model_interface import ModelClient, ModelRequest
 from claim_agent.agent.repair_execution import (
+    RepairModelBoundaryError,
     execute_repair_model_call,
 )
 from claim_agent.agent.runtime_budget import (
@@ -38,6 +39,7 @@ from claim_agent.agent.runtime_trace import (
     RuntimeTraceEntry,
 )
 from claim_agent.agent.tool_execution import (
+    ToolBoundaryError,
     ToolNotAllowedError,
     execute_tool_action,
 )
@@ -67,14 +69,10 @@ class OfflineRuntimeResult:
         """Protect an accepted decision from later modification."""
 
         if not self.final_state.is_terminal:
-            raise ValueError(
-                "OfflineRuntimeResult requires a terminal final_state"
-            )
+            raise ValueError("OfflineRuntimeResult requires a terminal final_state")
 
         if self.validated_decision is not None:
-            protected_decision = MappingProxyType(
-                dict(self.validated_decision)
-            )
+            protected_decision = MappingProxyType(dict(self.validated_decision))
             object.__setattr__(
                 self,
                 "validated_decision",
@@ -97,14 +95,10 @@ class OfflineAgentRuntime:
         """Store boundaries, limits, allowlist, and an injectable clock."""
 
         if any(not tool_name.strip() for tool_name in allowed_tool_names):
-            raise ValueError(
-                "allowed_tool_names cannot contain blank values"
-            )
+            raise ValueError("allowed_tool_names cannot contain blank values")
 
         if len(set(allowed_tool_names)) != len(allowed_tool_names):
-            raise ValueError(
-                "allowed_tool_names cannot contain duplicates"
-            )
+            raise ValueError("allowed_tool_names cannot contain duplicates")
 
         self._model_client = model_client
         self._tool_dispatcher = tool_dispatcher
@@ -154,9 +148,7 @@ class OfflineAgentRuntime:
                 return timeout_result
 
             try:
-                budget_usage = budget_usage.record_model_call(
-                    self._budget_limits
-                )
+                budget_usage = budget_usage.record_model_call(self._budget_limits)
             except RuntimeBudgetExceededError as error:
                 return self._finish_manual_review(
                     runtime_state=runtime_state,
@@ -179,14 +171,33 @@ class OfflineAgentRuntime:
                 "MODEL_REQUESTED",
                 {"request_id": request_id},
             )
-            model_response = self._model_client.generate_response(model_request)
+            try:
+                model_response = self._model_client.generate_response(model_request)
+            except Exception as error:
+                # Boundary failures must become traceable manual-review
+                # outcomes instead of escaping the claim workflow.
+                runtime_trace.record(
+                    "MODEL_FAILED",
+                    {
+                        "request_id": request_id,
+                        "error_type": type(error).__name__,
+                    },
+                )
+                return self._finish_manual_review(
+                    runtime_state=runtime_state,
+                    budget_usage=budget_usage,
+                    runtime_trace=runtime_trace,
+                    terminal_reason="model_boundary_error",
+                    problem_message=(
+                        "The model boundary raised " f"{type(error).__name__}."
+                    ),
+                )
+
             runtime_trace.record(
                 "MODEL_RESPONDED",
                 {
                     "request_id": model_response.request_id,
-                    "provider_request_id": (
-                        model_response.provider_request_id or ""
-                    ),
+                    "provider_request_id": (model_response.provider_request_id or ""),
                 },
             )
 
@@ -203,9 +214,7 @@ class OfflineAgentRuntime:
             # which rejected decision it must correct.
             current_response_text = model_response.response_text
             try:
-                parsed_action = parse_model_action(
-                    model_response.response_text
-                )
+                parsed_action = parse_model_action(model_response.response_text)
             except ModelOutputParseError as initial_parse_error:
                 try:
                     repair_outcome = execute_repair_model_call(
@@ -217,10 +226,16 @@ class OfflineAgentRuntime:
                         system_instructions=system_instructions,
                         task_context=current_task_context,
                         rejected_output=model_response.response_text,
-                        problem_messages=(
-                            str(initial_parse_error),
-                        ),
+                        problem_messages=(str(initial_parse_error),),
                         allowed_tool_names=self._allowed_tool_names,
+                    )
+                except RepairModelBoundaryError as error:
+                    return self._finish_manual_review(
+                        runtime_state=error.runtime_state,
+                        budget_usage=error.budget_usage,
+                        runtime_trace=runtime_trace,
+                        terminal_reason="model_boundary_error",
+                        problem_message=str(error),
                     )
                 except RuntimeBudgetExceededError as budget_error:
                     return self._finish_manual_review(
@@ -233,9 +248,7 @@ class OfflineAgentRuntime:
 
                 runtime_state = repair_outcome.runtime_state
                 budget_usage = repair_outcome.budget_usage
-                current_response_text = (
-                    repair_outcome.repaired_response_text
-                )
+                current_response_text = repair_outcome.repaired_response_text
 
                 timeout_result = self._timeout_result_if_expired(
                     runtime_started_at=runtime_started_at,
@@ -261,13 +274,8 @@ class OfflineAgentRuntime:
 
                 # Tool execution begins from PLANNING. Decision and
                 # manual-review actions can transition directly from REPAIRING.
-                if (
-                    parsed_action.action_type
-                    is RuntimeActionType.CALL_TOOL
-                ):
-                    runtime_state = runtime_state.transition_to(
-                        RuntimePhase.PLANNING
-                    )
+                if parsed_action.action_type is RuntimeActionType.CALL_TOOL:
+                    runtime_state = runtime_state.transition_to(RuntimePhase.PLANNING)
 
             if parsed_action.action_type is RuntimeActionType.REQUEST_MANUAL_REVIEW:
                 return self._finish_manual_review(
@@ -308,6 +316,14 @@ class OfflineAgentRuntime:
                         budget_usage=budget_usage,
                         runtime_trace=runtime_trace,
                         terminal_reason="tool_not_allowed",
+                        problem_message=str(error),
+                    )
+                except ToolBoundaryError as error:
+                    return self._finish_manual_review(
+                        runtime_state=error.runtime_state,
+                        budget_usage=error.budget_usage,
+                        runtime_trace=runtime_trace,
+                        terminal_reason="tool_boundary_error",
                         problem_message=str(error),
                     )
                 except RuntimeBudgetExceededError as error:
@@ -374,24 +390,40 @@ class OfflineAgentRuntime:
             if timeout_result is not None:
                 return timeout_result
 
-            runtime_state = runtime_state.transition_to(
-                RuntimePhase.PROPOSING_DECISION
-            )
+            runtime_state = runtime_state.transition_to(RuntimePhase.PROPOSING_DECISION)
             runtime_trace.record(
                 "DECISION_PROPOSED",
-                {
-                    "decision_field_count": len(
-                        parsed_action.decision_payload
-                    )
-                },
+                {"decision_field_count": len(parsed_action.decision_payload)},
             )
 
-            runtime_state = runtime_state.transition_to(
-                RuntimePhase.VALIDATING
-            )
-            validation_result = self._decision_validator.validate(
-                parsed_action.decision_payload
-            )
+            runtime_state = runtime_state.transition_to(RuntimePhase.VALIDATING)
+            # TODO(#3, #6): Hriday must pass accumulated EvidencePassage IDs
+            # into deterministic validation after Silas and Neha approve the
+            # retrieval and validation contracts.
+            try:
+                validation_result = self._decision_validator.validate(
+                    parsed_action.decision_payload
+                )
+            except Exception as error:
+                # Deterministic validation is a runtime boundary. An
+                # unexpected implementation failure must not approve or lose
+                # the proposed claim decision.
+                runtime_trace.record(
+                    "VALIDATION_FAILED",
+                    {
+                        "error_type": type(error).__name__,
+                    },
+                )
+                return self._finish_manual_review(
+                    runtime_state=runtime_state,
+                    budget_usage=budget_usage,
+                    runtime_trace=runtime_trace,
+                    terminal_reason="validation_boundary_error",
+                    problem_message=(
+                        "The validation boundary raised " f"{type(error).__name__}."
+                    ),
+                )
+
             runtime_trace.record(
                 "VALIDATION_RETURNED",
                 {"status": validation_result.status.value},
@@ -406,10 +438,7 @@ class OfflineAgentRuntime:
             if timeout_result is not None:
                 return timeout_result
 
-            if (
-                validation_result.status
-                is OfflineValidationStatus.ACCEPTED
-            ):
+            if validation_result.status is OfflineValidationStatus.ACCEPTED:
                 completed_state = runtime_state.transition_to(
                     RuntimePhase.COMPLETED,
                     terminal_reason="decision_accepted",
@@ -423,24 +452,15 @@ class OfflineAgentRuntime:
                     final_state=completed_state,
                     budget_usage=budget_usage,
                     trace_entries=runtime_trace.entries,
-                    validated_decision=(
-                        validation_result.validated_decision
-                    ),
+                    validated_decision=(validation_result.validated_decision),
                 )
 
-            problem_messages = (
-                validation_result.problem_messages
-                or (
-                    "Deterministic validation did not accept "
-                    "the decision.",
-                )
+            problem_messages = validation_result.problem_messages or (
+                "Deterministic validation did not accept " "the decision.",
             )
             problem_message = "; ".join(problem_messages)
 
-            if (
-                validation_result.status
-                is OfflineValidationStatus.MANUAL_REVIEW
-            ):
+            if validation_result.status is OfflineValidationStatus.MANUAL_REVIEW:
                 return self._finish_manual_review(
                     runtime_state=runtime_state,
                     budget_usage=budget_usage,
@@ -461,6 +481,14 @@ class OfflineAgentRuntime:
                     rejected_output=current_response_text,
                     problem_messages=problem_messages,
                     allowed_tool_names=self._allowed_tool_names,
+                )
+            except RepairModelBoundaryError as error:
+                return self._finish_manual_review(
+                    runtime_state=error.runtime_state,
+                    budget_usage=error.budget_usage,
+                    runtime_trace=runtime_trace,
+                    terminal_reason="model_boundary_error",
+                    problem_message=str(error),
                 )
             except RuntimeBudgetExceededError as budget_error:
                 return self._finish_manual_review(
@@ -495,10 +523,7 @@ class OfflineAgentRuntime:
                     problem_message=str(repair_parse_error),
                 )
 
-            if (
-                parsed_action.action_type
-                is RuntimeActionType.REQUEST_MANUAL_REVIEW
-            ):
+            if parsed_action.action_type is RuntimeActionType.REQUEST_MANUAL_REVIEW:
                 return self._finish_manual_review(
                     runtime_state=runtime_state,
                     budget_usage=budget_usage,
@@ -510,10 +535,7 @@ class OfflineAgentRuntime:
                     ),
                 )
 
-            if (
-                parsed_action.action_type
-                is not RuntimeActionType.PROPOSE_DECISION
-            ):
+            if parsed_action.action_type is not RuntimeActionType.PROPOSE_DECISION:
                 return self._finish_manual_review(
                     runtime_state=runtime_state,
                     budget_usage=budget_usage,

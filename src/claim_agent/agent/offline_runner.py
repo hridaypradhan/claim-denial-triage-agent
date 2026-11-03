@@ -38,7 +38,9 @@ from claim_agent.agent.scripted_ports import (
 # defines the required TraceEvent fields and persistence requirements.
 
 DEMO_RUN_ID = "offline-demo-medical-necessity"
-POLICY_SOURCE_ID = "POL-BCBSAZ-MRI-BRAIN@v1"
+# The fragment identifies the exact passage supporting the recommendation,
+# rather than citing the policy document as a whole.
+POLICY_SOURCE_ID = "POL-BCBSAZ-MRI-BRAIN@v1#P3"
 POLICY_TOOL_NAME = "retrieve_medical_policy"
 
 

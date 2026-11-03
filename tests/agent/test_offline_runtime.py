@@ -5,6 +5,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import Mock
 
+from claim_agent.agent.model_interface import ModelResponse
 from claim_agent.agent.offline_runtime import OfflineAgentRuntime
 from claim_agent.agent.runtime_budget import RuntimeBudgetLimits
 from claim_agent.agent.runtime_ports import (
@@ -152,11 +153,8 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
 
         model_client = ScriptedModelClient(
             [
-                ScriptedModelOutput(
-                    response_text='{"action": "propose_decision"'
-                ),
-                ScriptedModelOutput(
-                    response_text="""
+                ScriptedModelOutput(response_text='{"action": "propose_decision"'),
+                ScriptedModelOutput(response_text="""
                     {
                         "action": "propose_decision",
                         "decision": {
@@ -164,8 +162,7 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
                             "rationale": "Required evidence is missing."
                         }
                     }
-                    """
-                ),
+                    """),
             ]
         )
         decision_validator = ScriptedDecisionValidator(
@@ -202,10 +199,7 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
         self.assertEqual(result.budget_usage.total_steps_used, 2)
         self.assertIn(
             "REPAIR_ATTEMPTED",
-            [
-                entry.event_name
-                for entry in result.trace_entries
-            ],
+            [entry.event_name for entry in result.trace_entries],
         )
 
     def test_invalid_repair_output_stops_for_manual_review(self) -> None:
@@ -213,12 +207,8 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
 
         model_client = ScriptedModelClient(
             [
-                ScriptedModelOutput(
-                    response_text='{"action": "propose_decision"'
-                ),
-                ScriptedModelOutput(
-                    response_text='{"action": "propose_decision"'
-                ),
+                ScriptedModelOutput(response_text='{"action": "propose_decision"'),
+                ScriptedModelOutput(response_text='{"action": "propose_decision"'),
             ]
         )
         runtime = OfflineAgentRuntime(
@@ -340,9 +330,7 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
 
         result = runtime.run(
             run_id="run-5",
-            system_instructions=(
-                "Retrieve evidence before proposing an appeal."
-            ),
+            system_instructions=("Retrieve evidence before proposing an appeal."),
             task_context=("BCBS_AZ denied CPT 70553 for medical necessity."),
         )
 
@@ -401,20 +389,14 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
             [
                 OfflineValidationResult(
                     status=OfflineValidationStatus.REPAIRABLE,
-                    problem_messages=(
-                        "An appeal requires at least one citation.",
-                    ),
+                    problem_messages=("An appeal requires at least one citation.",),
                 ),
                 OfflineValidationResult(
                     status=OfflineValidationStatus.ACCEPTED,
                     validated_decision={
                         "recommended_disposition": "APPEAL",
-                        "rationale": (
-                            "Policy evidence supports an appeal."
-                        ),
-                        "citation_ids": [
-                            "POL-BCBSAZ-MRI-BRAIN@v1"
-                        ],
+                        "rationale": ("Policy evidence supports an appeal."),
+                        "citation_ids": ["POL-BCBSAZ-MRI-BRAIN@v1"],
                     },
                 ),
             ]
@@ -429,12 +411,8 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
 
         result = runtime.run(
             run_id="run-repairable-decision",
-            system_instructions=(
-                "Cite retrieved evidence for every appeal."
-            ),
-            task_context=(
-                "Review a synthetic MRI medical-necessity denial."
-            ),
+            system_instructions=("Cite retrieved evidence for every appeal."),
+            task_context=("Review a synthetic MRI medical-necessity denial."),
         )
 
         self.assertEqual(
@@ -499,15 +477,11 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
             [
                 OfflineValidationResult(
                     status=OfflineValidationStatus.REPAIRABLE,
-                    problem_messages=(
-                        "An appeal requires a valid citation.",
-                    ),
+                    problem_messages=("An appeal requires a valid citation.",),
                 ),
                 OfflineValidationResult(
                     status=OfflineValidationStatus.REPAIRABLE,
-                    problem_messages=(
-                        "The corrected citation is not recognized.",
-                    ),
+                    problem_messages=("The corrected citation is not recognized.",),
                 ),
             ]
         )
@@ -521,12 +495,8 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
 
         result = runtime.run(
             run_id="run-repair-limit",
-            system_instructions=(
-                "Use only citations already present in the evidence."
-            ),
-            task_context=(
-                "Review a synthetic MRI medical-necessity denial."
-            ),
+            system_instructions=("Use only citations already present in the evidence."),
+            task_context=("Review a synthetic MRI medical-necessity denial."),
         )
 
         self.assertEqual(
@@ -545,18 +515,14 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
     def test_runtime_timeout_stops_after_slow_model_response(self) -> None:
         """Elapsed runtime capacity should end in explicit manual review."""
 
-        model_client = ScriptedModelClient(
-            [
-                ScriptedModelOutput(response_text="""
+        model_client = ScriptedModelClient([ScriptedModelOutput(response_text="""
                     {
                         "action": "propose_decision",
                         "decision": {
                             "recommended_disposition": "APPEAL"
                         }
                     }
-                    """)
-            ]
-        )
+                    """)])
         monotonic_clock = Mock(
             side_effect=[
                 100.0,
@@ -669,9 +635,7 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
     ) -> None:
         """A tool observation cannot authorize an extra planning call."""
 
-        model_client = ScriptedModelClient(
-            [
-                ScriptedModelOutput(response_text="""
+        model_client = ScriptedModelClient([ScriptedModelOutput(response_text="""
                     {
                         "action": "call_tool",
                         "tool_name": "retrieve_medical_policy",
@@ -680,9 +644,7 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
                             "procedure_code": "70553"
                         }
                     }
-                    """)
-            ]
-        )
+                    """)])
         tool_dispatcher = ScriptedToolDispatcher(
             [
                 ExpectedToolCall(
@@ -729,6 +691,211 @@ class OfflineAgentRuntimeTests(unittest.TestCase):
         self.assertEqual(result.budget_usage.model_calls_used, 1)
         self.assertEqual(result.budget_usage.tool_calls_used, 1)
         self.assertEqual(len(model_client.received_requests), 1)
+
+    def test_dispatcher_exception_stops_for_manual_review(self) -> None:
+        """An unexpected tool timeout must not escape the runtime."""
+
+        class TimeoutToolDispatcher:
+            """Simulate a production dispatcher that fails unexpectedly."""
+
+            def dispatch(
+                self,
+                tool_name: str,
+                tool_arguments: object,
+            ) -> OfflineToolObservation:
+                """Raise instead of returning a normal failed observation."""
+
+                raise TimeoutError("The synthetic policy service did not respond.")
+
+        model_client = ScriptedModelClient([ScriptedModelOutput(response_text="""
+                    {
+                        "action": "call_tool",
+                        "tool_name": "retrieve_medical_policy",
+                        "tool_arguments": {
+                            "payer": "BCBS_AZ",
+                            "procedure_code": "70553"
+                        }
+                    }
+                    """)])
+        runtime = OfflineAgentRuntime(
+            model_client=model_client,
+            tool_dispatcher=TimeoutToolDispatcher(),
+            decision_validator=ScriptedDecisionValidator([]),
+            budget_limits=make_test_limits(),
+            allowed_tool_names=("retrieve_medical_policy",),
+        )
+
+        result = runtime.run(
+            run_id="run-tool-boundary-error",
+            system_instructions="Stop safely when retrieval fails.",
+            task_context="Review one synthetic MRI denial.",
+        )
+
+        self.assertEqual(
+            result.final_state.phase,
+            RuntimePhase.MANUAL_REVIEW,
+        )
+        self.assertEqual(
+            result.final_state.terminal_reason,
+            "tool_boundary_error",
+        )
+        self.assertEqual(result.budget_usage.model_calls_used, 1)
+        self.assertEqual(result.budget_usage.tool_calls_used, 1)
+        self.assertEqual(
+            [entry.event_name for entry in result.trace_entries][-2:],
+            ["TOOL_FAILED", "MANUAL_REVIEW"],
+        )
+        self.assertEqual(len(model_client.received_requests), 1)
+
+    def test_model_exception_stops_for_manual_review(self) -> None:
+        """An unexpected model failure must not escape the runtime."""
+
+        class TimeoutModelClient:
+            """Simulate a hosted model boundary that fails unexpectedly."""
+
+            def generate_response(self, request: object) -> object:
+                """Raise instead of returning a model response."""
+
+                raise TimeoutError("The synthetic model service did not respond.")
+
+        runtime = OfflineAgentRuntime(
+            model_client=TimeoutModelClient(),
+            tool_dispatcher=ScriptedToolDispatcher([]),
+            decision_validator=ScriptedDecisionValidator([]),
+            budget_limits=make_test_limits(),
+            allowed_tool_names=("retrieve_medical_policy",),
+        )
+
+        result = runtime.run(
+            run_id="run-model-boundary-error",
+            system_instructions="Stop safely when the model fails.",
+            task_context="Review one synthetic MRI denial.",
+        )
+
+        self.assertEqual(
+            result.final_state.phase,
+            RuntimePhase.MANUAL_REVIEW,
+        )
+        self.assertEqual(
+            result.final_state.terminal_reason,
+            "model_boundary_error",
+        )
+        self.assertEqual(result.budget_usage.model_calls_used, 1)
+        self.assertEqual(result.budget_usage.tool_calls_used, 0)
+        self.assertEqual(
+            [entry.event_name for entry in result.trace_entries][-2:],
+            ["MODEL_FAILED", "MANUAL_REVIEW"],
+        )
+
+    def test_validator_exception_stops_for_manual_review(self) -> None:
+        """An unexpected validator failure must not approve the decision."""
+
+        class FailingDecisionValidator:
+            """Simulate deterministic validation becoming unavailable."""
+
+            def validate(self, decision_payload: object) -> object:
+                """Raise instead of returning a validation result."""
+
+                raise RuntimeError(
+                    "The synthetic validator could not evaluate the decision."
+                )
+
+        model_client = ScriptedModelClient([ScriptedModelOutput(response_text="""
+                    {
+                        "action": "propose_decision",
+                        "decision": {
+                            "recommended_disposition": "APPEAL",
+                            "rationale": "Synthetic policy supports appeal."
+                        }
+                    }
+                    """)])
+        runtime = OfflineAgentRuntime(
+            model_client=model_client,
+            tool_dispatcher=ScriptedToolDispatcher([]),
+            decision_validator=FailingDecisionValidator(),
+            budget_limits=make_test_limits(),
+            allowed_tool_names=("retrieve_medical_policy",),
+        )
+
+        result = runtime.run(
+            run_id="run-validation-boundary-error",
+            system_instructions="Never bypass deterministic validation.",
+            task_context="Review one synthetic MRI denial.",
+        )
+
+        self.assertEqual(
+            result.final_state.phase,
+            RuntimePhase.MANUAL_REVIEW,
+        )
+        self.assertEqual(
+            result.final_state.terminal_reason,
+            "validation_boundary_error",
+        )
+        self.assertEqual(result.budget_usage.model_calls_used, 1)
+        self.assertEqual(
+            [entry.event_name for entry in result.trace_entries][-2:],
+            ["VALIDATION_FAILED", "MANUAL_REVIEW"],
+        )
+        self.assertIsNone(result.validated_decision)
+
+    def test_repair_model_exception_preserves_consumed_budgets(
+        self,
+    ) -> None:
+        """A failed repair call must remain visible and budgeted."""
+
+        class RepairTimeoutModelClient:
+            """Return malformed output, then fail during its correction."""
+
+            def __init__(self) -> None:
+                """Track how many model requests have been received."""
+
+                self.received_request_count = 0
+
+            def generate_response(self, request: object) -> object:
+                """Return one malformed response before timing out."""
+
+                self.received_request_count += 1
+
+                if self.received_request_count == 1:
+                    return ModelResponse(
+                        request_id=request.request_id,
+                        response_text='{"action": "propose_decision"',
+                        provider_request_id="initial-malformed-response",
+                    )
+
+                raise TimeoutError("The synthetic repair model did not respond.")
+
+        model_client = RepairTimeoutModelClient()
+        runtime = OfflineAgentRuntime(
+            model_client=model_client,
+            tool_dispatcher=ScriptedToolDispatcher([]),
+            decision_validator=ScriptedDecisionValidator([]),
+            budget_limits=make_test_limits(),
+            allowed_tool_names=("retrieve_medical_policy",),
+        )
+
+        result = runtime.run(
+            run_id="run-repair-boundary-error",
+            system_instructions="Repair malformed structured output once.",
+            task_context="Review one synthetic MRI denial.",
+        )
+
+        self.assertEqual(
+            result.final_state.phase,
+            RuntimePhase.MANUAL_REVIEW,
+        )
+        self.assertEqual(
+            result.final_state.terminal_reason,
+            "model_boundary_error",
+        )
+        self.assertEqual(result.budget_usage.model_calls_used, 2)
+        self.assertEqual(result.budget_usage.repair_attempts_used, 1)
+        self.assertEqual(result.budget_usage.total_steps_used, 2)
+        self.assertEqual(model_client.received_request_count, 2)
+        self.assertEqual(
+            [entry.event_name for entry in result.trace_entries][-2:],
+            ["MODEL_FAILED", "MANUAL_REVIEW"],
+        )
 
 
 if __name__ == "__main__":

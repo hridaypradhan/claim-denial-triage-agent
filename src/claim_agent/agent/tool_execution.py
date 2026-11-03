@@ -27,10 +27,33 @@ from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace
 
 # TODO(#3): Replace the temporary dispatcher and observation types with the
 # approved ToolResult and EvidencePassage contract adapter.
+# TODO(#3): Hriday must implement the approved single-retry behavior after
+# Silas decides whether retry ownership belongs to the dispatcher or runtime.
 
 
 class ToolNotAllowedError(ValueError):
     """Raised when a model requests a tool outside its allowlist."""
+
+
+class ToolBoundaryError(RuntimeError):
+    """Carry runtime values when the dispatcher raises unexpectedly."""
+
+    def __init__(
+        self,
+        runtime_state: AgentRuntimeState,
+        budget_usage: RuntimeBudgetUsage,
+        original_error: Exception,
+    ) -> None:
+        """Preserve consumed capacity and describe the failed boundary."""
+
+        self.runtime_state = runtime_state
+        self.budget_usage = budget_usage
+        self.original_error = original_error
+
+        super().__init__(
+            "The tool dispatcher raised "
+            f"{type(original_error).__name__}."
+        )
 
 
 @dataclass(frozen=True)
@@ -77,13 +100,31 @@ def execute_tool_action(
         {
             "tool_name": action.tool_name,
             "argument_count": len(action.tool_arguments),
+            "tool_arguments": dict(action.tool_arguments),
         },
     )
 
-    observation = tool_dispatcher.dispatch(
-        action.tool_name,
-        action.tool_arguments,
-    )
+    try:
+        observation = tool_dispatcher.dispatch(
+            action.tool_name,
+            action.tool_arguments,
+        )
+    except Exception as error:
+        # A dispatcher exception is different from a normal failed
+        # observation. The runtime must stop safely while retaining the tool
+        # call that already consumed budget capacity.
+        runtime_trace.record(
+            "TOOL_FAILED",
+            {
+                "tool_name": action.tool_name,
+                "error_type": type(error).__name__,
+            },
+        )
+        raise ToolBoundaryError(
+            runtime_state=waiting_state,
+            budget_usage=updated_budget_usage,
+            original_error=error,
+        ) from error
     runtime_trace.record(
         "TOOL_RETURNED",
         {
@@ -92,6 +133,7 @@ def execute_tool_action(
             "error_code": observation.error_code or "",
             "retryable": observation.retryable,
             "source_count": len(observation.source_ids),
+            "source_ids": list(observation.source_ids),
         },
     )
 

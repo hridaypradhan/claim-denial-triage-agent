@@ -36,6 +36,10 @@ class OfflineRunnerIntegrationTests(unittest.TestCase):
             [POLICY_SOURCE_ID],
         )
         self.assertEqual(
+            POLICY_SOURCE_ID,
+            "POL-BCBSAZ-MRI-BRAIN@v1#P3",
+        )
+        self.assertEqual(
             summary["budget_usage"],
             {
                 "model_calls": 2,
