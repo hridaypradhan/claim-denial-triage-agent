@@ -21,6 +21,40 @@
       }
     },
     {
+      "source_id": "POL-AETNA-PT-THERAPY",
+      "source_type": "medical_policy",
+      "version": "1",
+      "path": "policies/POL-AETNA-PT-THERAPY.v1.json",
+      "payer": "AETNA",
+      "procedure_codes": ["97110"],
+      "effective_from": "2025-01-01",
+      "effective_to": "2026-03-31",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "POL-AETNA-PT-THERAPY",
+      "source_type": "medical_policy",
+      "version": "2",
+      "path": "policies/POL-AETNA-PT-THERAPY.v2.json",
+      "payer": "AETNA",
+      "procedure_codes": ["97110"],
+      "effective_from": "2026-04-01",
+      "effective_to": null,
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
       "source_id": "ENC-CLM-2026-005097-CN",
       "source_type": "encounter_note",
       "version": "1",
