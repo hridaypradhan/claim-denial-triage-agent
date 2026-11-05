@@ -47,9 +47,10 @@ class AgentStatus(str, Enum):
     MANUAL_REVIEW_REQUIRED = "MANUAL_REVIEW_REQUIRED"
 
 class CriterionStatus(str, Enum):
-    MET = "MET"
+    SUPPORTED = "SUPPORTED"
     NOT_MET = "NOT_MET"
-    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    UNKNOWN = "UNKNOWN"
+    CONFLICTING = "CONFLICTING"
 
 # --- Shared Base Configuration ---
 # Enforces strict typing and forbids unknown fields to prevent LLM hallucinations
@@ -59,7 +60,6 @@ class StrictContract(BaseModel):
 # --- Contract v0.1: Tools (Silas) ---
 
 class EvidencePassage(StrictContract):
-    """Deterministically ordered by source_id, then version, then passage_id."""
     passage_id: str = Field(description="Unique ID for this specific passage")
     source_id: str = Field(description="The source document identifier")
     source_type: str = Field(description="The type of the source document")
