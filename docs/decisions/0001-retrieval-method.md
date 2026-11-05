@@ -17,7 +17,7 @@ The agent must cite policy and encounter passages that deterministic validation 
 
 ## Decision
 
-Use option 2.
+Use option 2. The `retrieve_medical_policy` tool is implemented by `retrieve_policy_passages` in `src/claim_agent/tools/policy_retrieval.py`.
 
 1. **Hard filter.** `retrieve_medical_policy` first selects manifest entries where `payer` equals the claim payer, `procedure_codes` contains the service-line code, and `effective_from <= service_date` and (`effective_to` is null or `service_date <= effective_to`).
 2. **No fallback.** If the filter matches nothing, the tool returns status `NO_MATCH`. It never relaxes payer, procedure, or date. If it matches more than one policy version, it returns status `AMBIGUOUS_POLICY` rather than choosing one. Both lead to manual review downstream.
