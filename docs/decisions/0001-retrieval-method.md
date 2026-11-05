@@ -1,6 +1,6 @@
 # 0001: Retrieval method and knowledge format
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Owner:** Silas Sangmin
 - **Reviewers:** Hriday Pradhan (required), Neha Kashyap (citation contract), Sachin Kothandaraman (provenance metrics)
 - **Affected contracts:** `ToolResult`, `EvidencePassage`
