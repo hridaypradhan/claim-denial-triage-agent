@@ -1,0 +1,54 @@
+{
+  "source_id": "POL-AETNA-PT-THERAPY",
+  "source_type": "medical_policy",
+  "version": "1",
+  "synthetic": true,
+  "synthetic_notice": "Synthetic policy written for this project. It is modeled on the general structure of public outpatient therapy policies but is not the text or position of Aetna.",
+  "title": "Outpatient Physical Therapy: Therapeutic Exercise",
+  "payer": "AETNA",
+  "procedure_codes": ["97110"],
+  "effective_from": "2025-01-01",
+  "effective_to": "2026-03-31",
+  "criteria": [
+    {
+      "criterion_id": "A",
+      "summary": "Functional deficit documented at evaluation",
+      "passage_id": "POL-AETNA-PT-THERAPY@v1#P3"
+    },
+    {
+      "criterion_id": "B",
+      "summary": "Plan of care signed by the treating clinician",
+      "passage_id": "POL-AETNA-PT-THERAPY@v1#P4"
+    }
+  ],
+  "criteria_formulas": {
+    "97110": "A AND B"
+  },
+  "passages": [
+    {
+      "passage_id": "POL-AETNA-PT-THERAPY@v1#P1",
+      "section": "1. Scope",
+      "text": "This policy applies to outpatient professional claims for therapeutic exercise, CPT 97110, with dates of service from January 1, 2025 through March 31, 2026."
+    },
+    {
+      "passage_id": "POL-AETNA-PT-THERAPY@v1#P2",
+      "section": "2. Coverage statement",
+      "text": "Therapeutic exercise is considered medically necessary when criteria 3.1 and 3.2 are met."
+    },
+    {
+      "passage_id": "POL-AETNA-PT-THERAPY@v1#P3",
+      "section": "3.1 Functional deficit",
+      "text": "The evaluation documents a functional deficit, such as limited range of motion, reduced strength, or impaired gait, that affects daily activity."
+    },
+    {
+      "passage_id": "POL-AETNA-PT-THERAPY@v1#P4",
+      "section": "3.2 Plan of care",
+      "text": "A plan of care stating the treatment goals, frequency, and duration is signed by the treating clinician before therapy begins."
+    },
+    {
+      "passage_id": "POL-AETNA-PT-THERAPY@v1#P5",
+      "section": "4. Documentation",
+      "text": "Documentation supporting each applicable criterion must be available in the medical record on request. Absence of documentation for a required criterion does not establish that the criterion was not met."
+    }
+  ]
+}

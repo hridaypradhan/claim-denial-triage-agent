@@ -281,7 +281,7 @@ Hold two brief progress syncs and one integration demonstration per week. Each o
 3. Implement the baseline adapter and deterministic router.
 4. Implement the scripted fake model and fake dispatcher.
 5. Add the offline vertical-slice integration test.
-6. ~~Select the initial payer/procedure policy subset~~ — done: BCBS_AZ brain MRI (knowledge corpus v0). Next: add a second payer/procedure pair and an effective-date test case (Silas).
+6. ~~Select the initial payer/procedure policy subset~~ — done: BCBS_AZ brain MRI and AETNA physical therapy, with dated policy versions (knowledge corpus v0).
 7. Draft the dataset annotation rubric.
 
 Do not replace fake boundaries with hosted-model calls or production retrieval until the offline vertical slice passes.

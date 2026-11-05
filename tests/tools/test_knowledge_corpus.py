@@ -1,8 +1,10 @@
-"""Integrity checks for the frozen knowledge corpus in knowledge/."""
+"""Integrity checks for the knowledge corpus in knowledge/."""
 
 import json
 import re
 import unittest
+from datetime import date
+from itertools import combinations
 from pathlib import Path
 
 KNOWLEDGE = Path(__file__).resolve().parents[2] / "knowledge"
@@ -12,6 +14,21 @@ FORMULA_OPERATORS = {"AND", "OR"}
 def load_json(path):
     with open(path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def date_ranges_overlap(first, second):
+    """Return whether two manifest entries share an effective date."""
+
+    latest_start = max(
+        date.fromisoformat(first["effective_from"]),
+        date.fromisoformat(second["effective_from"]),
+    )
+    end_dates = [
+        date.fromisoformat(entry["effective_to"])
+        for entry in (first, second)
+        if entry["effective_to"] is not None
+    ]
+    return not end_dates or latest_start <= min(end_dates)
 
 
 class KnowledgeCorpusTest(unittest.TestCase):
@@ -38,6 +55,28 @@ class KnowledgeCorpusTest(unittest.TestCase):
             with self.subTest(source=entry["source_id"]):
                 for field in ("source_id", "version", "source_type"):
                     self.assertEqual(entry[field], doc[field], field)
+
+    def test_manifest_matches_policy_filter_fields(self):
+        fields = ("payer", "procedure_codes", "effective_from", "effective_to")
+        for entry, doc in self.sources:
+            if doc["source_type"] != "medical_policy":
+                continue
+            with self.subTest(source=entry["source_id"], version=entry["version"]):
+                for field in fields:
+                    self.assertEqual(entry[field], doc[field], field)
+
+    def test_policies_for_one_payer_and_code_never_overlap(self):
+        policies = [
+            entry
+            for entry in self.manifest["sources"]
+            if entry["source_type"] == "medical_policy"
+        ]
+        for first, second in combinations(policies, 2):
+            shared_codes = set(first["procedure_codes"]) & set(second["procedure_codes"])
+            if first["payer"] != second["payer"] or not shared_codes:
+                continue
+            with self.subTest(first=first["path"], second=second["path"]):
+                self.assertFalse(date_ranges_overlap(first, second))
 
     def test_passage_ids_are_unique_and_well_formed(self):
         seen = set()
