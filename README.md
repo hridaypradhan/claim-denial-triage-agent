@@ -75,7 +75,9 @@ The unchanged comparison baseline is preserved under [`baseline/`](baseline/) an
 
 ### Knowledge corpus v0
 
-The [`knowledge/`](knowledge/) directory contains the first frozen evidence snapshot for the planned retrieval tools:
+The [`knowledge/`](knowledge/) directory contains the evidence snapshot `knowledge-v0` for the planned retrieval tools. It is still being assembled: it freezes when #11 or #12 first uses it, and after that its contents do not change under this ID.
+
+It contains:
 
 - A [manifest](knowledge/manifest.json) listing every source with its version, payer, procedure codes or claim ID, effective dates, and origin.
 - A synthetic medical policy for brain MRI (CPT 70551–70553) under the `BCBS_AZ` payer profile, with a criteria formula for each procedure code (`A AND B` for 70551 and 70552; `A AND B AND (C OR D)` for 70553). It is not the payer's actual policy.

@@ -1,4 +1,4 @@
-"""Integrity checks for the frozen knowledge corpus in knowledge/."""
+"""Integrity checks for the knowledge corpus in knowledge/."""
 
 import json
 import re
