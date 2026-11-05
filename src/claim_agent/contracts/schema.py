@@ -3,6 +3,8 @@ from typing import List, Optional, Dict, Any, Literal
 from enum import Enum
 from datetime import date
 
+CONTRACT_VERSION = "0.1"
+
 # --- Enums ---
 
 class Disposition(str, Enum):
@@ -13,6 +15,19 @@ class Disposition(str, Enum):
     BILL_PATIENT = "BILL_PATIENT"
     WRITE_OFF = "WRITE_OFF"
     NO_ACTION_CONTRACTUAL = "NO_ACTION_CONTRACTUAL"
+
+class RootCause(str, Enum):
+    AUTHORIZATION = "AUTHORIZATION"
+    CODING = "CODING"
+    MEDICAL_NECESSITY = "MEDICAL_NECESSITY"
+    BUNDLING_NCCI = "BUNDLING_NCCI"
+    DUPLICATE = "DUPLICATE"
+    TIMELY_FILING = "TIMELY_FILING"
+    REGISTRATION_ELIGIBILITY = "REGISTRATION_ELIGIBILITY"
+    COORDINATION_OF_BENEFITS = "COORDINATION_OF_BENEFITS"
+    NON_COVERED_BENEFIT = "NON_COVERED_BENEFIT"
+    CONTRACTUAL = "CONTRACTUAL"
+    UNKNOWN = "UNKNOWN"
 
 class EvidenceStatus(str, Enum):
     MISSING = "MISSING"
@@ -53,7 +68,6 @@ class CriterionStatus(str, Enum):
     CONFLICTING = "CONFLICTING"
 
 # --- Shared Base Configuration ---
-# Enforces strict typing and forbids unknown fields to prevent LLM hallucinations
 class StrictContract(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -76,6 +90,7 @@ class EvidencePassage(StrictContract):
         return self
 
 class ToolResult(StrictContract):
+    contract_version: str = Field(default=CONTRACT_VERSION)
     request_id: str = Field(description="Unique identifier for the tool request")
     tool_name: str = Field(description="Name of the tool executed")
     status: ToolStatus
@@ -86,23 +101,29 @@ class ToolResult(StrictContract):
     retryable: bool = Field(default=False)
 
     @model_validator(mode='after')
-    def validate_status_relationships(self):
+    def validate_tool_relationships(self):
         if self.status == ToolStatus.OK:
             if self.error_code is not None or self.retryable:
                 raise ValueError("error_code must be null and retryable False when status is OK")
         else:
             if self.error_code is None:
                 raise ValueError("error_code is required when status is ERROR")
+        
+        # Ensure source_ids equals the unique source IDs from evidence_passages (Hriday's rule)
+        expected_sources = {p.source_id for p in self.evidence_passages}
+        if set(self.source_ids) != expected_sources:
+            raise ValueError("source_ids must exactly match the unique source IDs represented in evidence_passages")
+        
         return self
 
 # --- Contract v0.1: Routing (Hriday) ---
 
 class BaselineFinding(StrictContract):
-    contract_version: str = Field(default="0.1")
+    contract_version: str = Field(default=CONTRACT_VERSION)
     claim_id: str
     service_line_id: int
     denial_codes: List[str]
-    root_cause: str
+    root_cause: RootCause
     baseline_disposition: Disposition
     required_evidence: List[str] = Field(default_factory=list)
     rationale: str
@@ -110,6 +131,9 @@ class BaselineFinding(StrictContract):
     deadline_status: str
 
 class RouteDecision(StrictContract):
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    claim_id: str
+    service_line_id: int
     outcome: RouteOutcome
     reason_code: str
     routing_reason: str
@@ -124,9 +148,11 @@ class CriterionAssessment(StrictContract):
     citation_ids: List[str] = Field(default_factory=list)
 
 class AgentDecision(StrictContract):
-    contract_version: str = Field(default="0.1")
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    decision_id: str
     claim_id: str
     service_line_id: int
+    root_cause: RootCause
     recommended_disposition: Disposition
     actions: List[str] = Field(default_factory=list)
     criterion_assessments: List[CriterionAssessment] = Field(default_factory=list)
@@ -143,8 +169,25 @@ class ValidationProblem(StrictContract):
     is_repairable: bool
 
 class ValidationResult(StrictContract):
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    decision_id: str
+    claim_id: str
+    service_line_id: int
     outcome: ValidationOutcome
     approval_state: Literal["PENDING_REVIEW"] = Field(default="PENDING_REVIEW")
     validation_problems: List[ValidationProblem] = Field(default_factory=list)
-    validated_decision: Optional[AgentDecision] = Field(None, description="Present only if ACCEPTED")
+    validated_decision: Optional[AgentDecision] = Field(None)
     manual_review_reasons: List[str] = Field(default_factory=list)
+
+    @model_validator(mode='after')
+    def validate_outcomes(self):
+        # Hriday's exact ACCEPTED/REPAIRABLE/REJECTED strictness rules
+        if self.outcome == ValidationOutcome.ACCEPTED:
+            if not self.validated_decision:
+                raise ValueError("validated_decision is required for ACCEPTED outcome.")
+        elif self.outcome in (ValidationOutcome.REPAIRABLE, ValidationOutcome.REJECTED_MANUAL_REVIEW):
+            if self.validated_decision:
+                raise ValueError("validated_decision must be omitted for repairable or manual review outcomes.")
+            if self.outcome == ValidationOutcome.REJECTED_MANUAL_REVIEW and not self.manual_review_reasons:
+                raise ValueError("At least one manual_review_reasons is required for REJECTED_MANUAL_REVIEW.")
+        return self
