@@ -1,0 +1,54 @@
+{
+  "manifest_version": "0.1",
+  "snapshot_id": "knowledge-v0",
+  "note": "Every source the read-only tools may return. Tools resolve sources only through this manifest. All entries are synthetic unless origin.url is set and origin.terms_status is 'permitted'.",
+  "sources": [
+    {
+      "source_id": "POL-BCBSAZ-MRI-BRAIN",
+      "source_type": "medical_policy",
+      "version": "1",
+      "path": "policies/POL-BCBSAZ-MRI-BRAIN.v1.json",
+      "payer": "BCBS_AZ",
+      "procedure_codes": ["70551", "70552", "70553"],
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-005097-CN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-005097-CN.v1.json",
+      "claim_id": "CLM-2026-005097",
+      "document_type": "clinical_note",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-005097-PN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-005097-PN.v1.json",
+      "claim_id": "CLM-2026-005097",
+      "document_type": "progress_notes",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    }
+  ]
+}

@@ -62,15 +62,22 @@ Primary ownership means coordinating design, implementation, tests, and document
 **Owns**
 
 - Common tool dispatcher and argument validation at the tool boundary.
-- Denial-code and payer-profile lookup wrappers.
-- Policy retrieval, encounter-note retrieval, and eligibility-record retrieval.
-- Knowledge manifests, passage IDs, effective-date filtering, provenance, and no-match/error responses.
+- Fake dispatcher with scripted tool results for the offline vertical slice.
+- Denial-code and payer-profile lookup wrappers; payer profiles report their version and whether values are verified or illustrative.
+- Policy retrieval, encounter-note retrieval, and eligibility-record retrieval. All tools are read-only.
+- Policy matching that filters by payer, procedure, and service date before ranking, with no fallback to another payer's policy or a different effective date.
+- Encounter notes returned as numbered, citable passages, with unavailable documents reported explicitly.
+- Eligibility records returned without deciding eligibility. This tool is cut first if the schedule slips.
+- Knowledge manifests, passage IDs, provenance, and no-match/error responses.
+- Policy corpus selection and source metadata: URL, access date, effective date, payer, procedure, section, and version. A policy is included only when its terms of use permit.
+- The retrieval-method architecture decision.
 
 **Delivers**
 
 - Typed `ToolResult` records containing status, data, source IDs, and error codes.
 - Versioned `EvidencePassage` records that can be resolved deterministically.
-- Tests for success, missing data, no match, incompatible policy, malformed request, and transient failure.
+- A fake dispatcher for Hriday's offline vertical slice.
+- Tests for success, missing data, unavailable documents, no match, incompatible policy, malformed request, transient failure, and timeout.
 
 **Does not own**
 
@@ -147,6 +154,8 @@ Primary ownership means coordinating design, implementation, tests, and document
 | Baseline adapter and deterministic router | Neha | Baseline regression tests |
 | Tool dispatcher and knowledge manifest | Silas | Contract approval from Neha; runtime review from Hriday |
 | Policy, encounter, and eligibility tools | Silas | Evaluation provenance requirements from Sachin |
+| Fake dispatcher for the offline vertical slice | Silas | Tool contracts from Neha; consumer review from Hriday |
+| Policy corpus selection and source metadata | Silas | Payer/procedure coverage needs from Sachin |
 | Fake model and offline vertical slice | Hriday | Fake dispatcher from Silas; validators from Neha |
 | Hosted-model runtime and prompts | Hriday | Stable tool and decision contracts |
 | Final validators and review package | Neha | Agent decision from Hriday; resolvable sources from Silas |
@@ -155,6 +164,8 @@ Primary ownership means coordinating design, implementation, tests, and document
 | End-to-end evaluation report | Sachin | Frozen versions of all components |
 | Public README accuracy | PR author | Reviewer verifies public claims and commands |
 | This team guide | Affected owner | All affected owners approve scope/process changes |
+
+The following cross-team work remains unassigned: the `calculate_deadline` tool wrapper, transient-failure retry ownership, the per-claim document inventory, and untrusted-text handling in tool results. Each must be recorded in a GitHub issue before implementation and added to this table only after the affected owners agree.
 
 If work does not clearly fit one row, open an issue and assign an owner before implementation. Do not assume another workstream will cover it.
 
@@ -270,7 +281,7 @@ Hold two brief progress syncs and one integration demonstration per week. Each o
 3. Implement the baseline adapter and deterministic router.
 4. Implement the scripted fake model and fake dispatcher.
 5. Add the offline vertical-slice integration test.
-6. Select the initial payer/procedure policy subset.
+6. ~~Select the initial payer/procedure policy subset~~ — done: BCBS_AZ brain MRI (knowledge corpus v0). Next: add a second payer/procedure pair and an effective-date test case (Silas).
 7. Draft the dataset annotation rubric.
 
 Do not replace fake boundaries with hosted-model calls or production retrieval until the offline vertical slice passes.
