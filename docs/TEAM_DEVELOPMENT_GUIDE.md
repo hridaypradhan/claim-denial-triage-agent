@@ -196,7 +196,7 @@ Later work may be developed behind fake interfaces, but it cannot merge before i
 7. Run the baseline once and the agent three times per held-out case.
 8. Never tune against held-out failures; preserve them for final analysis.
 
-The trace and run-configuration format that evaluation depends on is defined in [decision 0001](decisions/0001-trace-and-run-config.md), with example traces in [`evaluation/examples/`](../evaluation/examples/).
+The proposed trace and run-configuration format that evaluation depends on is in [decision 0002](decisions/0002-trace-and-run-config.md), with example traces and a config-hash test vector in [`evaluation/examples/`](../evaluation/examples/). It is not authoritative until the decision's status is `Accepted`.
 
 ## Git and pull-request workflow
 
