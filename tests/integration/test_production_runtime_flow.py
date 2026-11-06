@@ -14,6 +14,7 @@ from claim_agent.agent.scripted_model import (
     ScriptedModelClient,
     ScriptedModelOutput,
 )
+from claim_agent.agent.tool_request_guard import ClaimToolContext
 from claim_agent.contracts import (
     BaselineFinding,
     Disposition,
@@ -60,6 +61,17 @@ def make_baseline_finding() -> BaselineFinding:
         rationale=("Medical-necessity review requires policy and encounter evidence."),
         filing_deadline=date(2026, 12, 31),
         deadline_status="ACTIVE",
+    )
+
+
+def make_claim_tool_context() -> ClaimToolContext:
+    """Create trusted retrieval fields for the integrated claim."""
+
+    return ClaimToolContext(
+        claim_id=CLAIM_ID,
+        payer="BCBS_AZ",
+        procedure_code="70553",
+        service_date=date(2026, 6, 2),
     )
 
 
@@ -191,6 +203,7 @@ class ProductionRuntimeFlowTests(unittest.TestCase):
             model_client=make_scripted_model(),
             dispatcher=shared_dispatcher,
             baseline_finding=make_baseline_finding(),
+            claim_context=make_claim_tool_context(),
             route_decision=make_route_decision(),
             budget_limits=RuntimeBudgetLimits(
                 max_model_calls=3,
@@ -266,8 +279,7 @@ class ProductionRuntimeFlowTests(unittest.TestCase):
         )
 
         retrieved_passage_ids = {
-            passage.passage_id
-            for passage in integrated_result.retrieved_evidence
+            passage.passage_id for passage in integrated_result.retrieved_evidence
         }
 
         self.assertTrue(set(POLICY_PASSAGE_IDS).issubset(retrieved_passage_ids))

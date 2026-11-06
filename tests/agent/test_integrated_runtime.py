@@ -21,6 +21,7 @@ from claim_agent.agent.scripted_model import (
     ScriptedModelClient,
     ScriptedModelOutput,
 )
+from claim_agent.agent.tool_request_guard import ClaimToolContext
 from claim_agent.agent.tool_result_adapter import SharedToolDispatcher
 from claim_agent.contracts import (
     BaselineFinding,
@@ -47,6 +48,17 @@ def make_baseline_finding() -> BaselineFinding:
         rationale="The applicable policy must be interpreted.",
         filing_deadline=date(2026, 12, 31),
         deadline_status="ACTIVE",
+    )
+
+
+def make_claim_tool_context() -> ClaimToolContext:
+    """Create trusted retrieval fields for the integrated test claim."""
+
+    return ClaimToolContext(
+        claim_id=CLAIM_ID,
+        payer="BCBS_AZ",
+        procedure_code="70553",
+        service_date=date(2026, 6, 2),
     )
 
 
@@ -120,6 +132,7 @@ class IntegratedRuntimeTests(unittest.TestCase):
             model_client=model_client,
             dispatcher=dispatcher,
             baseline_finding=make_baseline_finding(),
+            claim_context=make_claim_tool_context(),
             route_decision=make_route_decision(),
             budget_limits=make_budget_limits(),
             as_of=date(2026, 11, 6),
@@ -205,6 +218,7 @@ class IntegratedRuntimeTests(unittest.TestCase):
             model_client=model_client,
             dispatcher=dispatcher,
             baseline_finding=make_baseline_finding(),
+            claim_context=make_claim_tool_context(),
             route_decision=make_route_decision(),
             budget_limits=make_budget_limits(),
             as_of=date(2026, 11, 6),
@@ -277,6 +291,7 @@ class IntegratedRuntimeTests(unittest.TestCase):
                         model_client=model_client,
                         dispatcher=dispatcher,
                         baseline_finding=make_baseline_finding(),
+                        claim_context=make_claim_tool_context(),
                         route_decision=make_route_decision(blocked_outcome),
                         budget_limits=make_budget_limits(),
                         as_of=date(2026, 11, 6),

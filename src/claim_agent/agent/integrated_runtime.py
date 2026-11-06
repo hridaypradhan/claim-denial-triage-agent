@@ -22,6 +22,7 @@ from claim_agent.agent.production_boundaries import (
 )
 from claim_agent.agent.runtime_budget import RuntimeBudgetLimits
 from claim_agent.agent.runtime_case import prepare_runtime_case
+from claim_agent.agent.tool_request_guard import ClaimToolContext
 from claim_agent.agent.tool_result_adapter import SharedToolDispatcher
 from claim_agent.contracts import (
     AgentDecision,
@@ -52,6 +53,7 @@ def run_integrated_case(
     model_client: ModelClient,
     dispatcher: SharedToolDispatcher,
     baseline_finding: BaselineFinding,
+    claim_context: ClaimToolContext,
     route_decision: RouteDecision,
     budget_limits: RuntimeBudgetLimits,
     as_of: date,
@@ -72,6 +74,7 @@ def run_integrated_case(
     boundaries = build_production_runtime_boundaries(
         dispatcher=dispatcher,
         baseline_finding=baseline_finding,
+        claim_context=claim_context,
         as_of=as_of,
     )
 
@@ -96,12 +99,8 @@ def run_integrated_case(
         knowledge_snapshot_id=knowledge_snapshot_id,
         finding=baseline_finding,
         route_outcome=route_decision.outcome,
-        proposed_decision=(
-            boundaries.decision_validator.last_proposed_decision
-        ),
-        validation_result=(
-            boundaries.decision_validator.last_validation_result
-        ),
+        proposed_decision=(boundaries.decision_validator.last_proposed_decision),
+        validation_result=(boundaries.decision_validator.last_validation_result),
         agent_terminal_reason=runtime_result.final_state.terminal_reason,
     )
 
@@ -109,11 +108,7 @@ def run_integrated_case(
         runtime_result=runtime_result,
         retrieved_evidence=boundaries.evidence_store.evidence_passages,
         policy_formula=boundaries.evidence_store.policy_formula,
-        proposed_decision=(
-            boundaries.decision_validator.last_proposed_decision
-        ),
-        validation_result=(
-            boundaries.decision_validator.last_validation_result
-        ),
+        proposed_decision=(boundaries.decision_validator.last_proposed_decision),
+        validation_result=(boundaries.decision_validator.last_validation_result),
         output_package=output_package,
     )

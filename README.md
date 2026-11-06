@@ -131,8 +131,12 @@ through the merged project boundaries:
   model or tool call.
 - The route-derived tool allowlist controls real local policy and encounter
   retrieval.
+- A claim-bound dispatcher guard requires policy payer, procedure, and service
+  date—and encounter claim ID—to match the active claim before retrieval.
 - Retrieved passages are stored per run and passed to deterministic safety
   validation.
+- Policy-criterion formulas use a purpose-built Boolean parser rather than
+  executable expression evaluation; malformed formulas fail closed.
 - The validated shared `AgentDecision` and `ValidationResult` are preserved as
   audit artifacts.
 - Structured validation problems retain their stable code, field path,

@@ -18,6 +18,7 @@ from claim_agent.contracts import (
     ToolResult,
     ToolStatus,
 )
+from claim_agent.agent.tool_request_guard import ClaimToolContext
 
 CLAIM_ID = "CLM-BOUNDARY-001"
 PASSAGE_ID = "ENC-BOUNDARY-001@v1#P1"
@@ -69,6 +70,19 @@ def make_baseline_finding() -> BaselineFinding:
     )
 
 
+def make_claim_tool_context(
+    claim_id: str = CLAIM_ID,
+) -> ClaimToolContext:
+    """Create trusted retrieval fields for the synthetic claim."""
+
+    return ClaimToolContext(
+        claim_id=claim_id,
+        payer="BCBS_AZ",
+        procedure_code="70553",
+        service_date=date(2026, 6, 2),
+    )
+
+
 def make_decision_payload() -> dict[str, object]:
     """Create a model-shaped proposal grounded in the encounter passage."""
 
@@ -98,6 +112,7 @@ class ProductionRuntimeBoundariesTests(unittest.TestCase):
             dispatcher=SyntheticEncounterDispatcher(),
             baseline_finding=make_baseline_finding(),
             as_of=date(2026, 11, 6),
+            claim_context=make_claim_tool_context(),
         )
 
         boundaries.tool_dispatcher.dispatch(
@@ -128,11 +143,13 @@ class ProductionRuntimeBoundariesTests(unittest.TestCase):
             dispatcher=SyntheticEncounterDispatcher(),
             baseline_finding=make_baseline_finding(),
             as_of=date(2026, 11, 6),
+            claim_context=make_claim_tool_context(),
         )
         second_run = build_production_runtime_boundaries(
             dispatcher=SyntheticEncounterDispatcher(),
             baseline_finding=make_baseline_finding(),
             as_of=date(2026, 11, 6),
+            claim_context=make_claim_tool_context(),
         )
 
         first_run.tool_dispatcher.dispatch(
@@ -156,6 +173,19 @@ class ProductionRuntimeBoundariesTests(unittest.TestCase):
             (),
             second_run.evidence_store.evidence_passages,
         )
+
+    def test_claim_context_must_belong_to_baseline_claim(self) -> None:
+        """Production boundaries must not combine two claim identities."""
+
+        with self.assertRaisesRegex(ValueError, "claim_id mismatch"):
+            build_production_runtime_boundaries(
+                dispatcher=SyntheticEncounterDispatcher(),
+                baseline_finding=make_baseline_finding(),
+                claim_context=make_claim_tool_context(
+                    claim_id="CLM-ANOTHER-PATIENT",
+                ),
+                as_of=date(2026, 11, 6),
+            )
 
 
 if __name__ == "__main__":

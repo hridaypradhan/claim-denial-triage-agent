@@ -19,6 +19,7 @@ from claim_agent.agent.scripted_model import (
     ScriptedModelClient,
     ScriptedModelOutput,
 )
+from claim_agent.agent.tool_request_guard import ClaimToolContext
 
 from claim_agent.contracts import (
     BaselineFinding,
@@ -40,6 +41,9 @@ KNOWLEDGE_ROOT = PROJECT_ROOT / "knowledge"
 DEMO_RUN_ID = "integrated-demo-medical-necessity"
 DEMO_CLAIM_ID = "CLM-2026-005097"
 DEMO_SERVICE_LINE_ID = 1
+DEMO_PAYER = "BCBS_AZ"
+DEMO_PROCEDURE_CODE = "70553"
+DEMO_SERVICE_DATE = date(2026, 6, 2)
 DEMO_PACKAGE_VERSION = "v1"
 DEMO_KNOWLEDGE_SNAPSHOT_ID = "local-corpus-v1"
 
@@ -92,6 +96,17 @@ def build_demo_route_decision() -> RouteDecision:
     )
 
 
+def build_demo_claim_context() -> ClaimToolContext:
+    """Return the trusted retrieval fields for the demonstration claim."""
+
+    return ClaimToolContext(
+        claim_id=DEMO_CLAIM_ID,
+        payer=DEMO_PAYER,
+        procedure_code=DEMO_PROCEDURE_CODE,
+        service_date=DEMO_SERVICE_DATE,
+    )
+
+
 def build_demo_dispatcher() -> ToolDispatcher:
     """Create the production dispatcher over the versioned local corpus."""
 
@@ -106,9 +121,9 @@ def build_demo_model() -> ScriptedModelClient:
         "action": "call_tool",
         "tool_name": MEDICAL_POLICY_TOOL,
         "tool_arguments": {
-            "payer": "BCBS_AZ",
-            "procedure_code": "70553",
-            "service_date": "2026-06-02",
+            "payer": DEMO_PAYER,
+            "procedure_code": DEMO_PROCEDURE_CODE,
+            "service_date": DEMO_SERVICE_DATE.isoformat(),
             "query": (
                 "headache diplopia neurologic examination " "possible mass contrast"
             ),
@@ -169,8 +184,7 @@ def build_demo_model() -> ScriptedModelClient:
             "agent_status": "COMPLETED",
             "manual_review_reasons": [],
             "rationale": (
-                "The retrieved policy criteria are supported by "
-                "the encounter note."
+                "The retrieved policy criteria are supported by " "the encounter note."
             ),
             "citation_ids": [
                 *POLICY_PASSAGE_IDS,
@@ -206,6 +220,7 @@ def run_integrated_demo() -> Mapping[str, object]:
         model_client=build_demo_model(),
         dispatcher=build_demo_dispatcher(),
         baseline_finding=build_demo_baseline_finding(),
+        claim_context=build_demo_claim_context(),
         route_decision=build_demo_route_decision(),
         budget_limits=RuntimeBudgetLimits(
             max_model_calls=3,
@@ -230,25 +245,19 @@ def run_integrated_demo() -> Mapping[str, object]:
             if runtime_result.validated_decision is not None
             else None
         ),
-        "output_package": integrated_result.output_package.model_dump(
-            mode="json"
-        ),
+        "output_package": integrated_result.output_package.model_dump(mode="json"),
         "budget_usage": {
             "model_calls": runtime_result.budget_usage.model_calls_used,
             "tool_calls": runtime_result.budget_usage.tool_calls_used,
-            "repair_attempts": (
-                runtime_result.budget_usage.repair_attempts_used
-            ),
+            "repair_attempts": (runtime_result.budget_usage.repair_attempts_used),
             "total_steps": runtime_result.budget_usage.total_steps_used,
         },
         "retrieved_passage_ids": [
-            passage.passage_id
-            for passage in integrated_result.retrieved_evidence
+            passage.passage_id for passage in integrated_result.retrieved_evidence
         ],
         "policy_formula": integrated_result.policy_formula,
         "trace_events": [
-            trace_entry.event_name
-            for trace_entry in runtime_result.trace_entries
+            trace_entry.event_name for trace_entry in runtime_result.trace_entries
         ],
     }
 

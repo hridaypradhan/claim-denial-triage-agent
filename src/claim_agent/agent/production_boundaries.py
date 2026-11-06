@@ -13,6 +13,10 @@ from datetime import date
 from claim_agent.agent.decision_validation_adapter import (
     DecisionValidationAdapter,
 )
+from claim_agent.agent.tool_request_guard import (
+    ClaimBoundToolDispatcher,
+    ClaimToolContext,
+)
 from claim_agent.agent.run_evidence import RunEvidenceStore
 from claim_agent.agent.tool_result_adapter import (
     SharedToolDispatcher,
@@ -33,14 +37,27 @@ class ProductionRuntimeBoundaries:
 def build_production_runtime_boundaries(
     dispatcher: SharedToolDispatcher,
     baseline_finding: BaselineFinding,
+    claim_context: ClaimToolContext,
     as_of: date,
 ) -> ProductionRuntimeBoundaries:
-    """Create production adapters that share one run-scoped evidence store."""
+    """Create guarded production adapters sharing one run's evidence store."""
+
+    if baseline_finding.claim_id != claim_context.claim_id:
+        raise ValueError(
+            "claim_id mismatch between BaselineFinding and ClaimToolContext"
+        )
 
     evidence_store = RunEvidenceStore()
 
-    tool_dispatcher = ToolResultDispatcherAdapter(
+    # The model may suggest retrieval arguments, but this wrapper ensures that
+    # payer, procedure, service date, and claim ID belong to the active claim.
+    claim_bound_dispatcher = ClaimBoundToolDispatcher(
         dispatcher=dispatcher,
+        claim_context=claim_context,
+    )
+
+    tool_dispatcher = ToolResultDispatcherAdapter(
+        dispatcher=claim_bound_dispatcher,
         observation_consumer=evidence_store.record_observation,
     )
     decision_validator = DecisionValidationAdapter(
