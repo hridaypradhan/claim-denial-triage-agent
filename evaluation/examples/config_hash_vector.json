@@ -1,0 +1,39 @@
+{
+  "description": "Shared contract-test vector for config_sha256 (decision 0002). Both the runtime and the evaluation harness must produce exactly this canonical_json and sha256 from this config.",
+  "config": {
+    "config_version": "0.2",
+    "code_commit": "0000000000000000000000000000000000000000",
+    "model_provider": "example-provider",
+    "model_id": "example-model-2026-01-01",
+    "model_parameters": {
+      "max_output_tokens": 2048,
+      "temperature": 0.0,
+      "top_p": null
+    },
+    "prompt_version": "agent-prompt-v0.1",
+    "runtime_seed": 598,
+    "provider_seed": null,
+    "provider_seed_supported": false,
+    "max_model_calls": 6,
+    "max_tool_calls": 8,
+    "max_repair_attempts": 2,
+    "max_total_steps": 14,
+    "max_tool_retries": 1,
+    "max_runtime_seconds": 120.0,
+    "model_request_timeout_seconds": 30.0,
+    "tool_request_timeout_seconds": 5.0,
+    "allowed_tools": [
+      {
+        "tool_name": "get_encounter_note",
+        "tool_version": "0.1"
+      },
+      {
+        "tool_name": "retrieve_medical_policy",
+        "tool_version": "0.1"
+      }
+    ],
+    "knowledge_snapshot_id": "knowledge-v0"
+  },
+  "canonical_json": "{\"allowed_tools\":[{\"tool_name\":\"get_encounter_note\",\"tool_version\":\"0.1\"},{\"tool_name\":\"retrieve_medical_policy\",\"tool_version\":\"0.1\"}],\"code_commit\":\"0000000000000000000000000000000000000000\",\"config_version\":\"0.2\",\"knowledge_snapshot_id\":\"knowledge-v0\",\"max_model_calls\":6,\"max_repair_attempts\":2,\"max_runtime_seconds\":120.0,\"max_tool_calls\":8,\"max_tool_retries\":1,\"max_total_steps\":14,\"model_id\":\"example-model-2026-01-01\",\"model_parameters\":{\"max_output_tokens\":2048,\"temperature\":0.0,\"top_p\":null},\"model_provider\":\"example-provider\",\"model_request_timeout_seconds\":30.0,\"prompt_version\":\"agent-prompt-v0.1\",\"provider_seed\":null,\"provider_seed_supported\":false,\"runtime_seed\":598,\"tool_request_timeout_seconds\":5.0}",
+  "sha256": "94ec85048641b5ffdff51ea7c265c296c7ae4433a5aa3fa5459c4e08c03ffc23"
+}
