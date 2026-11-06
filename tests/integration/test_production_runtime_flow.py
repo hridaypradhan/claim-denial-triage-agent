@@ -7,10 +7,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from claim_agent.agent.offline_runtime import OfflineAgentRuntime
-from claim_agent.agent.production_boundaries import (
-    build_production_runtime_boundaries,
-)
+from claim_agent.agent.integrated_runtime import run_integrated_case
 from claim_agent.agent.runtime_budget import RuntimeBudgetLimits
 from claim_agent.agent.runtime_state import RuntimePhase
 from claim_agent.agent.scripted_model import (
@@ -21,6 +18,8 @@ from claim_agent.contracts import (
     BaselineFinding,
     Disposition,
     RootCause,
+    RouteDecision,
+    RouteOutcome,
 )
 from claim_agent.tools.dispatcher import (
     ENCOUNTER_NOTE_TOOL,
@@ -60,6 +59,24 @@ def make_baseline_finding() -> BaselineFinding:
         rationale=("Medical-necessity review requires policy and encounter evidence."),
         filing_deadline=date(2026, 12, 31),
         deadline_status="ACTIVE",
+    )
+
+
+def make_route_decision() -> RouteDecision:
+    """Authorize the agent and only the tools needed by this case."""
+
+    return RouteDecision(
+        claim_id=CLAIM_ID,
+        service_line_id=1,
+        outcome=RouteOutcome.AGENT_REQUIRED,
+        reason_code="EVIDENCE_EVALUATION_REQUIRED",
+        routing_reason=(
+            "Medical-necessity review requires policy and encounter evidence."
+        ),
+        authorized_tools=[
+            MEDICAL_POLICY_TOOL,
+            ENCOUNTER_NOTE_TOOL,
+        ],
     )
 
 
@@ -164,15 +181,16 @@ class ProductionRuntimeFlowTests(unittest.TestCase):
         """Retrieved same-run evidence should support an accepted decision."""
 
         shared_dispatcher = ToolDispatcher(KnowledgeStore(KNOWLEDGE_ROOT))
-        boundaries = build_production_runtime_boundaries(
+        integrated_result = run_integrated_case(
+            run_id="integrated-production-boundaries",
+            system_instructions=(
+                "Use only retrieved evidence. Return one structured "
+                "runtime action per turn. Never submit an appeal."
+            ),
+            model_client=make_scripted_model(),
             dispatcher=shared_dispatcher,
             baseline_finding=make_baseline_finding(),
-            as_of=date(2026, 11, 6),
-        )
-        runtime = OfflineAgentRuntime(
-            model_client=make_scripted_model(),
-            tool_dispatcher=boundaries.tool_dispatcher,
-            decision_validator=boundaries.decision_validator,
+            route_decision=make_route_decision(),
             budget_limits=RuntimeBudgetLimits(
                 max_model_calls=3,
                 max_tool_calls=2,
@@ -180,23 +198,10 @@ class ProductionRuntimeFlowTests(unittest.TestCase):
                 max_total_steps=5,
                 max_runtime_seconds=30.0,
             ),
-            allowed_tool_names=(
-                MEDICAL_POLICY_TOOL,
-                ENCOUNTER_NOTE_TOOL,
-            ),
+            as_of=date(2026, 11, 6),
         )
 
-        result = runtime.run(
-            run_id="integrated-production-boundaries",
-            system_instructions=(
-                "Use only retrieved evidence. Return one structured "
-                "runtime action per turn. Never submit an appeal."
-            ),
-            task_context=(
-                "Review the synthetic medical-necessity denial for "
-                "claim CLM-2026-005097."
-            ),
-        )
+        result = integrated_result.runtime_result
 
         self.assertEqual(
             RuntimePhase.COMPLETED,
@@ -225,14 +230,14 @@ class ProductionRuntimeFlowTests(unittest.TestCase):
 
         retrieved_passage_ids = {
             passage.passage_id
-            for passage in boundaries.evidence_store.evidence_passages
+            for passage in integrated_result.retrieved_evidence
         }
 
         self.assertTrue(set(POLICY_PASSAGE_IDS).issubset(retrieved_passage_ids))
         self.assertTrue(set(ENCOUNTER_PASSAGE_IDS).issubset(retrieved_passage_ids))
         self.assertEqual(
             "A AND B AND (C OR D)",
-            boundaries.evidence_store.policy_formula,
+              integrated_result.policy_formula,
         )
 
         trace_event_names = [entry.event_name for entry in result.trace_entries]
