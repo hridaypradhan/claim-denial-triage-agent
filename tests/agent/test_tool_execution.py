@@ -138,6 +138,127 @@ class ToolExecutionTests(unittest.TestCase):
             ["POL-BCBSAZ-MRI-BRAIN@v1"],
         )
 
+    def test_retryable_failure_is_retried_once(self) -> None:
+        """A temporary failure should receive one budgeted automatic retry."""
+
+        retryable_failure = OfflineToolObservation(
+            succeeded=False,
+            error_code="TIMEOUT",
+            retryable=True,
+        )
+        successful_observation = OfflineToolObservation(
+            succeeded=True,
+            payload={"criteria_formula": "A AND B"},
+            source_ids=("POL-BCBSAZ-MRI-BRAIN@v1",),
+        )
+        dispatcher = ScriptedToolDispatcher(
+            [
+                ExpectedToolCall(
+                    tool_name="retrieve_medical_policy",
+                    tool_arguments={
+                        "payer": "BCBS_AZ",
+                        "procedure_code": "70553",
+                    },
+                    observation=retryable_failure,
+                ),
+                ExpectedToolCall(
+                    tool_name="retrieve_medical_policy",
+                    tool_arguments={
+                        "payer": "BCBS_AZ",
+                        "procedure_code": "70553",
+                    },
+                    observation=successful_observation,
+                ),
+            ]
+        )
+        trace = InMemoryRuntimeTrace(run_id="run-1")
+
+        outcome = execute_tool_action(
+            action=make_policy_action(),
+            allowed_tool_names=("retrieve_medical_policy",),
+            tool_dispatcher=dispatcher,
+            budget_limits=make_limits(),
+            budget_usage=RuntimeBudgetUsage(),
+            runtime_state=make_planning_state(),
+            runtime_trace=trace,
+            task_context="Review the synthetic MRI denial.",
+        )
+
+        self.assertTrue(outcome.observation.succeeded)
+        self.assertEqual(outcome.budget_usage.tool_calls_used, 2)
+        self.assertEqual(outcome.budget_usage.total_steps_used, 2)
+        self.assertEqual(
+            [call.request_id for call in dispatcher.recorded_calls],
+            [
+                "run-1:tool:1",
+                "run-1:tool:2",
+            ],
+        )
+        self.assertEqual(
+            [entry.event_name for entry in trace.entries],
+            [
+                "TOOL_REQUESTED",
+                "TOOL_RETURNED",
+                "TOOL_RETRY_REQUESTED",
+                "TOOL_RETURNED",
+                "PHASE_CHANGED",
+            ],
+        )
+        self.assertEqual(
+            trace.entries[2].details["previous_request_id"],
+            "run-1:tool:1",
+        )
+        self.assertEqual(
+            trace.entries[2].details["request_id"],
+            "run-1:tool:2",
+        )
+
+    def test_second_retryable_failure_is_not_retried_again(self) -> None:
+        """The runtime must stop automatically retrying after one retry."""
+
+        retryable_failure = OfflineToolObservation(
+            succeeded=False,
+            error_code="TRANSIENT_FAILURE",
+            retryable=True,
+        )
+        dispatcher = ScriptedToolDispatcher(
+            [
+                ExpectedToolCall(
+                    tool_name="retrieve_medical_policy",
+                    tool_arguments={
+                        "payer": "BCBS_AZ",
+                        "procedure_code": "70553",
+                    },
+                    observation=retryable_failure,
+                ),
+                ExpectedToolCall(
+                    tool_name="retrieve_medical_policy",
+                    tool_arguments={
+                        "payer": "BCBS_AZ",
+                        "procedure_code": "70553",
+                    },
+                    observation=retryable_failure,
+                ),
+            ]
+        )
+
+        outcome = execute_tool_action(
+            action=make_policy_action(),
+            allowed_tool_names=("retrieve_medical_policy",),
+            tool_dispatcher=dispatcher,
+            budget_limits=make_limits(),
+            budget_usage=RuntimeBudgetUsage(),
+            runtime_state=make_planning_state(),
+            runtime_trace=InMemoryRuntimeTrace(run_id="run-1"),
+            task_context="Review the synthetic MRI denial.",
+        )
+
+        self.assertFalse(outcome.observation.succeeded)
+        self.assertTrue(outcome.observation.retryable)
+        self.assertEqual(outcome.budget_usage.tool_calls_used, 2)
+        self.assertEqual(len(dispatcher.recorded_calls), 2)
+        self.assertEqual(dispatcher.remaining_call_count, 0)
+
     def test_tool_outside_allowlist_is_rejected(self) -> None:
         """The model cannot call a tool the runtime did not expose."""
 
@@ -189,7 +310,7 @@ class ToolExecutionTests(unittest.TestCase):
         self.assertEqual(trace.entries, ())
 
     def test_failed_observation_is_added_to_next_context(self) -> None:
-        """A timeout should be visible to the next planning turn."""
+        """A timeout should remain visible after the bounded retry."""
 
         failed_observation = OfflineToolObservation(
             succeeded=False,
@@ -205,7 +326,15 @@ class ToolExecutionTests(unittest.TestCase):
                         "procedure_code": "70553",
                     },
                     observation=failed_observation,
-                )
+                ),
+                ExpectedToolCall(
+                    tool_name="retrieve_medical_policy",
+                    tool_arguments={
+                        "payer": "BCBS_AZ",
+                        "procedure_code": "70553",
+                    },
+                    observation=failed_observation,
+                ),
             ]
         )
 

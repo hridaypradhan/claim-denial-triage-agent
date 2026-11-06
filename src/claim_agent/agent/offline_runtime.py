@@ -40,6 +40,7 @@ from claim_agent.agent.runtime_trace import (
 from claim_agent.agent.tool_execution import (
     ToolBoundaryError,
     ToolNotAllowedError,
+    ToolRetryBudgetExceededError,
     execute_tool_action,
 )
 
@@ -324,6 +325,14 @@ class OfflineAgentRuntime:
                         runtime_trace=runtime_trace,
                         terminal_reason="tool_boundary_error",
                         problem_message=str(error),
+                    )
+                except ToolRetryBudgetExceededError as error:
+                    return self._finish_manual_review(
+                        runtime_state=error.runtime_state,
+                        budget_usage=error.budget_usage,
+                        runtime_trace=runtime_trace,
+                        terminal_reason="tool_budget_exhausted",
+                        problem_message=str(error.original_error),
                     )
                 except RuntimeBudgetExceededError as error:
                     return self._finish_manual_review(

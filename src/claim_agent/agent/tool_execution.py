@@ -15,6 +15,7 @@ from claim_agent.agent.action_parser import (
 )
 from claim_agent.agent.evidence_context import append_tool_observation
 from claim_agent.agent.runtime_budget import (
+    RuntimeBudgetExceededError,
     RuntimeBudgetLimits,
     RuntimeBudgetUsage,
 )
@@ -25,10 +26,8 @@ from claim_agent.agent.runtime_ports import (
 from claim_agent.agent.runtime_state import AgentRuntimeState, RuntimePhase
 from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace
 
-# TODO(#11, owner=Hriday, blocker=Silas): Replace the temporary observation
+# TODO(#11, owner=Hriday, blocker=Silas): Remove the temporary observation
 # after every issue #3 tool returns the approved ToolResult contract.
-# TODO(#11, owner=Hriday): Implement the approved single bounded retry for
-# ToolResult failures marked retryable.
 
 
 class ToolNotAllowedError(ValueError):
@@ -56,6 +55,24 @@ class ToolBoundaryError(RuntimeError):
         )
 
 
+class ToolRetryBudgetExceededError(RuntimeError):
+    """Preserve the first tool attempt when its retry cannot start."""
+
+    def __init__(
+        self,
+        runtime_state: AgentRuntimeState,
+        budget_usage: RuntimeBudgetUsage,
+        original_error: RuntimeBudgetExceededError,
+    ) -> None:
+        """Carry the consumed first attempt to the runtime terminal path."""
+
+        self.runtime_state = runtime_state
+        self.budget_usage = budget_usage
+        self.original_error = original_error
+
+        super().__init__(str(original_error))
+
+
 @dataclass(frozen=True)
 class ToolExecutionOutcome:
     """Updated runtime values produced by one completed tool action."""
@@ -64,6 +81,63 @@ class ToolExecutionOutcome:
     budget_usage: RuntimeBudgetUsage
     task_context: str
     observation: OfflineToolObservation
+
+
+def _dispatch_tool_request(
+    request_id: str,
+    tool_name: str,
+    tool_arguments: dict[str, object],
+    tool_dispatcher: ToolDispatcherPort,
+    waiting_state: AgentRuntimeState,
+    budget_usage: RuntimeBudgetUsage,
+    runtime_trace: InMemoryRuntimeTrace,
+) -> OfflineToolObservation:
+    """Dispatch one tool attempt and preserve state if its boundary raises."""
+
+    try:
+        return tool_dispatcher.dispatch(
+            request_id,
+            tool_name,
+            tool_arguments,
+        )
+    except Exception as error:
+        # A raised exception is different from a normal ToolResult failure.
+        # Preserve the budget already consumed by this exact attempt.
+        runtime_trace.record(
+            "TOOL_FAILED",
+            {
+                "request_id": request_id,
+                "tool_name": tool_name,
+                "error_type": type(error).__name__,
+            },
+        )
+        raise ToolBoundaryError(
+            runtime_state=waiting_state,
+            budget_usage=budget_usage,
+            original_error=error,
+        ) from error
+
+
+def _record_tool_result(
+    request_id: str,
+    tool_name: str,
+    observation: OfflineToolObservation,
+    runtime_trace: InMemoryRuntimeTrace,
+) -> None:
+    """Record one returned observation using its matching request identity."""
+
+    runtime_trace.record(
+        "TOOL_RETURNED",
+        {
+            "request_id": request_id,
+            "tool_name": tool_name,
+            "succeeded": observation.succeeded,
+            "error_code": observation.error_code or "",
+            "retryable": observation.retryable,
+            "source_count": len(observation.source_ids),
+            "source_ids": list(observation.source_ids),
+        },
+    )
 
 
 def execute_tool_action(
@@ -108,40 +182,65 @@ def execute_tool_action(
         },
     )
 
-    try:
-        observation = tool_dispatcher.dispatch(
-            request_id,
-            action.tool_name,
-            action.tool_arguments,
+    observation = _dispatch_tool_request(
+        request_id=request_id,
+        tool_name=action.tool_name,
+        tool_arguments=dict(action.tool_arguments),
+        tool_dispatcher=tool_dispatcher,
+        waiting_state=waiting_state,
+        budget_usage=updated_budget_usage,
+        runtime_trace=runtime_trace,
+    )
+    _record_tool_result(
+        request_id=request_id,
+        tool_name=action.tool_name,
+        observation=observation,
+        runtime_trace=runtime_trace,
+    )
+
+    if observation.retryable:
+        previous_request_id = request_id
+        try:
+            updated_budget_usage = updated_budget_usage.record_tool_call(
+                budget_limits
+            )
+        except RuntimeBudgetExceededError as error:
+            raise ToolRetryBudgetExceededError(
+                runtime_state=waiting_state,
+                budget_usage=updated_budget_usage,
+                original_error=error,
+            ) from error
+        request_id = (
+            f"{runtime_state.run_id}:tool:"
+            f"{updated_budget_usage.tool_calls_used}"
         )
-    except Exception as error:
-        # A dispatcher exception is different from a normal failed
-        # observation. The runtime must stop safely while retaining the tool
-        # call that already consumed budget capacity.
         runtime_trace.record(
-            "TOOL_FAILED",
+            "TOOL_RETRY_REQUESTED",
             {
+                "request_id": request_id,
+                "previous_request_id": previous_request_id,
                 "tool_name": action.tool_name,
-                "error_type": type(error).__name__,
+                "error_code": observation.error_code or "",
+                "argument_count": len(action.tool_arguments),
+                "tool_arguments": dict(action.tool_arguments),
             },
         )
-        raise ToolBoundaryError(
-            runtime_state=waiting_state,
+
+        observation = _dispatch_tool_request(
+            request_id=request_id,
+            tool_name=action.tool_name,
+            tool_arguments=dict(action.tool_arguments),
+            tool_dispatcher=tool_dispatcher,
+            waiting_state=waiting_state,
             budget_usage=updated_budget_usage,
-            original_error=error,
-        ) from error
-    runtime_trace.record(
-        "TOOL_RETURNED",
-        {
-            "request_id": request_id,
-            "tool_name": action.tool_name,
-            "succeeded": observation.succeeded,
-            "error_code": observation.error_code or "",
-            "retryable": observation.retryable,
-            "source_count": len(observation.source_ids),
-            "source_ids": list(observation.source_ids),
-        },
-    )
+            runtime_trace=runtime_trace,
+        )
+        _record_tool_result(
+            request_id=request_id,
+            tool_name=action.tool_name,
+            observation=observation,
+            runtime_trace=runtime_trace,
+        )
 
     updating_state = waiting_state.transition_to(RuntimePhase.UPDATING_EVIDENCE)
     updated_context = append_tool_observation(

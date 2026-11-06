@@ -141,6 +141,74 @@ class OfflineRuntimeResilienceTests(unittest.TestCase):
         self.assertEqual(result.budget_usage.tool_calls_used, 1)
         self.assertEqual(len(model_client.received_requests), 1)
 
+    def test_retry_budget_exhaustion_preserves_first_tool_call(self) -> None:
+        """A blocked retry must not erase the first consumed tool attempt."""
+
+        model_client = ScriptedModelClient([ScriptedModelOutput(response_text="""
+                    {
+                        "action": "call_tool",
+                        "tool_name": "retrieve_medical_policy",
+                        "tool_arguments": {
+                            "payer": "BCBS_AZ",
+                            "procedure_code": "70553"
+                        }
+                    }
+                    """)])
+        tool_dispatcher = ScriptedToolDispatcher(
+            [
+                ExpectedToolCall(
+                    tool_name="retrieve_medical_policy",
+                    tool_arguments={
+                        "payer": "BCBS_AZ",
+                        "procedure_code": "70553",
+                    },
+                    observation=OfflineToolObservation(
+                        succeeded=False,
+                        error_code="TIMEOUT",
+                        retryable=True,
+                    ),
+                )
+            ]
+        )
+        runtime = OfflineAgentRuntime(
+            model_client=model_client,
+            tool_dispatcher=tool_dispatcher,
+            decision_validator=ScriptedDecisionValidator([]),
+            budget_limits=RuntimeBudgetLimits(
+                max_model_calls=1,
+                max_tool_calls=1,
+                max_repair_attempts=0,
+                max_total_steps=2,
+            ),
+            allowed_tool_names=("retrieve_medical_policy",),
+        )
+
+        result = runtime.run(
+            run_id="run-retry-budget",
+            system_instructions="Retry temporary tool failures once.",
+            task_context="Review one synthetic MRI denial.",
+        )
+
+        self.assertEqual(
+            result.final_state.phase,
+            RuntimePhase.MANUAL_REVIEW,
+        )
+        self.assertEqual(
+            result.final_state.terminal_reason,
+            "tool_budget_exhausted",
+        )
+        self.assertEqual(result.budget_usage.model_calls_used, 1)
+        self.assertEqual(result.budget_usage.tool_calls_used, 1)
+        self.assertEqual(result.budget_usage.total_steps_used, 2)
+        self.assertEqual(len(tool_dispatcher.recorded_calls), 1)
+        self.assertEqual(
+            [entry.event_name for entry in result.trace_entries][-2:],
+            [
+                "TOOL_RETURNED",
+                "MANUAL_REVIEW",
+            ],
+        )
+
     def test_dispatcher_exception_stops_for_manual_review(self) -> None:
         """An unexpected tool timeout must not escape the runtime."""
 
