@@ -101,6 +101,53 @@ class ToolResultAdapterTests(unittest.TestCase):
             ("POL-BCBSAZ-MRI-BRAIN@v1",),
         )
 
+    def test_adapter_sends_verified_observation_to_consumer(self) -> None:
+        """Validated production evidence should enter the run evidence store."""
+
+        consumed_observations = []
+        adapter = ToolResultDispatcherAdapter(
+            RecordingSharedDispatcher(make_successful_result()),
+            observation_consumer=consumed_observations.append,
+        )
+
+        returned_observation = adapter.dispatch(
+            "run-1:tool:1",
+            "retrieve_medical_policy",
+            {
+                "payer": "BCBS_AZ",
+                "procedure_code": "70553",
+            },
+        )
+
+        self.assertEqual(
+            consumed_observations,
+            [returned_observation],
+        )
+        self.assertEqual(
+            consumed_observations[0].payload[
+                "evidence_passages"
+            ][0]["passage_id"],
+            "POL-BCBSAZ-MRI-BRAIN@v1#P1",
+        )
+
+    def test_mismatched_result_is_not_sent_to_consumer(self) -> None:
+        """Evidence with the wrong request identity must not enter the run."""
+
+        consumed_observations = []
+        adapter = ToolResultDispatcherAdapter(
+            RecordingSharedDispatcher(make_successful_result()),
+            observation_consumer=consumed_observations.append,
+        )
+
+        with self.assertRaisesRegex(ValueError, "request_id"):
+            adapter.dispatch(
+                "run-1:tool:2",
+                "retrieve_medical_policy",
+                {},
+            )
+
+        self.assertEqual([], consumed_observations)
+
     def test_failed_result_preserves_error_and_retryability(self) -> None:
         """The runtime must retain the dispatcher's failure instructions."""
 

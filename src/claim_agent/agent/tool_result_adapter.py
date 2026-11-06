@@ -7,10 +7,12 @@ point between Silas's production dispatcher and that internal runtime format.
 
 from __future__ import annotations
 
-from typing import Mapping, Protocol
+from typing import Callable, Mapping, Optional, Protocol
 
 from claim_agent.agent.runtime_ports import OfflineToolObservation
 from claim_agent.contracts import ToolResult, ToolStatus
+
+ObservationConsumer = Callable[[OfflineToolObservation], None]
 
 
 class SharedToolDispatcher(Protocol):
@@ -28,10 +30,15 @@ class SharedToolDispatcher(Protocol):
 class ToolResultDispatcherAdapter:
     """Make a shared-contract dispatcher usable by the agent runtime."""
 
-    def __init__(self, dispatcher: SharedToolDispatcher) -> None:
-        """Store the production dispatcher that performs the actual lookup."""
+    def __init__(
+        self,
+        dispatcher: SharedToolDispatcher,
+        observation_consumer: Optional[ObservationConsumer] = None,
+    ) -> None:
+        """Store the dispatcher and optional run-evidence consumer."""
 
         self._dispatcher = dispatcher
+        self._observation_consumer = observation_consumer
 
     def dispatch(
         self,
@@ -57,7 +64,14 @@ class ToolResultDispatcherAdapter:
                 "The returned ToolResult tool_name does not match the request."
             )
 
-        return adapt_tool_result(tool_result)
+        observation = adapt_tool_result(tool_result)
+
+        # Record evidence only after request and tool identity checks pass.
+        # This prevents a mismatched result from contaminating the run.
+        if self._observation_consumer is not None:
+            self._observation_consumer(observation)
+
+        return observation
 
 
 def adapt_tool_result(tool_result: ToolResult) -> OfflineToolObservation:

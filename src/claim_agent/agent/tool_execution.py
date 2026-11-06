@@ -26,8 +26,8 @@ from claim_agent.agent.runtime_ports import (
 from claim_agent.agent.runtime_state import AgentRuntimeState, RuntimePhase
 from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace
 
-# TODO(#11, owner=Hriday, blocker=Silas): Remove the temporary observation
-# after every issue #3 tool returns the approved ToolResult contract.
+# TODO(#11, owner=Hriday): Remove the temporary observation after the
+# integrated runner adopts production ToolResult throughout its control loop.
 
 
 class ToolNotAllowedError(ValueError):

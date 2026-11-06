@@ -6,12 +6,8 @@ merged production contracts are connected through adapters.
 
 from __future__ import annotations
 
-# TODO(#11, owner=Hriday, blocker=Silas): Remove OfflineToolObservation after
-# every issue #3 tool returns the approved ToolResult contract. Policy
-# retrieval is available; encounter-note and remaining tool implementations
-# are still being delivered by Silas.
-# TODO(#11, owner=Hriday): Adapt merged AgentDecision and ValidationResult
-# values at this boundary while preserving scripted regression coverage.
+# TODO(#11, owner=Hriday): Retire OfflineToolObservation after the integrated
+# runner uses production boundaries while preserving scripted regression tests.
 
 from dataclasses import dataclass, field
 from enum import Enum
