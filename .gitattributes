@@ -1,1 +1,1 @@
-knowledge/** text eol=lf
+knowledge/**/*.json text eol=lf
