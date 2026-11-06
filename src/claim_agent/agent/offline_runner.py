@@ -28,12 +28,6 @@ from claim_agent.agent.scripted_ports import (
     ScriptedToolDispatcher,
 )
 
-# TODO(#11, owner=Hriday): Add an integrated runner that uses the production
-# dispatcher while retaining this deterministic scripted demonstration.
-# TODO(#11, owner=Hriday): Initialize integrated runs from the merged
-# BaselineFinding and RouteDecision contracts instead of free-form context.
-# TODO(#11, owner=Hriday): Connect the merged AgentDecision and
-# ValidationResult contracts through a production validator adapter.
 # TODO(#7, owner=Hriday, blocker=Sachin): Emit the durable trace format after
 # Sachin finalizes TraceEvent fields and persistence requirements.
 
