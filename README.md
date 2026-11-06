@@ -84,7 +84,7 @@ It contains:
 - A synthetic physical therapy policy (CPT 97110) under the `AETNA` payer profile in two dated versions, so the service date selects the criteria: v1 (`A AND B`) through 2026-03-31 and v2 (`A AND B AND C`) from 2026-04-01. It is not the payer's actual policy.
 - Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
 
-Every passage has a stable citation ID such as `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in [decision 0001](docs/decisions/0001-retrieval-method.md). `retrieve_policy_passages`, the core of the planned `retrieve_medical_policy` tool, now reads this corpus: it matches one policy by payer, procedure, and service date, then ranks its passages with BM25. `ToolDispatcher` exposes it as `retrieve_medical_policy` and returns the shared `ToolResult` contract. Encounter and eligibility retrieval and the other lookup tools are not implemented yet, and the runtime does not call the dispatcher yet.
+Every passage has a stable citation ID such as `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in [decision 0001](docs/decisions/0001-retrieval-method.md). `retrieve_policy_passages`, the core of the planned `retrieve_medical_policy` tool, now reads this corpus: it matches one policy by payer, procedure, and service date, then ranks its passages with BM25. `ToolDispatcher` exposes it as `retrieve_medical_policy`, and also provides `get_encounter_note`, which returns a claim's note as numbered, citable passages. Both return the shared `ToolResult` contract. Eligibility retrieval and the other lookup tools are not implemented yet, and the runtime does not call the dispatcher yet.
 
 ### Scripted offline agent runtime
 
@@ -239,7 +239,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 41 tests
+Ran 54 tests
 OK
 ```
 
