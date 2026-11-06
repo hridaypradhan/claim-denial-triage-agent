@@ -229,3 +229,40 @@ class ValidationResult(StrictContract):
             if self.outcome == ValidationOutcome.REJECTED_MANUAL_REVIEW and not self.manual_review_reasons:
                 raise ValueError("At least one manual_review_reasons is required for REJECTED_MANUAL_REVIEW.")
         return self
+
+# --- Contract v0.1: Output Package ---
+class OutputPackage(StrictContract):
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    run_id: str
+    package_version: str
+    knowledge_snapshot_id: str
+    claim_id: str
+    service_line_id: int
+    route_outcome: RouteOutcome
+    baseline_finding: BaselineFinding
+    proposed_decision: Optional[AgentDecision] = Field(None)
+    validation_result: Optional[ValidationResult] = Field(None)
+    agent_terminal_reason: Optional[str] = Field(None)
+    final_disposition: Disposition
+    final_root_cause: RootCause
+    manual_review_reasons: List[str] = Field(default_factory=list)
+
+    @model_validator(mode='after')
+    def validate_package_rules(self):
+        # 2. Unvalidated agent decision guards
+        if self.proposed_decision is not None:
+            if self.validation_result is None:
+                raise ValueError("validation_result is required when proposed_decision is present.")
+            if self.validation_result.outcome == ValidationOutcome.ACCEPTED:
+                if self.validation_result.validated_decision is None or self.validation_result.validated_decision.decision_id != self.proposed_decision.decision_id:
+                    raise ValueError("ACCEPTED validation result must have a validated_decision matching proposed_decision's decision_id.")
+
+        # 3. Agent terminal reason guards
+        if self.route_outcome == RouteOutcome.AGENT_REQUIRED:
+            if self.proposed_decision is None and not self.agent_terminal_reason:
+                raise ValueError("agent_terminal_reason is required when AGENT_REQUIRED has no proposed_decision.")
+        else:
+            if self.agent_terminal_reason is not None:
+                raise ValueError("agent_terminal_reason must be omitted for non-AGENT_REQUIRED outcomes.")
+
+        return self
