@@ -268,16 +268,16 @@ class OfflineRuntimeResilienceTests(unittest.TestCase):
     def test_model_exception_stops_for_manual_review(self) -> None:
         """An unexpected model failure must not escape the runtime."""
 
-        class TimeoutModelClient:
+        class FailingModelClient:
             """Simulate a hosted model boundary that fails unexpectedly."""
 
             def generate_response(self, request: object) -> object:
                 """Raise instead of returning a model response."""
 
-                raise TimeoutError("The synthetic model service did not respond.")
+                raise RuntimeError("The synthetic model service failed.")
 
         runtime = OfflineAgentRuntime(
-            model_client=TimeoutModelClient(),
+            model_client=FailingModelClient(),
             tool_dispatcher=ScriptedToolDispatcher([]),
             decision_validator=ScriptedDecisionValidator([]),
             budget_limits=make_test_limits(),

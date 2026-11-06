@@ -145,7 +145,9 @@ The runtime also provides a provider-neutral `HostedModelClient`. It translates
 the stable runtime request into a timeout-bounded transport request and maps
 provider text, request IDs, and token counts back into the runtime response.
 Its fake-transport tests run offline. No live provider transport or credential
-configuration is committed yet.
+configuration is committed yet. Hosted-call timeouts consume the attempted
+model-call budget, emit `MODEL_FAILED`, and produce an audited `MANUAL_REVIEW`
+package with terminal reason `model_timeout`.
 
 ### Remaining project scaffolding
 

@@ -179,14 +179,25 @@ class OfflineAgentRuntime:
                         "error_type": type(error).__name__,
                     },
                 )
+                if isinstance(error, TimeoutError):
+                    terminal_reason = "model_timeout"
+                    problem_message = (
+                        "The hosted model did not respond before its "
+                        "configured timeout."
+                    )
+                else:
+                    terminal_reason = "model_boundary_error"
+                    problem_message = (
+                        "The model boundary raised "
+                        f"{type(error).__name__}."
+                    )
+
                 return self._finish_manual_review(
                     runtime_state=runtime_state,
                     budget_usage=budget_usage,
                     runtime_trace=runtime_trace,
-                    terminal_reason="model_boundary_error",
-                    problem_message=(
-                        "The model boundary raised " f"{type(error).__name__}."
-                    ),
+                    terminal_reason=terminal_reason,
+                    problem_message=problem_message,
                 )
 
             runtime_trace.record(
