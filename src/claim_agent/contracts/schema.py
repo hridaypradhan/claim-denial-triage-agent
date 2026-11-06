@@ -108,11 +108,21 @@ class ToolResult(StrictContract):
         else:
             if self.error_code is None:
                 raise ValueError("error_code is required when status is ERROR")
+            # Hriday's rule: Only TRANSIENT_FAILURE and TIMEOUT can be retryable
+            if self.retryable and self.error_code not in (ErrorCode.TRANSIENT_FAILURE, ErrorCode.TIMEOUT):
+                raise ValueError("retryable=True is only permitted for TRANSIENT_FAILURE and TIMEOUT")
         
-        # Ensure source_ids equals the unique source IDs from evidence_passages (Hriday's rule)
-        expected_sources = {p.source_id for p in self.evidence_passages}
-        if set(self.source_ids) != expected_sources:
-            raise ValueError("source_ids must exactly match the unique source IDs represented in evidence_passages")
+        # Hriday's rule: source_ids must equal unique versioned document IDs in first-appearance order
+        expected_source_ids = []
+        seen = set()
+        for p in self.evidence_passages:
+            vid = f"{p.source_id}@v{p.version}"
+            if vid not in seen:
+                seen.add(vid)
+                expected_source_ids.append(vid)
+                
+        if self.source_ids != expected_source_ids:
+            raise ValueError("source_ids must exactly match the unique versioned document IDs in first-appearance order")
         
         return self
 
@@ -181,10 +191,16 @@ class ValidationResult(StrictContract):
 
     @model_validator(mode='after')
     def validate_outcomes(self):
-        # Hriday's exact ACCEPTED/REPAIRABLE/REJECTED strictness rules
         if self.outcome == ValidationOutcome.ACCEPTED:
             if not self.validated_decision:
                 raise ValueError("validated_decision is required for ACCEPTED outcome.")
+            # Hriday's rule: ensure identity fields match the validated_decision
+            if self.validated_decision.decision_id != self.decision_id:
+                raise ValueError("decision_id mismatch between ValidationResult and validated_decision")
+            if self.validated_decision.claim_id != self.claim_id:
+                raise ValueError("claim_id mismatch between ValidationResult and validated_decision")
+            if self.validated_decision.service_line_id != self.service_line_id:
+                raise ValueError("service_line_id mismatch between ValidationResult and validated_decision")
         elif self.outcome in (ValidationOutcome.REPAIRABLE, ValidationOutcome.REJECTED_MANUAL_REVIEW):
             if self.validated_decision:
                 raise ValueError("validated_decision must be omitted for repairable or manual review outcomes.")
