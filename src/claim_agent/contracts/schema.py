@@ -112,7 +112,8 @@ class ToolResult(StrictContract):
             if self.retryable and self.error_code not in (ErrorCode.TRANSIENT_FAILURE, ErrorCode.TIMEOUT):
                 raise ValueError("retryable=True is only permitted for TRANSIENT_FAILURE and TIMEOUT")
 
-        # Hriday's rule: source_ids must equal unique versioned document IDs in first-appearance order
+        # Hriday's rule: source_ids must equal unique versioned document IDs in first-appearance order.
+        # Tools without passages, such as denial-code lookup, still report their sources.
         expected_source_ids = []
         seen = set()
         for p in self.evidence_passages:
@@ -121,7 +122,7 @@ class ToolResult(StrictContract):
                 seen.add(vid)
                 expected_source_ids.append(vid)
 
-        if self.source_ids != expected_source_ids:
+        if self.evidence_passages and self.source_ids != expected_source_ids:
             raise ValueError("source_ids must exactly match the unique versioned document IDs in first-appearance order")
 
         return self

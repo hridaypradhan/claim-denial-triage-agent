@@ -5,9 +5,6 @@ Matching never relaxes payer, procedure, or service date. See decision 0001.
 
 from __future__ import annotations
 
-# TODO(#3): Wrap PolicyRetrievalResult in the approved ToolResult and
-# EvidencePassage contracts once they are stable.
-
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
