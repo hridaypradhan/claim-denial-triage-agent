@@ -156,6 +156,9 @@ def execute_decision_with_repair(
                 task_context=current_task_context,
                 rejected_output=current_response_text,
                 problem_messages=problem_messages,
+                validation_problems=(
+                    validation_result.validation_problems
+                ),
                 allowed_tool_names=allowed_tool_names,
             )
         except RepairModelBoundaryError as error:

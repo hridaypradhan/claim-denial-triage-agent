@@ -6,14 +6,16 @@ merged production contracts are connected through adapters.
 
 from __future__ import annotations
 
-# TODO(#11, owner=Hriday): Retire OfflineToolObservation after the integrated
-# runner uses production boundaries while preserving scripted regression tests.
+# TODO(#11, owner=Hriday): After Milestone 2, decide whether replacing the
+# internal OfflineToolObservation is worth the scripted-test migration cost.
 
 from dataclasses import dataclass, field
 from enum import Enum
 from types import MappingProxyType
 from typing import Mapping, Optional, Protocol, Tuple, runtime_checkable
+
 from claim_agent.contracts import ValidationProblem
+
 
 @dataclass(frozen=True)
 class OfflineToolObservation:

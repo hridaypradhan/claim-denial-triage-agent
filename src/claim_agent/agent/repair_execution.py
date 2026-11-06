@@ -17,9 +17,7 @@ from claim_agent.agent.runtime_budget import (
 )
 from claim_agent.agent.runtime_state import AgentRuntimeState, RuntimePhase
 from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace
-
-# TODO(#11, owner=Hriday): Carry merged ValidationProblem values through repair
-# execution instead of using temporary plain strings.
+from claim_agent.contracts import ValidationProblem
 
 
 class RepairModelBoundaryError(RuntimeError):
@@ -63,6 +61,7 @@ def execute_repair_model_call(
     rejected_output: str,
     problem_messages: Tuple[str, ...],
     allowed_tool_names: Tuple[str, ...],
+    validation_problems: Tuple[ValidationProblem, ...] = (),
 ) -> RepairExecutionOutcome:
     """Perform one model call dedicated to correcting rejected output.
 
@@ -77,6 +76,7 @@ def execute_repair_model_call(
         task_context=task_context,
         rejected_output=rejected_output,
         problem_messages=problem_messages,
+        validation_problems=validation_problems,
     )
 
     model_call_number = updated_budget_usage.model_calls_used

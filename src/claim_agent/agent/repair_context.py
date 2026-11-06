@@ -10,14 +10,14 @@ from __future__ import annotations
 import json
 from typing import Tuple
 
-# TODO(#11, owner=Hriday): Build repair prompts from merged ValidationProblem
-# values instead of flattening them to plain strings at the boundary.
+from claim_agent.contracts import ValidationProblem
 
 
 def build_repair_context(
     task_context: str,
     rejected_output: str,
     problem_messages: Tuple[str, ...],
+    validation_problems: Tuple[ValidationProblem, ...] = (),
 ) -> str:
     """Add rejected output and repair guidance to the existing task context.
 
@@ -43,10 +43,21 @@ def build_repair_context(
     if any(not message.strip() for message in problem_messages):
         raise ValueError("problem_messages cannot contain blank values")
 
+    if validation_problems:
+        structured_messages = tuple(problem.message for problem in validation_problems)
+
+        if problem_messages != structured_messages:
+            raise ValueError("problem_messages must match validation_problems")
+
     repair_data = {
         "rejected_output": rejected_output,
         "problems": list(problem_messages),
     }
+    if validation_problems:
+        repair_data["validation_problems"] = [
+            problem.model_dump(mode="json")
+            for problem in validation_problems
+        ]
     repair_json = json.dumps(
         repair_data,
         sort_keys=True,

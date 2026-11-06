@@ -289,6 +289,7 @@ Hold two brief progress syncs and one integration demonstration per week. Each o
 - [x] Add a provider-neutral hosted-model client and offline transport tests.
 - [ ] Select and implement the Milestone 2 provider-specific model transport.
 - [x] Add the offline vertical-slice integration test.
+- [x] Carry structured validation problems into bounded repair prompts.
 - [x] Select the initial payer/procedure policy subset: BCBS_AZ brain MRI and AETNA physical therapy, with dated policy versions in knowledge corpus v0.
 - [ ] Draft the dataset annotation rubric.
 

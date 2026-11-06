@@ -11,8 +11,8 @@ import json
 
 from claim_agent.agent.runtime_ports import OfflineToolObservation
 
-# TODO(#11, owner=Hriday): Serialize merged ToolResult and EvidencePassage
-# values directly after the temporary observation boundary is removed.
+# TODO(#11, owner=Hriday): If OfflineToolObservation is retired after
+# Milestone 2, serialize ToolResult and EvidencePassage here directly.
 
 
 def append_tool_observation(

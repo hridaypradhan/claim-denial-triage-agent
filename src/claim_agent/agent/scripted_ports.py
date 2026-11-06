@@ -7,11 +7,6 @@ tests while production adapters are integrated.
 
 from __future__ import annotations
 
-# TODO(#11, owner=Hriday): Use the production dispatcher adapter in integrated
-# runs while retaining ScriptedToolDispatcher for deterministic tests.
-# TODO(#11, owner=Hriday): Use the production validator adapter in integrated
-# runs while retaining ScriptedDecisionValidator for deterministic tests.
-
 from collections import deque
 from dataclasses import dataclass
 from types import MappingProxyType

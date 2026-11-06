@@ -135,6 +135,8 @@ through the merged project boundaries:
   validation.
 - The validated shared `AgentDecision` and `ValidationResult` are preserved as
   audit artifacts.
+- Structured validation problems retain their stable code, field path,
+  message, and repairability flag when included in the bounded repair prompt.
 - Every run produces an `OutputPackage`; even accepted recommendations remain
   `PENDING_REVIEW` and are never submitted automatically.
 
