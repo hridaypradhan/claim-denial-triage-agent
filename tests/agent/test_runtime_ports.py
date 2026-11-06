@@ -19,6 +19,7 @@ class CompatibleDispatcher:
 
     def dispatch(
         self,
+        request_id: str,
         tool_name: str,
         tool_arguments: Mapping[str, object],
     ) -> OfflineToolObservation:
@@ -26,7 +27,7 @@ class CompatibleDispatcher:
 
         return OfflineToolObservation(
             succeeded=True,
-            payload={"tool_name": tool_name},
+            payload={"request_id": request_id, "tool_name": tool_name},
             source_ids=("POL-BCBSAZ-MRI-BRAIN@v1",),
         )
 

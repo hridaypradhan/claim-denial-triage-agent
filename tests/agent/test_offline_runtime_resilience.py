@@ -149,6 +149,7 @@ class OfflineRuntimeResilienceTests(unittest.TestCase):
 
             def dispatch(
                 self,
+                request_id: str,
                 tool_name: str,
                 tool_arguments: object,
             ) -> OfflineToolObservation:

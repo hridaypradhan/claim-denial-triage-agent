@@ -59,6 +59,7 @@ class ScriptedToolDispatcherTests(unittest.TestCase):
         dispatcher = ScriptedToolDispatcher([make_expected_policy_call()])
 
         observation = dispatcher.dispatch(
+            "REQ-1",
             "retrieve_medical_policy",
             {
                 "payer": "BCBS_AZ",
@@ -79,6 +80,7 @@ class ScriptedToolDispatcherTests(unittest.TestCase):
         dispatcher = ScriptedToolDispatcher([make_expected_policy_call()])
 
         dispatcher.dispatch(
+            "REQ-1",
             "retrieve_medical_policy",
             {
                 "payer": "BCBS_AZ",
@@ -87,6 +89,7 @@ class ScriptedToolDispatcherTests(unittest.TestCase):
         )
 
         self.assertEqual(len(dispatcher.recorded_calls), 1)
+        self.assertEqual(dispatcher.recorded_calls[0].request_id, "REQ-1")
         self.assertEqual(
             dispatcher.recorded_calls[0].tool_name,
             "retrieve_medical_policy",
@@ -108,6 +111,7 @@ class ScriptedToolDispatcherTests(unittest.TestCase):
             "retrieve_medical_policy",
         ):
             dispatcher.dispatch(
+                "REQ-1",
                 "get_encounter_note",
                 {
                     "payer": "BCBS_AZ",
@@ -128,6 +132,7 @@ class ScriptedToolDispatcherTests(unittest.TestCase):
             "70553",
         ):
             dispatcher.dispatch(
+                "REQ-1",
                 "retrieve_medical_policy",
                 {
                     "payer": "BCBS_AZ",
@@ -142,6 +147,7 @@ class ScriptedToolDispatcherTests(unittest.TestCase):
 
         with self.assertRaises(ScriptedBoundaryExhaustedError):
             dispatcher.dispatch(
+                "REQ-1",
                 "retrieve_medical_policy",
                 {
                     "payer": "BCBS_AZ",

@@ -115,11 +115,23 @@ class ToolExecutionTests(unittest.TestCase):
             ],
         )
         self.assertEqual(
+            dispatcher.recorded_calls[0].request_id,
+            "run-1:tool:1",
+        )
+        self.assertEqual(
             trace.entries[0].details["tool_arguments"],
             {
                 "payer": "BCBS_AZ",
                 "procedure_code": "70553",
             },
+        )
+        self.assertEqual(
+            trace.entries[0].details["request_id"],
+            "run-1:tool:1",
+        )
+        self.assertEqual(
+            trace.entries[1].details["request_id"],
+            "run-1:tool:1",
         )
         self.assertEqual(
             trace.entries[1].details["source_ids"],

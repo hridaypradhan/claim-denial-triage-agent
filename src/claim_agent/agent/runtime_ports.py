@@ -7,8 +7,10 @@ when the approved production contracts become available.
 
 from __future__ import annotations
 
-# TODO(#3): Replace OfflineToolObservation with an adapter around the approved
-# ToolResult and EvidencePassage contracts.
+# TODO(#11, owner=Hriday, blocker=Silas): Remove OfflineToolObservation after
+# every issue #3 tool returns the approved ToolResult contract. Policy
+# retrieval is available; encounter-note and remaining tool implementations
+# are still being delivered by Silas.
 # TODO(#6): Replace OfflineValidationResult with an adapter around the approved
 # AgentDecision and ValidationResult contracts.
 
@@ -98,14 +100,15 @@ class OfflineValidationResult:
 
 @runtime_checkable
 class ToolDispatcherPort(Protocol):
-    """Behavior the runtime requires from an offline or real dispatcher."""
+    """Behavior the runtime requires from a scripted or production dispatcher."""
 
     def dispatch(
         self,
+        request_id: str,
         tool_name: str,
         tool_arguments: Mapping[str, object],
     ) -> OfflineToolObservation:
-        """Execute one allowlisted read-only tool request."""
+        """Execute one identified, allowlisted, read-only tool request."""
 
 
 @runtime_checkable

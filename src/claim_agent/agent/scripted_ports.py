@@ -56,11 +56,15 @@ class ExpectedToolCall:
 class RecordedToolCall:
     """One tool request actually received from the runtime."""
 
+    request_id: str
     tool_name: str
     tool_arguments: Mapping[str, object]
 
     def __post_init__(self) -> None:
-        """Protect the recorded arguments from later mutation."""
+        """Validate the request identity and protect its arguments."""
+
+        if not self.request_id.strip():
+            raise ValueError("request_id must contain a non-whitespace value")
 
         object.__setattr__(
             self,
@@ -95,6 +99,7 @@ class ScriptedToolDispatcher:
 
     def dispatch(
         self,
+        request_id: str,
         tool_name: str,
         tool_arguments: Mapping[str, object],
     ) -> OfflineToolObservation:
@@ -129,6 +134,7 @@ class ScriptedToolDispatcher:
         self._remaining_calls.popleft()
         self._recorded_calls.append(
             RecordedToolCall(
+                request_id=request_id,
                 tool_name=tool_name,
                 tool_arguments=received_arguments,
             )

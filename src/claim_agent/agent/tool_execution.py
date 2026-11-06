@@ -25,10 +25,10 @@ from claim_agent.agent.runtime_ports import (
 from claim_agent.agent.runtime_state import AgentRuntimeState, RuntimePhase
 from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace
 
-# TODO(#3): Replace the temporary dispatcher and observation types with the
-# approved ToolResult and EvidencePassage contract adapter.
-# TODO(#3): Hriday must implement the approved single-retry behavior after
-# Silas decides whether retry ownership belongs to the dispatcher or runtime.
+# TODO(#11, owner=Hriday, blocker=Silas): Replace the temporary observation
+# after every issue #3 tool returns the approved ToolResult contract.
+# TODO(#11, owner=Hriday): Implement the approved single bounded retry for
+# ToolResult failures marked retryable.
 
 
 class ToolNotAllowedError(ValueError):
@@ -94,10 +94,14 @@ def execute_tool_action(
         )
 
     updated_budget_usage = budget_usage.record_tool_call(budget_limits)
+    request_id = (
+        f"{runtime_state.run_id}:tool:{updated_budget_usage.tool_calls_used}"
+    )
     waiting_state = runtime_state.transition_to(RuntimePhase.WAITING_FOR_TOOL)
     runtime_trace.record(
         "TOOL_REQUESTED",
         {
+            "request_id": request_id,
             "tool_name": action.tool_name,
             "argument_count": len(action.tool_arguments),
             "tool_arguments": dict(action.tool_arguments),
@@ -106,6 +110,7 @@ def execute_tool_action(
 
     try:
         observation = tool_dispatcher.dispatch(
+            request_id,
             action.tool_name,
             action.tool_arguments,
         )
@@ -128,6 +133,7 @@ def execute_tool_action(
     runtime_trace.record(
         "TOOL_RETURNED",
         {
+            "request_id": request_id,
             "tool_name": action.tool_name,
             "succeeded": observation.succeeded,
             "error_code": observation.error_code or "",
