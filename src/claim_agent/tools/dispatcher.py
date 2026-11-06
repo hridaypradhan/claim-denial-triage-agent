@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Dict, List, Mapping
+from typing import Dict, List, Mapping, Optional, Sequence
 
 from claim_agent.contracts import (
     ErrorCode,
@@ -30,12 +30,22 @@ from claim_agent.tools.policy_retrieval import (
     RetrievedPolicy,
     retrieve_policy_passages,
 )
+from claim_agent.tools.reference_lookups import (
+    DENIAL_CODE_SOURCE_ID,
+    PAYER_PROFILE_SOURCE_ID,
+    find_denial_code,
+    find_payer_profile,
+)
 
 MEDICAL_POLICY_TOOL = "retrieve_medical_policy"
 ENCOUNTER_NOTE_TOOL = "get_encounter_note"
+DENIAL_CODE_TOOL = "lookup_denial_code"
+PAYER_PROFILE_TOOL = "get_payer_profile"
 
 _POLICY_ARGUMENT_NAMES = {"payer", "procedure_code", "service_date", "query"}
 _ENCOUNTER_ARGUMENT_NAMES = {"claim_id", "document_id"}
+_DENIAL_ARGUMENT_NAMES = {"carc", "rarc", "group_code"}
+_PAYER_ARGUMENT_NAMES = {"payer_id"}
 _POLICY_ERROR_CODES = {
     PolicyRetrievalStatus.NO_MATCH: ErrorCode.NO_MATCH,
     PolicyRetrievalStatus.AMBIGUOUS_POLICY: ErrorCode.AMBIGUOUS_POLICY,
@@ -60,6 +70,22 @@ class _EncounterRequest:
     document_id: str
 
 
+@dataclass(frozen=True)
+class _DenialCodeRequest:
+    """Validated arguments for one denial-code lookup."""
+
+    carc: str
+    rarc: Sequence[str]
+    group_code: str
+
+
+@dataclass(frozen=True)
+class _PayerProfileRequest:
+    """Validated arguments for one payer-profile lookup."""
+
+    payer_id: str
+
+
 class ToolDispatcher:
     """Route allowlisted tool requests to their read-only implementations."""
 
@@ -75,6 +101,14 @@ class ToolDispatcher:
             ENCOUNTER_NOTE_TOOL: (
                 _parse_encounter_request,
                 self._get_encounter_note,
+            ),
+            DENIAL_CODE_TOOL: (
+                _parse_denial_code_request,
+                self._lookup_denial_code,
+            ),
+            PAYER_PROFILE_TOOL: (
+                _parse_payer_profile_request,
+                self._get_payer_profile,
             ),
         }
 
@@ -193,6 +227,38 @@ class ToolDispatcher:
             evidence_passages=_encounter_passages(note),
         )
 
+    def _lookup_denial_code(
+        self,
+        request_id: str,
+        denial_request: _DenialCodeRequest,
+    ) -> ToolResult:
+        """Return what the code tables say about one denial."""
+
+        return _reference_result(
+            request_id,
+            DENIAL_CODE_TOOL,
+            DENIAL_CODE_SOURCE_ID,
+            find_denial_code(
+                denial_request.carc,
+                denial_request.rarc,
+                denial_request.group_code,
+            ),
+        )
+
+    def _get_payer_profile(
+        self,
+        request_id: str,
+        payer_request: _PayerProfileRequest,
+    ) -> ToolResult:
+        """Return one payer's filing rules and verification status."""
+
+        return _reference_result(
+            request_id,
+            PAYER_PROFILE_TOOL,
+            PAYER_PROFILE_SOURCE_ID,
+            find_payer_profile(payer_request.payer_id),
+        )
+
 
 def _parse_policy_request(
     tool_arguments: Mapping[str, object],
@@ -229,18 +295,69 @@ def _parse_encounter_request(
     )
 
 
+def _parse_denial_code_request(
+    tool_arguments: Mapping[str, object],
+) -> _DenialCodeRequest:
+    """Return validated denial-code arguments or raise ValueError."""
+
+    _require_argument_names(tool_arguments, _DENIAL_ARGUMENT_NAMES)
+
+    rarc_codes = tool_arguments["rarc"]
+
+    if not isinstance(rarc_codes, list):
+        raise ValueError("rarc must be a list of codes.")
+
+    for text_value in (
+        tool_arguments["carc"],
+        tool_arguments["group_code"],
+        *rarc_codes,
+    ):
+        _require_text(text_value)
+
+    return _DenialCodeRequest(
+        carc=tool_arguments["carc"],
+        rarc=tuple(rarc_codes),
+        group_code=tool_arguments["group_code"],
+    )
+
+
+def _parse_payer_profile_request(
+    tool_arguments: Mapping[str, object],
+) -> _PayerProfileRequest:
+    """Return validated payer arguments or raise ValueError."""
+
+    _require_text_arguments(tool_arguments, _PAYER_ARGUMENT_NAMES)
+
+    return _PayerProfileRequest(payer_id=tool_arguments["payer_id"])
+
+
 def _require_text_arguments(
     tool_arguments: Mapping[str, object],
     argument_names: set,
 ) -> None:
     """Require exactly the named arguments, all as non-blank strings."""
 
+    _require_argument_names(tool_arguments, argument_names)
+
+    for argument_value in tool_arguments.values():
+        _require_text(argument_value)
+
+
+def _require_argument_names(
+    tool_arguments: Mapping[str, object],
+    argument_names: set,
+) -> None:
+    """Require exactly the named arguments."""
+
     if set(tool_arguments) != argument_names:
         raise ValueError("The tool received unexpected arguments.")
 
-    for argument_value in tool_arguments.values():
-        if not isinstance(argument_value, str) or not argument_value.strip():
-            raise ValueError("Tool arguments must be non-blank strings.")
+
+def _require_text(argument_value: object) -> None:
+    """Require one non-blank string."""
+
+    if not isinstance(argument_value, str) or not argument_value.strip():
+        raise ValueError("Tool arguments must be non-blank strings.")
 
 
 def _policy_data(
@@ -319,6 +436,26 @@ def _encounter_passages(note: EncounterNote) -> List[EvidencePassage]:
         )
         for passage in note.passages
     ]
+
+
+def _reference_result(
+    request_id: str,
+    tool_name: str,
+    source_id: str,
+    data: Optional[Dict[str, object]],
+) -> ToolResult:
+    """Convert one table lookup into the shared contract."""
+
+    if data is None:
+        return _error_result(request_id, tool_name, ErrorCode.NO_MATCH)
+
+    return ToolResult(
+        request_id=request_id,
+        tool_name=tool_name,
+        status=ToolStatus.OK,
+        data=data,
+        source_ids=[source_id],
+    )
 
 
 def _error_result(
