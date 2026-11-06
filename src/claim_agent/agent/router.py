@@ -1,35 +1,56 @@
+"""Adapt frozen baseline findings into shared routing contracts."""
+
 from datetime import date
-from typing import Tuple, List
 
 from baseline.triage.claim import Claim
 from baseline.triage.rules import triage_claim
-
-# Fix: Import directly from the public boundary we just merged!
 from claim_agent.contracts import (
-    BaselineFinding, 
-    RouteDecision, 
+    BaselineFinding,
     Disposition,
     RootCause,
-    RouteOutcome
+    RouteDecision,
+    RouteOutcome,
 )
 
-def analyze_and_route_claim(claim: Claim, as_of: date) -> List[Tuple[BaselineFinding, RouteDecision]]:
+
+EVIDENCE_INTERPRETATION_ROOT_CAUSES = frozenset(
+    {
+        RootCause.MEDICAL_NECESSITY,
+        RootCause.BUNDLING_NCCI,
+        RootCause.AUTHORIZATION,
+    }
+)
+
+AGENT_EVIDENCE_TOOLS = (
+    "retrieve_medical_policy",
+    "get_encounter_note",
+)
+
+
+def analyze_and_route_claim(
+    claim: Claim,
+    as_of: date,
+) -> list[tuple[BaselineFinding, RouteDecision]]:
+    """Return one baseline finding and route for each denied service line.
+
+    The frozen baseline remains responsible for deterministic claim analysis.
+    This adapter preserves each service line's identity and translates the
+    baseline output into the contracts consumed by the agent runtime.
     """
-    Wraps the frozen deterministic baseline. Evaluates the Claim object 
-    and outputs deterministic routing contracts per service line.
-    """
+
     triage_result = triage_claim(claim, as_of)
-    results = []
-    warnings = triage_result.get("warnings", [])
-    
-    # Fix 2: Iterate over all findings to support multi-denial claims
+    routing_results: list[tuple[BaselineFinding, RouteDecision]] = []
+    baseline_warnings = triage_result.get("warnings", [])
+
+    # Evaluate every finding independently so multi-denial claims preserve
+    # their service-line identities throughout routing.
     for finding_data in triage_result["findings"]:
         disposition = Disposition(finding_data["disposition"])
         root_cause = RootCause(finding_data["root_cause"])
-        
+
         raw_deadline = finding_data.get("deadline")
         deadline_date = date.fromisoformat(raw_deadline) if raw_deadline else None
-        
+
         days_remaining = finding_data.get("days_remaining")
         if days_remaining is None:
             deadline_status = "NONE"
@@ -37,13 +58,14 @@ def analyze_and_route_claim(claim: Claim, as_of: date) -> List[Tuple[BaselineFin
             deadline_status = "EXPIRED"
         else:
             deadline_status = "ACTIVE"
-            
-        evidence_needed = finding_data.get("evidence_needed", [])
-        
-        # Fix 4: Prepend the group code to the CARC (e.g., 'CO-45')
+
+        required_evidence = finding_data.get("evidence_needed", [])
+
+        # Preserve the adjustment group because CO and PR codes can lead to
+        # different responsibility and safety outcomes.
         group_code = finding_data.get("group_code", "CO")
-        primary_code = f"{group_code}-{finding_data['carc']}"
-        denial_codes = [primary_code] + finding_data.get("rarc", [])
+        primary_denial_code = f"{group_code}-{finding_data['carc']}"
+        denial_codes = [primary_denial_code] + finding_data.get("rarc", [])
 
         finding = BaselineFinding(
             contract_version="0.1",
@@ -52,14 +74,13 @@ def analyze_and_route_claim(claim: Claim, as_of: date) -> List[Tuple[BaselineFin
             denial_codes=denial_codes,
             root_cause=root_cause,
             baseline_disposition=disposition,
-            required_evidence=evidence_needed,
+            required_evidence=required_evidence,
             rationale=finding_data["rationale"],
             filing_deadline=deadline_date,
-            deadline_status=deadline_status
+            deadline_status=deadline_status,
         )
 
-        # Fix 1 & 6: Route based on whether the agent needs to interpret evidence, and separate manual reasons
-        if disposition == Disposition.MANUAL_REVIEW:
+        if disposition is Disposition.MANUAL_REVIEW:
             route = RouteDecision(
                 contract_version="0.1",
                 claim_id=triage_result["claim_id"],
@@ -67,9 +88,9 @@ def analyze_and_route_claim(claim: Claim, as_of: date) -> List[Tuple[BaselineFin
                 outcome=RouteOutcome.MANUAL_REVIEW,
                 reason_code="BASELINE_MANUAL_REVIEW",
                 routing_reason="Baseline hit a manual review state.",
-                authorized_tools=[]
+                authorized_tools=[],
             )
-        elif warnings:
+        elif baseline_warnings:
             route = RouteDecision(
                 contract_version="0.1",
                 claim_id=triage_result["claim_id"],
@@ -77,18 +98,24 @@ def analyze_and_route_claim(claim: Claim, as_of: date) -> List[Tuple[BaselineFin
                 outcome=RouteOutcome.MANUAL_REVIEW,
                 reason_code="BASELINE_WARNING",
                 routing_reason="Baseline generated warnings.",
-                authorized_tools=[]
+                authorized_tools=[],
             )
-        elif root_cause in (RootCause.MEDICAL_NECESSITY, RootCause.BUNDLING_NCCI, RootCause.AUTHORIZATION):
+        elif (
+            disposition is Disposition.APPEAL_WITH_DOCUMENTATION
+            and root_cause in EVIDENCE_INTERPRETATION_ROOT_CAUSES
+        ):
+            # Only appeal cases requiring evidence interpretation enter the
+            # agent. Deterministic corrections remain in the baseline flow.
             route = RouteDecision(
                 contract_version="0.1",
                 claim_id=triage_result["claim_id"],
                 service_line_id=finding_data["service_line"],
                 outcome=RouteOutcome.AGENT_REQUIRED,
                 reason_code="EVIDENCE_EVALUATION_REQUIRED",
-                routing_reason="Agent must interpret evidence for this root cause.",
-                # Fix 3: Use the exact tool names matching the manifest
-                authorized_tools=["retrieve_medical_policy", "get_encounter_note"]
+                routing_reason=(
+                    "Agent must interpret evidence for this root cause."
+                ),
+                authorized_tools=list(AGENT_EVIDENCE_TOOLS),
             )
         else:
             route = RouteDecision(
@@ -97,10 +124,13 @@ def analyze_and_route_claim(claim: Claim, as_of: date) -> List[Tuple[BaselineFin
                 service_line_id=finding_data["service_line"],
                 outcome=RouteOutcome.DETERMINISTIC_ONLY,
                 reason_code="BASELINE_RESOLVED",
-                routing_reason="Baseline reached a conclusion without requiring agent interpretation.",
-                authorized_tools=[]
+                routing_reason=(
+                    "Baseline reached a conclusion without requiring agent "
+                    "interpretation."
+                ),
+                authorized_tools=[],
             )
-            
-        results.append((finding, route))
 
-    return results
+        routing_results.append((finding, route))
+
+    return routing_results
