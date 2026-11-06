@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 
 from claim_agent.agent.action_parser import (
@@ -22,6 +23,9 @@ from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace
 from claim_agent.agent.scripted_model import (
     ScriptedModelClient,
     ScriptedModelOutput,
+)
+from tests.agent.runtime_test_support import (
+    make_test_agent_decision_payload,
 )
 
 
@@ -53,17 +57,17 @@ class RepairExecutionTests(unittest.TestCase):
     def test_repair_call_returns_corrected_action(self) -> None:
         """Malformed output may receive one corrected structured response."""
 
+        corrected_decision_payload = make_test_agent_decision_payload()
+
         model_client = ScriptedModelClient(
             [
                 ScriptedModelOutput(
-                    response_text="""
-                    {
-                        "action": "propose_decision",
-                        "decision": {
-                            "recommended_disposition": "MANUAL_REVIEW"
+                    response_text=json.dumps(
+                        {
+                            "action": "propose_decision",
+                            "decision": corrected_decision_payload,
                         }
-                    }
-                    """
+                    )
                 )
             ]
         )
@@ -89,13 +93,15 @@ class RepairExecutionTests(unittest.TestCase):
             outcome.runtime_state.phase,
             RuntimePhase.REPAIRING,
         )
-        repaired_action = parse_model_action(
-            outcome.repaired_response_text
-        )
+        repaired_action = parse_model_action(outcome.repaired_response_text)
 
         self.assertEqual(
             repaired_action.action_type,
             RuntimeActionType.PROPOSE_DECISION,
+        )
+        self.assertEqual(
+            repaired_action.decision_payload["decision_id"],
+            "decision-test-001",
         )
         self.assertEqual(outcome.budget_usage.model_calls_used, 2)
         self.assertEqual(outcome.budget_usage.repair_attempts_used, 1)

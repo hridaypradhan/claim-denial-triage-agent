@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 
 from claim_agent.agent.action_parser import (
     ModelOutputParseError,
     RuntimeActionType,
     parse_model_action,
+)
+
+from tests.agent.runtime_test_support import (
+    make_test_agent_decision_payload,
 )
 
 
@@ -34,24 +39,33 @@ class ModelActionParserTests(unittest.TestCase):
         self.assertEqual(action.tool_arguments["procedure_code"], "70553")
 
     def test_parses_valid_proposed_decision(self) -> None:
-        """Decision contents remain opaque until the shared contract exists."""
+        """A complete contract-shaped decision should remain available."""
 
-        action = parse_model_action("""
+        decision_payload = make_test_agent_decision_payload()
+        response_text = json.dumps(
             {
                 "action": "propose_decision",
-                "decision": {
-                    "recommended_disposition": "MANUAL_REVIEW"
-                }
+                "decision": decision_payload,
             }
-            """)
+        )
+
+        action = parse_model_action(response_text)
 
         self.assertEqual(
             action.action_type,
             RuntimeActionType.PROPOSE_DECISION,
         )
         self.assertEqual(
+            action.decision_payload["decision_id"],
+            "decision-test-001",
+        )
+        self.assertEqual(
             action.decision_payload["recommended_disposition"],
             "MANUAL_REVIEW",
+        )
+        self.assertEqual(
+            action.decision_payload["agent_status"],
+            "MANUAL_REVIEW_REQUIRED",
         )
 
     def test_parses_valid_manual_review_action(self) -> None:
