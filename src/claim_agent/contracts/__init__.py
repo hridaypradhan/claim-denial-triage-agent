@@ -4,6 +4,7 @@ from .schema import (
     AgentDecision,
     AgentStatus,
     BaselineFinding,
+    CONTRACT_VERSION,
     CriterionAssessment,
     CriterionStatus,
     Disposition,
@@ -22,6 +23,7 @@ from .schema import (
     ESCALATION_UNSUPPORTED_CRITERION,
     EvidencePassage,
     EvidenceStatus,
+    OutputPackage,
     PROBLEM_DEADLINE_EXPIRED,
     PROBLEM_FORMULA_NOT_SATISFIED,
     PROBLEM_IDENTITY_MISMATCH,
@@ -47,6 +49,7 @@ from .schema import (
 )
 
 __all__ = [
+    "CONTRACT_VERSION",
     "Disposition",
     "RootCause",
     "EvidenceStatus",
@@ -64,6 +67,7 @@ __all__ = [
     "AgentDecision",
     "ValidationProblem",
     "ValidationResult",
+    "OutputPackage",
     "PROBLEM_PROHIBITED_BILLING",
     "PROBLEM_UNAUTHORIZED_OVERRIDE",
     "PROBLEM_DEADLINE_EXPIRED",
