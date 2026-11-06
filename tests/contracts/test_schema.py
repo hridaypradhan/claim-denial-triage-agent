@@ -1,7 +1,7 @@
 import unittest
 from pydantic import ValidationError
 from claim_agent.contracts import (
-    ToolResult, ToolStatus, ErrorCode, 
+    ToolResult, ToolStatus, ErrorCode,
     EvidencePassage, ValidationResult, ValidationOutcome,
     AgentDecision, Disposition, RootCause, AgentStatus
 )
@@ -54,7 +54,7 @@ class TestSchema(unittest.TestCase):
         p1 = EvidencePassage(passage_id="docA@v1#p1", source_id="docA", source_type="policy", version="1", text="text1")
         p2 = EvidencePassage(passage_id="docB@v2#p1", source_id="docB", source_type="policy", version="2", text="text2")
         p3 = EvidencePassage(passage_id="docA@v1#p2", source_id="docA", source_type="policy", version="1", text="text3")
-        
+
         result = ToolResult(
             request_id="req_5",
             tool_name="tool_1",

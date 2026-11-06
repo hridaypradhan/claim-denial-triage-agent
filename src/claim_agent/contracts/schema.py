@@ -111,7 +111,7 @@ class ToolResult(StrictContract):
             # Hriday's rule: Only TRANSIENT_FAILURE and TIMEOUT can be retryable
             if self.retryable and self.error_code not in (ErrorCode.TRANSIENT_FAILURE, ErrorCode.TIMEOUT):
                 raise ValueError("retryable=True is only permitted for TRANSIENT_FAILURE and TIMEOUT")
-        
+
         # Hriday's rule: source_ids must equal unique versioned document IDs in first-appearance order
         expected_source_ids = []
         seen = set()
@@ -120,10 +120,10 @@ class ToolResult(StrictContract):
             if vid not in seen:
                 seen.add(vid)
                 expected_source_ids.append(vid)
-                
+
         if self.source_ids != expected_source_ids:
             raise ValueError("source_ids must exactly match the unique versioned document IDs in first-appearance order")
-        
+
         return self
 
 # --- Contract v0.1: Routing (Hriday) ---
