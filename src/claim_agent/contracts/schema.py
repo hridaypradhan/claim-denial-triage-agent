@@ -4,6 +4,7 @@ from enum import Enum
 from datetime import date
 
 CONTRACT_VERSION = "0.1"
+
 # --- Validation Problem Codes ---
 PROBLEM_PROHIBITED_BILLING = "PROHIBITED_PATIENT_BILLING"
 PROBLEM_UNAUTHORIZED_OVERRIDE = "UNAUTHORIZED_OVERRIDE"
@@ -13,6 +14,15 @@ PROBLEM_MISSING_CITATION = "MISSING_CITATION"
 PROBLEM_UNRESOLVED_CITATION = "UNRESOLVED_CITATION"
 PROBLEM_UNRESOLVED_CRITERION = "UNRESOLVED_CRITERION_CITATION"
 
+# New constraints
+PROBLEM_IDENTITY_MISMATCH = "IDENTITY_MISMATCH"
+PROBLEM_STATUS_MISMATCH = "STATUS_DISPOSITION_MISMATCH"
+PROBLEM_UNAUTHORIZED_DISPOSITION = "UNAUTHORIZED_DISPOSITION"
+PROBLEM_PROHIBITED_APPEAL = "PROHIBITED_APPEAL"
+PROBLEM_MISSING_POLICY_FORMULA = "MISSING_POLICY_FORMULA"
+PROBLEM_UNSUPPORTED_CRITERION = "UNSUPPORTED_CRITERION"
+PROBLEM_MISSING_ENCOUNTER_CITATION = "MISSING_ENCOUNTER_CITATION"
+
 # --- Safety Escalation Reasons ---
 ESCALATION_PROHIBITED_BILLING = "SAFETY_ESCALATION_PROHIBITED_BILLING"
 ESCALATION_UNAUTHORIZED_OVERRIDE = "SAFETY_ESCALATION_UNAUTHORIZED_OVERRIDE"
@@ -20,8 +30,16 @@ ESCALATION_DEADLINE_EXPIRED = "SAFETY_ESCALATION_DEADLINE_EXPIRED"
 ESCALATION_FORMULA_NOT_SATISFIED = "SAFETY_ESCALATION_FORMULA_NOT_SATISFIED"
 ESCALATION_MISSING_EVIDENCE = "SAFETY_ESCALATION_MISSING_EVIDENCE"
 
-# --- Enums ---
+# New constraints
+ESCALATION_IDENTITY_MISMATCH = "SAFETY_ESCALATION_IDENTITY_MISMATCH"
+ESCALATION_STATUS_MISMATCH = "SAFETY_ESCALATION_STATUS_MISMATCH"
+ESCALATION_UNAUTHORIZED_DISPOSITION = "SAFETY_ESCALATION_UNAUTHORIZED_DISPOSITION"
+ESCALATION_PROHIBITED_APPEAL = "SAFETY_ESCALATION_PROHIBITED_APPEAL"
+ESCALATION_MISSING_POLICY_FORMULA = "SAFETY_ESCALATION_MISSING_POLICY_FORMULA"
+ESCALATION_UNSUPPORTED_CRITERION = "SAFETY_ESCALATION_UNSUPPORTED_CRITERION"
+ESCALATION_MISSING_ENCOUNTER_CITATION = "SAFETY_ESCALATION_MISSING_ENCOUNTER_CITATION"
 
+# --- Enums ---
 class Disposition(str, Enum):
     APPEAL_WITH_DOCUMENTATION = "APPEAL_WITH_DOCUMENTATION"
     CORRECT_AND_RESUBMIT = "CORRECT_AND_RESUBMIT"
@@ -86,8 +104,7 @@ class CriterionStatus(str, Enum):
 class StrictContract(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-# --- Contract v0.1: Tools (Silas) ---
-
+# --- Contract v0.1: Tools ---
 class EvidencePassage(StrictContract):
     passage_id: str = Field(description="Unique ID for this specific passage")
     source_id: str = Field(description="The source document identifier")
@@ -123,12 +140,9 @@ class ToolResult(StrictContract):
         else:
             if self.error_code is None:
                 raise ValueError("error_code is required when status is ERROR")
-            # Hriday's rule: Only TRANSIENT_FAILURE and TIMEOUT can be retryable
             if self.retryable and self.error_code not in (ErrorCode.TRANSIENT_FAILURE, ErrorCode.TIMEOUT):
                 raise ValueError("retryable=True is only permitted for TRANSIENT_FAILURE and TIMEOUT")
-
-        # Hriday's rule: source_ids must equal unique versioned document IDs in first-appearance order.
-        # Tools without passages, such as denial-code lookup, still report their sources.
+        
         expected_source_ids = []
         seen = set()
         for p in self.evidence_passages:
@@ -136,14 +150,12 @@ class ToolResult(StrictContract):
             if vid not in seen:
                 seen.add(vid)
                 expected_source_ids.append(vid)
-
-        if self.evidence_passages and self.source_ids != expected_source_ids:
+                
+        if self.source_ids != expected_source_ids:
             raise ValueError("source_ids must exactly match the unique versioned document IDs in first-appearance order")
-
         return self
 
-# --- Contract v0.1: Routing (Hriday) ---
-
+# --- Contract v0.1: Routing ---
 class BaselineFinding(StrictContract):
     contract_version: str = Field(default=CONTRACT_VERSION)
     claim_id: str
@@ -165,8 +177,7 @@ class RouteDecision(StrictContract):
     routing_reason: str
     authorized_tools: List[str] = Field(default_factory=list)
 
-# --- Contract v0.1: Agent Decisions (Issue #6) ---
-
+# --- Contract v0.1: Agent Decisions ---
 class CriterionAssessment(StrictContract):
     criterion_id: str
     status: CriterionStatus
@@ -210,7 +221,6 @@ class ValidationResult(StrictContract):
         if self.outcome == ValidationOutcome.ACCEPTED:
             if not self.validated_decision:
                 raise ValueError("validated_decision is required for ACCEPTED outcome.")
-            # Hriday's rule: ensure identity fields match the validated_decision
             if self.validated_decision.decision_id != self.decision_id:
                 raise ValueError("decision_id mismatch between ValidationResult and validated_decision")
             if self.validated_decision.claim_id != self.claim_id:

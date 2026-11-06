@@ -1,47 +1,48 @@
+import re
 from typing import List, Optional
 from datetime import date
 from claim_agent.contracts import (
-    AgentDecision,
-    ValidationResult,
-    EvidencePassage,
-    BaselineFinding,
-    Disposition,
-    ValidationProblem,
-    ValidationOutcome,
-    CriterionStatus,
-    PROBLEM_PROHIBITED_BILLING, PROBLEM_UNAUTHORIZED_OVERRIDE, 
-    PROBLEM_DEADLINE_EXPIRED, PROBLEM_FORMULA_NOT_SATISFIED, 
-    PROBLEM_MISSING_CITATION, PROBLEM_UNRESOLVED_CITATION, PROBLEM_UNRESOLVED_CRITERION,
-    ESCALATION_PROHIBITED_BILLING, ESCALATION_UNAUTHORIZED_OVERRIDE, 
-    ESCALATION_DEADLINE_EXPIRED, ESCALATION_FORMULA_NOT_SATISFIED, ESCALATION_MISSING_EVIDENCE
+    AgentDecision, ValidationResult, EvidencePassage, BaselineFinding, Disposition,
+    RootCause, ValidationProblem, ValidationOutcome, CriterionStatus, AgentStatus,
+    PROBLEM_PROHIBITED_BILLING, PROBLEM_UNAUTHORIZED_OVERRIDE, PROBLEM_DEADLINE_EXPIRED, 
+    PROBLEM_FORMULA_NOT_SATISFIED, PROBLEM_MISSING_CITATION, PROBLEM_UNRESOLVED_CITATION, 
+    PROBLEM_UNRESOLVED_CRITERION, PROBLEM_IDENTITY_MISMATCH, PROBLEM_STATUS_MISMATCH, 
+    PROBLEM_UNAUTHORIZED_DISPOSITION, PROBLEM_PROHIBITED_APPEAL, PROBLEM_MISSING_POLICY_FORMULA, 
+    PROBLEM_UNSUPPORTED_CRITERION, PROBLEM_MISSING_ENCOUNTER_CITATION,
+    ESCALATION_PROHIBITED_BILLING, ESCALATION_UNAUTHORIZED_OVERRIDE, ESCALATION_DEADLINE_EXPIRED, 
+    ESCALATION_FORMULA_NOT_SATISFIED, ESCALATION_MISSING_EVIDENCE, ESCALATION_IDENTITY_MISMATCH, 
+    ESCALATION_STATUS_MISMATCH, ESCALATION_UNAUTHORIZED_DISPOSITION, ESCALATION_PROHIBITED_APPEAL, 
+    ESCALATION_MISSING_POLICY_FORMULA, ESCALATION_UNSUPPORTED_CRITERION, ESCALATION_MISSING_ENCOUNTER_CITATION
 )
 
-def _evaluate_formula(formula_tokens: List[str], supported_criteria: set) -> bool:
-    """Basic evaluator for policy boolean formulas like ['A', 'AND', 'B']."""
-    if not formula_tokens:
-        return True
+def _evaluate_formula(formula: str, supported_criteria: set) -> bool:
+    """Evaluates precedence-aware boolean string formulas like 'A AND B AND (C OR D)'."""
+    if not formula:
+        return False
         
-    result = True
-    current_op = "AND"
-    
-    for token in formula_tokens:
-        if token in ("AND", "OR"):
-            current_op = token
+    tokens = re.findall(r'\(|\)|AND|OR|[\w-]+', formula)
+    py_expr = []
+    for t in tokens:
+        if t == 'AND':
+            py_expr.append('and')
+        elif t == 'OR':
+            py_expr.append('or')
+        elif t in ('(', ')'):
+            py_expr.append(t)
         else:
-            is_supported = token in supported_criteria
-            if current_op == "AND":
-                result = result and is_supported
-            elif current_op == "OR":
-                result = result or is_supported
-                
-    return result
+            py_expr.append(str(t in supported_criteria))
+            
+    try:
+        return eval(" ".join(py_expr))
+    except Exception:
+        return False
 
 def validate_agent_decision(
     decision: AgentDecision,
     finding: BaselineFinding,
     retrieved_evidence: List[EvidencePassage],
     as_of: date,
-    policy_formula: Optional[List[str]] = None
+    policy_formula: Optional[str] = None
 ) -> ValidationResult:
     problems: List[ValidationProblem] = []
     manual_reasons: List[str] = []
@@ -49,89 +50,87 @@ def validate_agent_decision(
     baseline_disposition = finding.baseline_disposition
     is_manual = decision.recommended_disposition == Disposition.MANUAL_REVIEW
 
-    # 1. Patient Billing Restriction (Terminal)
+    # 1. Identity Mismatch (Terminal)
+    if decision.claim_id != finding.claim_id or decision.service_line_id != finding.service_line_id:
+        problems.append(ValidationProblem(code=PROBLEM_IDENTITY_MISMATCH, field_path="claim_id", message="Decision identity mismatch.", is_repairable=False))
+        manual_reasons.append(ESCALATION_IDENTITY_MISMATCH)
+
+    # 2. Status / Disposition Match (Terminal)
+    if decision.agent_status == AgentStatus.MANUAL_REVIEW_REQUIRED and not is_manual:
+        problems.append(ValidationProblem(code=PROBLEM_STATUS_MISMATCH, field_path="recommended_disposition", message="Agent status demands manual review but disposition does not match.", is_repairable=False))
+        manual_reasons.append(ESCALATION_STATUS_MISMATCH)
+
+    # 3. Patient Billing Restriction (Terminal)
     has_co_denial = any(code.startswith("CO-") for code in finding.denial_codes)
     if decision.recommended_disposition == Disposition.BILL_PATIENT and (baseline_disposition != Disposition.BILL_PATIENT or has_co_denial):
-        problems.append(ValidationProblem(
-            code=PROBLEM_PROHIBITED_BILLING, field_path="recommended_disposition",
-            message="Agent attempted to bill patient for a CO denial or without baseline authorization.",
-            is_repairable=False
-        ))
+        problems.append(ValidationProblem(code=PROBLEM_PROHIBITED_BILLING, field_path="recommended_disposition", message="Prohibited patient billing.", is_repairable=False))
         manual_reasons.append(ESCALATION_PROHIBITED_BILLING)
 
-    # 2. Unauthorized Override (Terminal)
+    # 4. Unauthorized Override (Terminal)
     if baseline_disposition == Disposition.MANUAL_REVIEW and not is_manual:
-        problems.append(ValidationProblem(
-            code=PROBLEM_UNAUTHORIZED_OVERRIDE, field_path="recommended_disposition",
-            message="Agent cannot override a deterministic MANUAL_REVIEW.",
-            is_repairable=False
-        ))
+        problems.append(ValidationProblem(code=PROBLEM_UNAUTHORIZED_OVERRIDE, field_path="recommended_disposition", message="Cannot override baseline manual review.", is_repairable=False))
         manual_reasons.append(ESCALATION_UNAUTHORIZED_OVERRIDE)
 
-    # 3. Deadline Check (Terminal)
-    if not is_manual and finding.filing_deadline and finding.filing_deadline < as_of:
-        problems.append(ValidationProblem(
-            code=PROBLEM_DEADLINE_EXPIRED, field_path="recommended_disposition",
-            message="Agent recommended an action, but its filing deadline has already expired.",
-            is_repairable=False
-        ))
+    # 5. Baseline Disallowed Disposition (Terminal)
+    if baseline_disposition == Disposition.WRITE_OFF and decision.recommended_disposition != Disposition.WRITE_OFF:
+        problems.append(ValidationProblem(code=PROBLEM_UNAUTHORIZED_DISPOSITION, field_path="recommended_disposition", message="Agent disposition prohibited by baseline.", is_repairable=False))
+        manual_reasons.append(ESCALATION_UNAUTHORIZED_DISPOSITION)
+
+    # 6. Contractual Appeal Prohibition (Terminal)
+    if decision.recommended_disposition == Disposition.APPEAL_WITH_DOCUMENTATION and finding.root_cause == RootCause.CONTRACTUAL:
+        problems.append(ValidationProblem(code=PROBLEM_PROHIBITED_APPEAL, field_path="recommended_disposition", message="Cannot appeal contractual adjustments.", is_repairable=False))
+        manual_reasons.append(ESCALATION_PROHIBITED_APPEAL)
+
+    # 7. Deadline Check (Terminal)
+    if not is_manual and finding.deadline_status in ("EXPIRED", "NONE"):
+        problems.append(ValidationProblem(code=PROBLEM_DEADLINE_EXPIRED, field_path="recommended_disposition", message="Deadline expired or missing.", is_repairable=False))
         manual_reasons.append(ESCALATION_DEADLINE_EXPIRED)
 
-    # 4. Policy Formula Validation (Terminal)
-    if decision.recommended_disposition == Disposition.APPEAL_WITH_DOCUMENTATION and policy_formula:
-        supported = {c.criterion_id for c in decision.criterion_assessments if c.status == CriterionStatus.SUPPORTED}
-        if not _evaluate_formula(policy_formula, supported):
-            problems.append(ValidationProblem(
-                code=PROBLEM_FORMULA_NOT_SATISFIED, field_path="criterion_assessments",
-                message="The agent's supported criteria do not satisfy the required policy formula.",
-                is_repairable=False
-            ))
-            manual_reasons.append(ESCALATION_FORMULA_NOT_SATISFIED)
+    # 8. Missing Evidence Collection (Terminal)
+    if not is_manual and not retrieved_evidence:
+        problems.append(ValidationProblem(code=PROBLEM_MISSING_CITATION, field_path="citation_ids", message="Empty retrieval collection is terminal.", is_repairable=False))
+        manual_reasons.append(ESCALATION_MISSING_EVIDENCE)
 
-    # 5. Missing Evidence / Empty Citations (Terminal if no evidence, Repairable otherwise)
-    if not is_manual and not decision.citation_ids:
-        if not retrieved_evidence:
-            problems.append(ValidationProblem(
-                code=PROBLEM_MISSING_CITATION, field_path="citation_ids",
-                message="No evidence was retrieved, so the lack of citations is terminal.",
-                is_repairable=False
-            ))
-            manual_reasons.append(ESCALATION_MISSING_EVIDENCE)
+    # 9. Policy Formula Checks (Terminal)
+    if decision.recommended_disposition == Disposition.APPEAL_WITH_DOCUMENTATION:
+        if not policy_formula:
+            problems.append(ValidationProblem(code=PROBLEM_MISSING_POLICY_FORMULA, field_path="criterion_assessments", message="Policy formula is missing.", is_repairable=False))
+            manual_reasons.append(ESCALATION_MISSING_POLICY_FORMULA)
         else:
-            problems.append(ValidationProblem(
-                code=PROBLEM_MISSING_CITATION, field_path="citation_ids",
-                message="A non-manual disposition requires at least one resolvable citation.",
-                is_repairable=True
-            ))
+            supported = {c.criterion_id for c in decision.criterion_assessments if c.status == CriterionStatus.SUPPORTED}
+            if not _evaluate_formula(policy_formula, supported):
+                problems.append(ValidationProblem(code=PROBLEM_FORMULA_NOT_SATISFIED, field_path="criterion_assessments", message="Policy formula not met.", is_repairable=False))
+                manual_reasons.append(ESCALATION_FORMULA_NOT_SATISFIED)
 
-    # 6. Unresolved Citations (Repairable)
-    valid_passage_ids = {passage.passage_id for passage in retrieved_evidence}
+    # 10. UNKNOWN or CONFLICTING Criteria (Terminal)
+    if not is_manual:
+        has_invalid = any(c.status in (CriterionStatus.UNKNOWN, CriterionStatus.CONFLICTING) for c in decision.criterion_assessments)
+        if has_invalid:
+            problems.append(ValidationProblem(code=PROBLEM_UNSUPPORTED_CRITERION, field_path="criterion_assessments", message="UNKNOWN or CONFLICTING criteria are terminal.", is_repairable=False))
+            manual_reasons.append(ESCALATION_UNSUPPORTED_CRITERION)
+
+    # 11. Repairable Citation Rules
+    encounter_passage_ids = {p.passage_id for p in retrieved_evidence if p.source_type == "encounter_note"}
+    valid_passage_ids = {p.passage_id for p in retrieved_evidence}
+    
+    if not is_manual and not decision.citation_ids and retrieved_evidence:
+        problems.append(ValidationProblem(code=PROBLEM_MISSING_CITATION, field_path="citation_ids", message="Non-manual disposition requires citations.", is_repairable=True))
+        
     for idx, citation in enumerate(decision.citation_ids):
         if citation not in valid_passage_ids:
-            problems.append(ValidationProblem(
-                code=PROBLEM_UNRESOLVED_CITATION, field_path=f"citation_ids[{idx}]",
-                message=f"Citation '{citation}' not found in retrieved evidence.",
-                is_repairable=True
-            ))
+            problems.append(ValidationProblem(code=PROBLEM_UNRESOLVED_CITATION, field_path=f"citation_ids[{idx}]", message=f"Citation '{citation}' unresolved.", is_repairable=True))
 
-    # 7. Criterion-Level Unresolved Citations & Support Enforcement (Repairable)
     for c_idx, criterion in enumerate(decision.criterion_assessments):
-        if criterion.status == CriterionStatus.SUPPORTED and not criterion.citation_ids:
-            problems.append(ValidationProblem(
-                code=PROBLEM_MISSING_CITATION, field_path=f"criterion_assessments[{c_idx}].citation_ids",
-                message=f"Criterion '{criterion.criterion_id}' is SUPPORTED but missing citations.",
-                is_repairable=True
-            ))
-            
+        if criterion.status == CriterionStatus.SUPPORTED:
+            if not criterion.citation_ids:
+                problems.append(ValidationProblem(code=PROBLEM_MISSING_CITATION, field_path=f"criterion_assessments[{c_idx}].citation_ids", message="SUPPORTED requires citations.", is_repairable=True))
+            if not any(cit in encounter_passage_ids for cit in criterion.citation_ids):
+                problems.append(ValidationProblem(code=PROBLEM_MISSING_ENCOUNTER_CITATION, field_path=f"criterion_assessments[{c_idx}].citation_ids", message="SUPPORTED requires at least one encounter note.", is_repairable=True))
+                
         for cit_idx, citation in enumerate(criterion.citation_ids):
             if citation not in valid_passage_ids:
-                problems.append(ValidationProblem(
-                    code=PROBLEM_UNRESOLVED_CRITERION, field_path=f"criterion_assessments[{c_idx}].citation_ids[{cit_idx}]",
-                    message=f"Criterion citation '{citation}' not found.",
-                    is_repairable=True
-                ))
+                problems.append(ValidationProblem(code=PROBLEM_UNRESOLVED_CRITERION, field_path=f"criterion_assessments[{c_idx}].citation_ids[{cit_idx}]", message="Criterion citation unresolved.", is_repairable=True))
 
-    # Determine explicit outcome
     if any(not p.is_repairable for p in problems):
         outcome = ValidationOutcome.REJECTED_MANUAL_REVIEW
         validated_decision = None
@@ -143,13 +142,9 @@ def validate_agent_decision(
         validated_decision = decision
 
     return ValidationResult(
-        contract_version="0.1",
-        decision_id=decision.decision_id,
-        claim_id=decision.claim_id,
-        service_line_id=decision.service_line_id,
-        outcome=outcome,
-        approval_state="PENDING_REVIEW",
-        validation_problems=problems,
-        validated_decision=validated_decision,
+        contract_version="0.1", decision_id=decision.decision_id,
+        claim_id=decision.claim_id, service_line_id=decision.service_line_id,
+        outcome=outcome, approval_state="PENDING_REVIEW",
+        validation_problems=problems, validated_decision=validated_decision,
         manual_review_reasons=manual_reasons
     )
