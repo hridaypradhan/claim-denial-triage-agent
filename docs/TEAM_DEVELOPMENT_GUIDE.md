@@ -69,6 +69,8 @@ Primary ownership means coordinating design, implementation, tests, and document
 - Encounter notes returned as numbered, citable passages, with unavailable documents reported explicitly.
 - Eligibility records returned without deciding eligibility. This tool is cut first if the schedule slips.
 - Knowledge manifests, passage IDs, provenance, and no-match/error responses.
+- The `calculate_deadline` tool wrapper, which calls Neha's deadline arithmetic through the dispatcher.
+- The per-claim document inventory, built from the knowledge manifest.
 - Policy corpus selection and source metadata: URL, access date, effective date, payer, procedure, section, and version. A policy is included only when its terms of use permit.
 - The retrieval-method architecture decision.
 
@@ -156,6 +158,10 @@ Primary ownership means coordinating design, implementation, tests, and document
 | Policy, encounter, and eligibility tools | Silas | Evaluation provenance requirements from Sachin |
 | Fake dispatcher for the offline vertical slice | Silas | Tool contracts from Neha; consumer review from Hriday |
 | Policy corpus selection and source metadata | Silas | Payer/procedure coverage needs from Sachin |
+| `calculate_deadline` tool wrapper (*default*) | Silas | Deadline arithmetic from Neha |
+| Per-claim document inventory (*default*) | Silas | Built from the knowledge manifest; case fixtures from Sachin use the same document IDs |
+| Single bounded tool retry (*default*) | Hriday | Dispatcher reports `retryable`; each retry counts against the tool-call budget, not planning turns |
+| Untrusted-text handling (*default*) | Hriday | Tools return text unmodified; the runtime passes it to the model as labelled data |
 | Fake model and offline vertical slice | Hriday | Fake dispatcher from Silas; validators from Neha |
 | Hosted-model runtime and prompts | Hriday | Stable tool and decision contracts |
 | Final validators and review package | Neha | Agent decision from Hriday; resolvable sources from Silas |
@@ -165,7 +171,7 @@ Primary ownership means coordinating design, implementation, tests, and document
 | Public README accuracy | PR author | Reviewer verifies public claims and commands |
 | This team guide | Affected owner | All affected owners approve scope/process changes |
 
-The following cross-team work remains unassigned: the `calculate_deadline` tool wrapper, transient-failure retry ownership, the per-claim document inventory, and untrusted-text handling in tool results. Each must be recorded in a GitHub issue before implementation and added to this table only after the affected owners agree.
+The four rows marked *default* stand unless an affected owner objects in pull-request review.
 
 If work does not clearly fit one row, open an issue and assign an owner before implementation. Do not assume another workstream will cover it.
 

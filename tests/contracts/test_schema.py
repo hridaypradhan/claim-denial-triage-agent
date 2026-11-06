@@ -64,6 +64,15 @@ class TestSchema(unittest.TestCase):
         )
         self.assertEqual(result.source_ids, ["docA@v1", "docB@v2"])
 
+    def test_sources_without_passages_are_allowed(self):
+        result = ToolResult(
+            request_id="req_7",
+            tool_name="lookup_denial_code",
+            status=ToolStatus.OK,
+            source_ids=["CODE-CARC-16"]
+        )
+        self.assertEqual(result.source_ids, ["CODE-CARC-16"])
+
     def test_accepted_result_matching_identity(self):
         decision = AgentDecision(
             decision_id="d1", claim_id="c1", service_line_id=1,

@@ -84,7 +84,7 @@ It contains:
 - A synthetic physical therapy policy (CPT 97110) under the `AETNA` payer profile in two dated versions, so the service date selects the criteria: v1 (`A AND B`) through 2026-03-31 and v2 (`A AND B AND C`) from 2026-04-01. It is not the payer's actual policy.
 - Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
 
-Every passage has a stable citation ID such as `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in [decision 0001](docs/decisions/0001-retrieval-method.md). No retrieval tool reads this corpus yet.
+Every passage has a stable citation ID such as `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in [decision 0001](docs/decisions/0001-retrieval-method.md). `retrieve_policy_passages`, the core of the planned `retrieve_medical_policy` tool, now reads this corpus: it matches one policy by payer, procedure, and service date, then ranks its passages with BM25. `ToolDispatcher` exposes it as `retrieve_medical_policy` and returns the shared `ToolResult` contract. Encounter and eligibility retrieval and the other lookup tools are not implemented yet, and the runtime does not call the dispatcher yet.
 
 ### Scripted offline agent runtime
 
@@ -219,24 +219,27 @@ python -m claim_agent.agent.offline_runner --pretty
 
 The JSON output reports the terminal phase, reason, accepted decision, consumed budgets, and ordered trace-event names. All model, tool, and validation responses in this demonstration are predefined fixtures rather than production services.
 
-## Run the knowledge corpus tests
+## Run the knowledge and retrieval tests
 
-These check that the manifest, source files, passage IDs, criteria, and per-procedure formulas in [`knowledge/`](knowledge/) are consistent:
+These check that the manifest, source files, passage IDs, criteria, and per-procedure formulas in [`knowledge/`](knowledge/) are consistent, that policy matching and ranking behave as decision 0001 requires, and that the dispatcher validates requests and returns `ToolResult` records. The dispatcher tests need the agent dependencies in [`requirements.txt`](requirements.txt):
 
 ```bash
-python -m unittest discover -s tests/tools -p "test*.py" -v
+python -m pip install -r requirements.txt
+PYTHONPATH=src python -m unittest discover -s tests/tools -p "test*.py" -v
 ```
 
 PowerShell equivalent:
 
 ```powershell
+$env:PYTHONPATH = '.\src'
+py -3 -m pip install -r requirements.txt
 py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 ```
 
 Expected result:
 
 ```text
-Ran 8 tests
+Ran 41 tests
 OK
 ```
 
