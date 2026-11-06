@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from types import MappingProxyType
 from typing import Mapping, Optional, Protocol, Tuple, runtime_checkable
-
+from claim_agent.contracts import ValidationProblem
 
 @dataclass(frozen=True)
 class OfflineToolObservation:
@@ -68,6 +68,7 @@ class OfflineValidationResult:
 
     status: OfflineValidationStatus
     problem_messages: Tuple[str, ...] = ()
+    validation_problems: Tuple[ValidationProblem, ...] = ()
     validated_decision: Optional[Mapping[str, object]] = None
 
     def __post_init__(self) -> None:
@@ -83,6 +84,20 @@ class OfflineValidationResult:
 
         if any(not message.strip() for message in self.problem_messages):
             raise ValueError("problem_messages cannot contain blank values")
+
+        if self.validation_problems:
+            structured_messages = tuple(
+                problem.message
+                for problem in self.validation_problems
+            )
+
+            if (
+                self.problem_messages
+                and self.problem_messages != structured_messages
+            ):
+                raise ValueError(
+                    "problem_messages must match validation_problems"
+                )
 
         if self.validated_decision is not None:
             protected_decision = MappingProxyType(dict(self.validated_decision))

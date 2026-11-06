@@ -12,6 +12,7 @@ from claim_agent.agent.runtime_ports import (
     OfflineValidationStatus,
     ToolDispatcherPort,
 )
+from claim_agent.contracts.schema import ValidationProblem
 
 
 class CompatibleDispatcher:
@@ -49,6 +50,32 @@ class CompatibleValidator:
 
 class RuntimePortTests(unittest.TestCase):
     """Verify temporary dispatcher and validator boundary behavior."""
+
+    def test_structured_validation_problems_preserve_details(self) -> None:
+        """Production validation problems should retain audit fields."""
+
+        validation_problem = ValidationProblem(
+            code="UNRESOLVED_CITATION",
+            field_path="citation_ids",
+            message="The citation does not resolve to same-run evidence.",
+            is_repairable=True,
+        )
+
+        result = OfflineValidationResult(
+            status=OfflineValidationStatus.REPAIRABLE,
+            problem_messages=(validation_problem.message,),
+            validation_problems=(validation_problem,),
+        )
+
+        self.assertEqual(
+            "UNRESOLVED_CITATION",
+            result.validation_problems[0].code,
+        )
+        self.assertEqual(
+            "citation_ids",
+            result.validation_problems[0].field_path,
+        )
+        self.assertTrue(result.validation_problems[0].is_repairable)
 
     def test_compatible_dispatcher_satisfies_protocol(self) -> None:
         """The runtime can accept any dispatcher with the required method."""

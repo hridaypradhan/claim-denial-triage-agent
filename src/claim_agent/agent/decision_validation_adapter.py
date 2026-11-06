@@ -106,6 +106,8 @@ def _to_runtime_validation_result(
 ) -> OfflineValidationResult:
     """Translate a shared ValidationResult into the runtime's stable format."""
 
+    validation_problems = (tuple(shared_result.validation_problems),)
+
     status_by_outcome = {
         ValidationOutcome.ACCEPTED: OfflineValidationStatus.ACCEPTED,
         ValidationOutcome.REPAIRABLE: OfflineValidationStatus.REPAIRABLE,
@@ -123,5 +125,6 @@ def _to_runtime_validation_result(
         problem_messages=tuple(
             problem.message for problem in shared_result.validation_problems
         ),
+        validation_problems=tuple(shared_result.validation_problems),
         validated_decision=validated_decision,
     )

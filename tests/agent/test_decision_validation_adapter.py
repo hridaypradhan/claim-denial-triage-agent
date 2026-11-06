@@ -137,6 +137,7 @@ class DecisionValidationAdapterTests(unittest.TestCase):
             "does not match AgentDecision",
             result.problem_messages[0],
         )
+        self.assertEqual((), result.validation_problems)
 
     def test_identity_mismatch_requires_manual_review(self) -> None:
         """A proposal for another claim must never be accepted or repaired."""
@@ -154,6 +155,14 @@ class DecisionValidationAdapterTests(unittest.TestCase):
         self.assertIn(
             "identity",
             result.problem_messages[0].lower(),
+        )
+        self.assertEqual(1, len(result.validation_problems))
+        self.assertEqual(
+            result.problem_messages[0],
+            result.validation_problems[0].message,
+        )
+        self.assertFalse(
+            result.validation_problems[0].is_repairable
         )
 
     def test_evidence_provider_reads_latest_same_run_evidence(self) -> None:
