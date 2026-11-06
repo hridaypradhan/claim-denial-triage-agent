@@ -27,7 +27,8 @@ Use option 2. The `retrieve_medical_policy` tool is implemented by `retrieve_pol
 
 ## Knowledge format
 
-- `knowledge/manifest.json` lists every source with its type, version, path, payer and procedure codes or claim ID, effective dates, and origin (URL, access date, terms-of-use status). Tools load sources only through the manifest.
+- `knowledge/manifest.json` lists every source with its type, version, path, `sha256`, payer and procedure codes or claim ID, effective dates, and origin (URL, access date, terms-of-use status). Tools load sources only through the manifest.
+- Each `sha256` is the SHA-256 of the file's exact bytes, so evaluation can confirm the snapshot is unchanged between runs. `.gitattributes` keeps these files on LF line endings, so the hashes match on every platform. Changing a file means updating its hash.
 - Each source file holds numbered passages. Passage IDs have the form `<source_id>@v<version>#<passage>`, for example `POL-BCBSAZ-MRI-BRAIN@v1#P3`.
 - Policies store one criteria formula per procedure code in `criteria_formulas`, because requirements can differ by code (for example, a contrast indication applies only to CPT 70553).
 - `tests/tools/test_knowledge_corpus.py` checks manifest paths, ID and version consistency, passage-ID uniqueness, criterion references, and formula coverage.
