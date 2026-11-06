@@ -17,13 +17,13 @@ The agent must cite policy and encounter passages that deterministic validation 
 
 ## Decision
 
-Use option 2.
+Use option 2. The `retrieve_medical_policy` tool is implemented by `retrieve_policy_passages` in `src/claim_agent/tools/policy_retrieval.py`.
 
 1. **Hard filter.** `retrieve_medical_policy` first selects manifest entries where `payer` equals the claim payer, `procedure_codes` contains the service-line code, and `effective_from <= service_date` and (`effective_to` is null or `service_date <= effective_to`).
 2. **No fallback.** If the filter matches nothing, the tool returns status `NO_MATCH`. It never relaxes payer, procedure, or date. If it matches more than one policy version, it returns status `AMBIGUOUS_POLICY` rather than choosing one. Both lead to manual review downstream.
-3. **Ranking.** Passages inside the matched policy are ranked with BM25 (`k1 = 1.5`, `b = 0.75`) against the agent's query. Text is lowercased and split on non-alphanumeric characters; no stemming or stop-word removal. Document frequencies are computed over the passages of the matched policy only. Ties are broken by the passage's order in the source file. This is implementable with the standard library and gives identical rankings across runs.
+3. **Ranking.** Passages inside the matched policy are ranked with BM25 (`k1 = 1.5`, `b = 0.75`) against the agent's query. Text is lowercased and split on non-alphanumeric characters; no stemming or stop-word removal. Repeated query terms count once. Inverse document frequency is `log(1 + (N - df + 0.5) / (df + 0.5))`. Document frequencies and average passage length are computed over the passages of the matched policy only. Ties are broken by the passage's order in the source file. This is implementable with the standard library and gives identical rankings across runs.
 4. **Criteria.** The policy's `criteria` list and the formula for the claim's procedure code (from `criteria_formulas`) are always returned with the result, so the agent sees every applicable criterion even if ranking misses one. A policy that lists a procedure code without a formula for it is a corpus defect and returns `NO_MATCH`.
-5. **Encounter notes and eligibility records** are fetched by claim ID and document ID, not searched. A requested document that is not in the manifest returns `DOCUMENT_UNAVAILABLE`.
+5. **Encounter notes and eligibility records** are fetched by claim ID and document ID, not searched. A requested document that is not in the manifest returns `DOCUMENT_UNAVAILABLE`. A claim's document inventory is the set of manifest entries with its `claim_id`.
 
 ## Knowledge format
 
