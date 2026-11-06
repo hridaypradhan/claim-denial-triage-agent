@@ -1,5 +1,6 @@
 """Integrity checks for the knowledge corpus in knowledge/."""
 
+import hashlib
 import json
 import re
 import unittest
@@ -45,6 +46,12 @@ class KnowledgeCorpusTest(unittest.TestCase):
         for entry in self.manifest["sources"]:
             with self.subTest(source=entry["source_id"]):
                 self.assertTrue((KNOWLEDGE / entry["path"]).is_file(), entry["path"])
+
+    def test_manifest_hashes_match_files(self):
+        for entry in self.manifest["sources"]:
+            with self.subTest(source=entry["path"]):
+                file_bytes = (KNOWLEDGE / entry["path"]).read_bytes()
+                self.assertEqual(entry["sha256"], hashlib.sha256(file_bytes).hexdigest())
 
     def test_manifest_source_ids_are_unique(self):
         ids = [(e["source_id"], e["version"]) for e in self.manifest["sources"]]
