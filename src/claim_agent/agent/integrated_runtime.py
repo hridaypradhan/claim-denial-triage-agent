@@ -1,0 +1,88 @@
+"""Run one routed claim through production-shaped runtime boundaries.
+
+This module is the assembly point between the deterministic router and the
+agent runtime. It validates that the agent is authorized before constructing
+model, tool, evidence, and decision-validation boundaries.
+"""
+
+from __future__ import annotations
+
+import time
+from dataclasses import dataclass
+from datetime import date
+from typing import Callable, Optional, Tuple
+
+from claim_agent.agent.model_interface import ModelClient
+from claim_agent.agent.offline_runtime import (
+    OfflineAgentRuntime,
+    OfflineRuntimeResult,
+)
+from claim_agent.agent.production_boundaries import (
+    build_production_runtime_boundaries,
+)
+from claim_agent.agent.runtime_budget import RuntimeBudgetLimits
+from claim_agent.agent.runtime_case import prepare_runtime_case
+from claim_agent.agent.tool_result_adapter import SharedToolDispatcher
+from claim_agent.contracts import (
+    BaselineFinding,
+    EvidencePassage,
+    RouteDecision,
+)
+
+
+@dataclass(frozen=True)
+class IntegratedCaseResult:
+    """Observable runtime result and evidence collected during one case."""
+
+    runtime_result: OfflineRuntimeResult
+    retrieved_evidence: Tuple[EvidencePassage, ...]
+    policy_formula: Optional[str]
+
+
+def run_integrated_case(
+    run_id: str,
+    system_instructions: str,
+    model_client: ModelClient,
+    dispatcher: SharedToolDispatcher,
+    baseline_finding: BaselineFinding,
+    route_decision: RouteDecision,
+    budget_limits: RuntimeBudgetLimits,
+    as_of: date,
+    monotonic_clock: Callable[[], float] = time.monotonic,
+) -> IntegratedCaseResult:
+    """Validate, assemble, and execute one authorized agent case."""
+
+    # Route validation happens before any model or tool boundary is invoked.
+    # This is like checking that a claim belongs in the specialist-review
+    # queue before handing it to the specialist.
+    prepared_case = prepare_runtime_case(
+        baseline_finding=baseline_finding,
+        route_decision=route_decision,
+    )
+
+    boundaries = build_production_runtime_boundaries(
+        dispatcher=dispatcher,
+        baseline_finding=baseline_finding,
+        as_of=as_of,
+    )
+
+    runtime = OfflineAgentRuntime(
+        model_client=model_client,
+        tool_dispatcher=boundaries.tool_dispatcher,
+        decision_validator=boundaries.decision_validator,
+        budget_limits=budget_limits,
+        allowed_tool_names=prepared_case.allowed_tool_names,
+        monotonic_clock=monotonic_clock,
+    )
+
+    runtime_result = runtime.run(
+        run_id=run_id,
+        system_instructions=system_instructions,
+        task_context=prepared_case.task_context,
+    )
+
+    return IntegratedCaseResult(
+        runtime_result=runtime_result,
+        retrieved_evidence=boundaries.evidence_store.evidence_passages,
+        policy_formula=boundaries.evidence_store.policy_formula,
+    )

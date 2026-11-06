@@ -44,10 +44,6 @@ from claim_agent.agent.tool_execution import (
     execute_tool_action,
 )
 
-# TODO(#11, owner=Hriday): Adapt the merged BaselineFinding and RouteDecision
-# contracts into the runtime's planning context.
-
-
 @dataclass(frozen=True)
 class OfflineRuntimeResult:
     """Final observable result of one offline agent run.
