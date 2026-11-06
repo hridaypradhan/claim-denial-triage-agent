@@ -138,7 +138,7 @@ class ToolResult(StrictContract):
                 raise ValueError("error_code is required when status is ERROR")
             if self.retryable and self.error_code not in (ErrorCode.TRANSIENT_FAILURE, ErrorCode.TIMEOUT):
                 raise ValueError("retryable=True is only permitted for TRANSIENT_FAILURE and TIMEOUT")
-        
+
         expected_source_ids = []
         seen = set()
         for p in self.evidence_passages:
@@ -146,7 +146,7 @@ class ToolResult(StrictContract):
             if vid not in seen:
                 seen.add(vid)
                 expected_source_ids.append(vid)
-                
+
         if self.evidence_passages and self.source_ids != expected_source_ids:
             raise ValueError("source_ids must exactly match the unique versioned document IDs in first-appearance order")
         return self
@@ -228,4 +228,105 @@ class ValidationResult(StrictContract):
                 raise ValueError("validated_decision must be omitted for repairable or manual review outcomes.")
             if self.outcome == ValidationOutcome.REJECTED_MANUAL_REVIEW and not self.manual_review_reasons:
                 raise ValueError("At least one manual_review_reasons is required for REJECTED_MANUAL_REVIEW.")
+        return self
+
+# --- Contract v0.1: Output Package ---
+class OutputPackage(StrictContract):
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    run_id: str
+    package_version: str
+    knowledge_snapshot_id: str
+    claim_id: str
+    service_line_id: int
+    route_outcome: RouteOutcome
+    baseline_finding: BaselineFinding
+    proposed_decision: Optional[AgentDecision] = Field(None)
+    validation_result: Optional[ValidationResult] = Field(None)
+    agent_terminal_reason: Optional[str] = Field(None)
+    final_disposition: Disposition
+    final_root_cause: RootCause
+    manual_review_reasons: List[str] = Field(default_factory=list)
+
+    @model_validator(mode='after')
+    def validate_package_rules(self):
+        finding = self.baseline_finding
+        proposed = self.proposed_decision
+        result = self.validation_result
+
+        # 1. Package identity must match the baseline finding
+        if self.claim_id != finding.claim_id:
+            raise ValueError("claim_id mismatch between OutputPackage and baseline_finding.")
+        if self.service_line_id != finding.service_line_id:
+            raise ValueError("service_line_id mismatch between OutputPackage and baseline_finding.")
+
+        # 2. Route outcomes that never involve the agent must not carry agent artifacts
+        if self.route_outcome in (RouteOutcome.DETERMINISTIC_ONLY, RouteOutcome.MANUAL_REVIEW):
+            if proposed is not None or result is not None:
+                raise ValueError(
+                    f"proposed_decision and validation_result must be omitted for {self.route_outcome.value} route."
+                )
+
+        # 3. Proposed decision identity and validation requirement
+        if proposed is not None:
+            if proposed.claim_id != self.claim_id:
+                raise ValueError("claim_id mismatch between OutputPackage and proposed_decision.")
+            if proposed.service_line_id != self.service_line_id:
+                raise ValueError("service_line_id mismatch between OutputPackage and proposed_decision.")
+            if result is None:
+                raise ValueError("validation_result is required when proposed_decision is present.")
+
+        # 4. Validation result identity and linkage
+        if result is not None:
+            if proposed is None:
+                raise ValueError("proposed_decision is required when validation_result is present.")
+            if result.claim_id != self.claim_id:
+                raise ValueError("claim_id mismatch between OutputPackage and validation_result.")
+            if result.service_line_id != self.service_line_id:
+                raise ValueError("service_line_id mismatch between OutputPackage and validation_result.")
+            if result.decision_id != proposed.decision_id:
+                raise ValueError("decision_id mismatch between validation_result and proposed_decision.")
+
+            validated = result.validated_decision
+            if validated is not None:
+                if validated.claim_id != self.claim_id:
+                    raise ValueError("claim_id mismatch between OutputPackage and validated_decision.")
+                if validated.service_line_id != self.service_line_id:
+                    raise ValueError("service_line_id mismatch between OutputPackage and validated_decision.")
+                if validated.decision_id != proposed.decision_id:
+                    raise ValueError("decision_id mismatch between validated_decision and proposed_decision.")
+
+            if result.outcome == ValidationOutcome.ACCEPTED and validated is None:
+                raise ValueError("ACCEPTED validation result must have a validated_decision.")
+
+        # 5. Agent terminal reason guards
+        if self.route_outcome == RouteOutcome.AGENT_REQUIRED:
+            if proposed is None and not self.agent_terminal_reason:
+                raise ValueError("agent_terminal_reason is required when AGENT_REQUIRED has no proposed_decision.")
+        else:
+            if self.agent_terminal_reason is not None:
+                raise ValueError("agent_terminal_reason must be omitted for non-AGENT_REQUIRED outcomes.")
+
+        # 6. final_disposition must equal the documented route/outcome computation
+        if self.route_outcome == RouteOutcome.DETERMINISTIC_ONLY:
+            expected_disposition = finding.baseline_disposition
+        elif self.route_outcome == RouteOutcome.MANUAL_REVIEW:
+            expected_disposition = Disposition.MANUAL_REVIEW
+        elif (
+            result is not None
+            and result.outcome == ValidationOutcome.ACCEPTED
+            and result.validated_decision is not None
+        ):
+            expected_disposition = result.validated_decision.recommended_disposition
+        else:
+            expected_disposition = Disposition.MANUAL_REVIEW
+
+        if self.final_disposition != expected_disposition:
+            raise ValueError(
+                f"final_disposition must be {expected_disposition.value} for this route/validation outcome."
+            )
+
+        # 7. final_root_cause must match the baseline finding
+        if self.final_root_cause != finding.root_cause:
+            raise ValueError("final_root_cause must match baseline_finding.root_cause.")
+
         return self
