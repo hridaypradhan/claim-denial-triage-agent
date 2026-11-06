@@ -4,9 +4,9 @@ A hybrid agentic AI system for evidence-grounded triage of denied outpatient med
 
 > **Project status:** Active academic capstone. The deterministic baseline,
 > shared contracts, local retrieval tools, safety validator, bounded runtime,
-> and a production-shaped local integration are runnable and tested. Durable
-> traces, hosted-model integration, evaluation, and the final report remain in
-> progress.
+> a provider-neutral hosted-model boundary, and a production-shaped local
+> integration are runnable and tested. A provider-specific hosted transport,
+> durable traces, evaluation, and the final report remain in progress.
 
 ## Problem
 
@@ -140,6 +140,12 @@ through the merged project boundaries:
 
 The model is still scripted, so this flow is reproducible and requires no
 hosted-model credentials.
+
+The runtime also provides a provider-neutral `HostedModelClient`. It translates
+the stable runtime request into a timeout-bounded transport request and maps
+provider text, request IDs, and token counts back into the runtime response.
+Its fake-transport tests run offline. No live provider transport or credential
+configuration is committed yet.
 
 ### Remaining project scaffolding
 
