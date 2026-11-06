@@ -356,10 +356,10 @@ class OfflineRuntimeResilienceTests(unittest.TestCase):
         )
         self.assertIsNone(result.validated_decision)
 
-    def test_repair_model_exception_preserves_consumed_budgets(
+    def test_repair_model_timeout_preserves_consumed_budgets(
         self,
     ) -> None:
-        """A failed repair call must remain visible and budgeted."""
+        """A timed-out repair call must remain visible and budgeted."""
 
         class RepairTimeoutModelClient:
             """Return malformed output, then fail during its correction."""
@@ -404,7 +404,17 @@ class OfflineRuntimeResilienceTests(unittest.TestCase):
         )
         self.assertEqual(
             result.final_state.terminal_reason,
-            "model_boundary_error",
+            "repair_model_timeout",
+        )
+        manual_review_entry = result.trace_entries[-1]
+
+        self.assertEqual(
+            "repair_model_timeout",
+            manual_review_entry.details["terminal_reason"],
+        )
+        self.assertIn(
+            "repair-call timeout",
+            manual_review_entry.details["problem_message"],
         )
         self.assertEqual(result.budget_usage.model_calls_used, 2)
         self.assertEqual(result.budget_usage.repair_attempts_used, 1)

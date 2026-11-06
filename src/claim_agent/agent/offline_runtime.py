@@ -237,12 +237,22 @@ class OfflineAgentRuntime:
                         allowed_tool_names=self._allowed_tool_names,
                     )
                 except RepairModelBoundaryError as error:
+                    if isinstance(error.original_error, TimeoutError):
+                        terminal_reason = "repair_model_timeout"
+                        problem_message = (
+                            "The hosted model did not respond before the "
+                            "repair-call timeout."
+                        )
+                    else:
+                        terminal_reason = "model_boundary_error"
+                        problem_message = str(error)
+
                     return self._finish_manual_review(
                         runtime_state=error.runtime_state,
                         budget_usage=error.budget_usage,
                         runtime_trace=runtime_trace,
-                        terminal_reason="model_boundary_error",
-                        problem_message=str(error),
+                        terminal_reason=terminal_reason,
+                        problem_message=problem_message,
                     )
                 except RuntimeBudgetExceededError as budget_error:
                     return self._finish_manual_review(
