@@ -18,8 +18,8 @@ from claim_agent.agent.runtime_budget import (
 from claim_agent.agent.runtime_state import AgentRuntimeState, RuntimePhase
 from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace
 
-# TODO(#6): Replace plain validation problem strings with the approved
-# ValidationResult problem contract.
+# TODO(#11, owner=Hriday): Carry merged ValidationProblem values through repair
+# execution instead of using temporary plain strings.
 
 
 class RepairModelBoundaryError(RuntimeError):

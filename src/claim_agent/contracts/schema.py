@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field, model_validator, ConfigDict
-from typing import List, Optional, Dict, Any, Literal
-from enum import Enum
 from datetime import date
+from enum import Enum
+from typing import Any, Dict, List, Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 CONTRACT_VERSION = "0.1"
 
@@ -45,6 +46,7 @@ class Disposition(str, Enum):
     WRITE_OFF = "WRITE_OFF"
     NO_ACTION_CONTRACTUAL = "NO_ACTION_CONTRACTUAL"
 
+
 class RootCause(str, Enum):
     AUTHORIZATION = "AUTHORIZATION"
     CODING = "CODING"
@@ -58,20 +60,24 @@ class RootCause(str, Enum):
     CONTRACTUAL = "CONTRACTUAL"
     UNKNOWN = "UNKNOWN"
 
+
 class EvidenceStatus(str, Enum):
     MISSING = "MISSING"
     PRESENT = "PRESENT"
     CONFLICTING = "CONFLICTING"
     NOT_APPLICABLE = "NOT_APPLICABLE"
 
+
 class RouteOutcome(str, Enum):
     DETERMINISTIC_ONLY = "DETERMINISTIC_ONLY"
     AGENT_REQUIRED = "AGENT_REQUIRED"
     MANUAL_REVIEW = "MANUAL_REVIEW"
 
+
 class ToolStatus(str, Enum):
     OK = "OK"
     ERROR = "ERROR"
+
 
 class ErrorCode(str, Enum):
     NO_MATCH = "NO_MATCH"
@@ -81,14 +87,17 @@ class ErrorCode(str, Enum):
     TRANSIENT_FAILURE = "TRANSIENT_FAILURE"
     TIMEOUT = "TIMEOUT"
 
+
 class ValidationOutcome(str, Enum):
     ACCEPTED = "ACCEPTED"
     REPAIRABLE = "REPAIRABLE"
     REJECTED_MANUAL_REVIEW = "REJECTED_MANUAL_REVIEW"
 
+
 class AgentStatus(str, Enum):
     COMPLETED = "COMPLETED"
     MANUAL_REVIEW_REQUIRED = "MANUAL_REVIEW_REQUIRED"
+
 
 class CriterionStatus(str, Enum):
     SUPPORTED = "SUPPORTED"
@@ -100,6 +109,7 @@ class CriterionStatus(str, Enum):
 class StrictContract(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
+
 # --- Contract v0.1: Tools ---
 class EvidencePassage(StrictContract):
     passage_id: str = Field(description="Unique ID for this specific passage")
@@ -110,12 +120,16 @@ class EvidencePassage(StrictContract):
     effective_to: Optional[date] = Field(None, description="End of effective date range")
     text: str = Field(description="The actual text content")
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validate_passage_id_format(self):
         expected_prefix = f"{self.source_id}@v{self.version}#"
         if not self.passage_id.startswith(expected_prefix):
-            raise ValueError(f"passage_id '{self.passage_id}' must follow format <source_id>@v<version>#<passage>")
+            raise ValueError(
+                f"passage_id '{self.passage_id}' must follow format "
+                "<source_id>@v<version>#<passage>"
+            )
         return self
+
 
 class ToolResult(StrictContract):
     contract_version: str = Field(default=CONTRACT_VERSION)
@@ -128,7 +142,7 @@ class ToolResult(StrictContract):
     error_code: Optional[ErrorCode] = Field(None)
     retryable: bool = Field(default=False)
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validate_tool_relationships(self):
         if self.status == ToolStatus.OK:
             if self.error_code is not None or self.retryable:
@@ -136,20 +150,29 @@ class ToolResult(StrictContract):
         else:
             if self.error_code is None:
                 raise ValueError("error_code is required when status is ERROR")
-            if self.retryable and self.error_code not in (ErrorCode.TRANSIENT_FAILURE, ErrorCode.TIMEOUT):
-                raise ValueError("retryable=True is only permitted for TRANSIENT_FAILURE and TIMEOUT")
-        
+            if self.retryable and self.error_code not in (
+                ErrorCode.TRANSIENT_FAILURE,
+                ErrorCode.TIMEOUT,
+            ):
+                raise ValueError(
+                    "retryable=True is only permitted for TRANSIENT_FAILURE and TIMEOUT"
+                )
+
         expected_source_ids = []
-        seen = set()
-        for p in self.evidence_passages:
-            vid = f"{p.source_id}@v{p.version}"
-            if vid not in seen:
-                seen.add(vid)
-                expected_source_ids.append(vid)
-                
+        seen_source_ids = set()
+        for passage in self.evidence_passages:
+            versioned_source_id = f"{passage.source_id}@v{passage.version}"
+            if versioned_source_id not in seen_source_ids:
+                seen_source_ids.add(versioned_source_id)
+                expected_source_ids.append(versioned_source_id)
+
         if self.evidence_passages and self.source_ids != expected_source_ids:
-            raise ValueError("source_ids must exactly match the unique versioned document IDs in first-appearance order")
+            raise ValueError(
+                "source_ids must exactly match the unique versioned document IDs "
+                "in first-appearance order"
+            )
         return self
+
 
 # --- Contract v0.1: Routing ---
 class BaselineFinding(StrictContract):
@@ -163,6 +186,7 @@ class BaselineFinding(StrictContract):
     rationale: str
     filing_deadline: Optional[date] = Field(None)
     deadline_status: str
+
 
 class RouteDecision(StrictContract):
     contract_version: str = Field(default=CONTRACT_VERSION)
@@ -180,6 +204,7 @@ class CriterionAssessment(StrictContract):
     explanation: str
     citation_ids: List[str] = Field(default_factory=list)
 
+
 class AgentDecision(StrictContract):
     contract_version: str = Field(default=CONTRACT_VERSION)
     decision_id: str
@@ -195,11 +220,13 @@ class AgentDecision(StrictContract):
     rationale: str
     citation_ids: List[str] = Field(default_factory=list)
 
+
 class ValidationProblem(StrictContract):
     code: str
     field_path: str
     message: str
     is_repairable: bool
+
 
 class ValidationResult(StrictContract):
     contract_version: str = Field(default=CONTRACT_VERSION)
@@ -212,7 +239,7 @@ class ValidationResult(StrictContract):
     validated_decision: Optional[AgentDecision] = Field(None)
     manual_review_reasons: List[str] = Field(default_factory=list)
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validate_outcomes(self):
         if self.outcome == ValidationOutcome.ACCEPTED:
             if not self.validated_decision:
@@ -223,9 +250,21 @@ class ValidationResult(StrictContract):
                 raise ValueError("claim_id mismatch between ValidationResult and validated_decision")
             if self.validated_decision.service_line_id != self.service_line_id:
                 raise ValueError("service_line_id mismatch between ValidationResult and validated_decision")
-        elif self.outcome in (ValidationOutcome.REPAIRABLE, ValidationOutcome.REJECTED_MANUAL_REVIEW):
+        elif self.outcome in (
+            ValidationOutcome.REPAIRABLE,
+            ValidationOutcome.REJECTED_MANUAL_REVIEW,
+        ):
             if self.validated_decision:
-                raise ValueError("validated_decision must be omitted for repairable or manual review outcomes.")
-            if self.outcome == ValidationOutcome.REJECTED_MANUAL_REVIEW and not self.manual_review_reasons:
-                raise ValueError("At least one manual_review_reasons is required for REJECTED_MANUAL_REVIEW.")
+                raise ValueError(
+                    "validated_decision must be omitted for repairable or manual "
+                    "review outcomes."
+                )
+            if (
+                self.outcome == ValidationOutcome.REJECTED_MANUAL_REVIEW
+                and not self.manual_review_reasons
+            ):
+                raise ValueError(
+                    "At least one manual_review_reasons is required for "
+                    "REJECTED_MANUAL_REVIEW."
+                )
         return self

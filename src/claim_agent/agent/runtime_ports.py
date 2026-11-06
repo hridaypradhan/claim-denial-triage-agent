@@ -1,8 +1,7 @@
-"""Temporary boundaries between the offline runtime and teammate-owned code.
+"""Compatibility boundaries used by the deterministic offline runtime.
 
-These types support the independent vertical slice while the shared contracts
-in issues #3, #5, and #6 remain unresolved. They must be replaced or adapted
-when the approved production contracts become available.
+These small internal types keep scripted regression tests stable while the
+merged production contracts are connected through adapters.
 """
 
 from __future__ import annotations
@@ -11,8 +10,8 @@ from __future__ import annotations
 # every issue #3 tool returns the approved ToolResult contract. Policy
 # retrieval is available; encounter-note and remaining tool implementations
 # are still being delivered by Silas.
-# TODO(#6): Replace OfflineValidationResult with an adapter around the approved
-# AgentDecision and ValidationResult contracts.
+# TODO(#11, owner=Hriday): Adapt merged AgentDecision and ValidationResult
+# values at this boundary while preserving scripted regression coverage.
 
 from dataclasses import dataclass, field
 from enum import Enum

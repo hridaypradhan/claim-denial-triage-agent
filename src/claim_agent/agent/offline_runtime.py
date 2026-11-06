@@ -44,8 +44,8 @@ from claim_agent.agent.tool_execution import (
     execute_tool_action,
 )
 
-# TODO(#5): Replace the free-form task_context input with an adapter around the
-# approved BaselineFinding and RouteDecision contracts.
+# TODO(#11, owner=Hriday): Adapt the merged BaselineFinding and RouteDecision
+# contracts into the runtime's planning context.
 
 
 @dataclass(frozen=True)

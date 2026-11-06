@@ -7,8 +7,8 @@ untrusted model text and executable runtime behavior.
 
 from __future__ import annotations
 
-# TODO(#6): Validate proposed decisions through the approved AgentDecision
-# contract instead of keeping decision_payload as an opaque mapping.
+# TODO(#11, owner=Hriday): Convert proposed decisions into the merged
+# AgentDecision contract instead of keeping decision_payload opaque.
 
 import json
 from dataclasses import dataclass, field

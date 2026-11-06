@@ -10,8 +10,8 @@ from __future__ import annotations
 import json
 from typing import Tuple
 
-# TODO(#6): Replace plain validation problem strings with the approved
-# ValidationResult problem contract when issue #6 is resolved.
+# TODO(#11, owner=Hriday): Build repair prompts from merged ValidationProblem
+# values instead of flattening them to plain strings at the boundary.
 
 
 def build_repair_context(

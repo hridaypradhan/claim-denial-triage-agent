@@ -1,16 +1,16 @@
-"""Deterministic stand-ins for teammate-owned runtime boundaries.
+"""Deterministic stand-ins for external runtime boundaries.
 
 The scripted dispatcher and validator let the offline vertical slice exercise
-real runtime control flow before the production tool and validation contracts
-are available.
+real control flow without network services and remain useful for regression
+tests while production adapters are integrated.
 """
 
 from __future__ import annotations
 
-# TODO(#3): Replace ScriptedToolDispatcher with Silas's contract-backed
-# dispatcher adapter when the approved tool contracts are available.
-# TODO(#6): Replace ScriptedDecisionValidator with Neha's contract-backed
-# validator adapter when the approved validation contracts are available.
+# TODO(#11, owner=Hriday): Use the production dispatcher adapter in integrated
+# runs while retaining ScriptedToolDispatcher for deterministic tests.
+# TODO(#11, owner=Hriday): Use the production validator adapter in integrated
+# runs while retaining ScriptedDecisionValidator for deterministic tests.
 
 from collections import deque
 from dataclasses import dataclass

@@ -76,9 +76,8 @@ def execute_decision_with_repair(
         )
 
         runtime_state = runtime_state.transition_to(RuntimePhase.VALIDATING)
-        # TODO(#3, #6): Hriday must pass accumulated EvidencePassage IDs
-        # into deterministic validation after Silas and Neha approve the
-        # retrieval and validation contracts.
+        # TODO(#11, owner=Hriday): Pass accumulated same-run EvidencePassage
+        # values and the applicable policy formula into production validation.
         try:
             validation_result = decision_validator.validate(
                 parsed_action.decision_payload
