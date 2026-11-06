@@ -30,7 +30,6 @@ class TestValidatorFaultInjection(unittest.TestCase):
         self.as_of = date(2026, 9, 6)
 
     def test_accepted_happy_path(self):
-        # Fix: Provide the SUPPORTED criterion so it satisfies policy_formula="A"
         self.decision.criterion_assessments = [
             CriterionAssessment(criterion_id="A", status=CriterionStatus.SUPPORTED, explanation=".", citation_ids=["enc1@v1#p1"])
         ]
@@ -42,8 +41,19 @@ class TestValidatorFaultInjection(unittest.TestCase):
         result = validate_agent_decision(self.decision, self.finding, self.evidence, self.as_of)
         self.assertEqual(result.validation_problems[0].code, PROBLEM_IDENTITY_MISMATCH)
 
+    def test_identity_mismatch_root_cause(self):
+        self.decision.root_cause = RootCause.CODING
+        result = validate_agent_decision(self.decision, self.finding, self.evidence, self.as_of)
+        self.assertEqual(result.validation_problems[0].code, PROBLEM_IDENTITY_MISMATCH)
+
     def test_status_mismatch(self):
         self.decision.agent_status = AgentStatus.MANUAL_REVIEW_REQUIRED
+        result = validate_agent_decision(self.decision, self.finding, self.evidence, self.as_of)
+        self.assertEqual(result.validation_problems[0].code, PROBLEM_STATUS_MISMATCH)
+
+    def test_status_mismatch_completed_manual(self):
+        self.decision.agent_status = AgentStatus.COMPLETED
+        self.decision.recommended_disposition = Disposition.MANUAL_REVIEW
         result = validate_agent_decision(self.decision, self.finding, self.evidence, self.as_of)
         self.assertEqual(result.validation_problems[0].code, PROBLEM_STATUS_MISMATCH)
 
@@ -55,6 +65,7 @@ class TestValidatorFaultInjection(unittest.TestCase):
 
     def test_contractual_appeal_prohibited(self):
         self.finding.root_cause = RootCause.CONTRACTUAL
+        self.decision.root_cause = RootCause.CONTRACTUAL
         result = validate_agent_decision(self.decision, self.finding, self.evidence, self.as_of)
         self.assertEqual(result.validation_problems[0].code, PROBLEM_PROHIBITED_APPEAL)
 
@@ -84,7 +95,6 @@ class TestValidatorFaultInjection(unittest.TestCase):
             CriterionAssessment(criterion_id="A", status=CriterionStatus.UNKNOWN, explanation=".", citation_ids=["enc1@v1#p1"])
         ]
         result = validate_agent_decision(self.decision, self.finding, self.evidence, self.as_of, policy_formula="A")
-        # Fix: Check that the problem code is IN the list, since it will also fail the formula check
         problem_codes = [p.code for p in result.validation_problems]
         self.assertIn(PROBLEM_UNSUPPORTED_CRITERION, problem_codes)
 

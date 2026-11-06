@@ -51,13 +51,18 @@ def validate_agent_decision(
     is_manual = decision.recommended_disposition == Disposition.MANUAL_REVIEW
 
     # 1. Identity Mismatch (Terminal)
-    if decision.claim_id != finding.claim_id or decision.service_line_id != finding.service_line_id:
-        problems.append(ValidationProblem(code=PROBLEM_IDENTITY_MISMATCH, field_path="claim_id", message="Decision identity mismatch.", is_repairable=False))
+    if (decision.claim_id != finding.claim_id or
+        decision.service_line_id != finding.service_line_id or
+        decision.root_cause != finding.root_cause):
+        problems.append(ValidationProblem(code=PROBLEM_IDENTITY_MISMATCH, field_path="claim_id", message="Decision identity or root cause mismatch.", is_repairable=False))
         manual_reasons.append(ESCALATION_IDENTITY_MISMATCH)
 
     # 2. Status / Disposition Match (Terminal)
     if decision.agent_status == AgentStatus.MANUAL_REVIEW_REQUIRED and not is_manual:
         problems.append(ValidationProblem(code=PROBLEM_STATUS_MISMATCH, field_path="recommended_disposition", message="Agent status demands manual review but disposition does not match.", is_repairable=False))
+        manual_reasons.append(ESCALATION_STATUS_MISMATCH)
+    elif decision.agent_status == AgentStatus.COMPLETED and is_manual:
+        problems.append(ValidationProblem(code=PROBLEM_STATUS_MISMATCH, field_path="recommended_disposition", message="Agent status is COMPLETED but disposition is MANUAL_REVIEW.", is_repairable=False))
         manual_reasons.append(ESCALATION_STATUS_MISMATCH)
 
     # 3. Patient Billing Restriction (Terminal)
