@@ -109,6 +109,23 @@ class TestOutputPackage(unittest.TestCase):
         self.assertEqual(pkg.final_disposition, Disposition.CORRECT_AND_RESUBMIT)
         self.assertEqual(pkg.final_root_cause, RootCause.MEDICAL_NECESSITY)
 
+    def test_success_terminal_reason_is_not_manual_review_reason(self):
+        """A completed run must not be mislabeled as requiring manual review."""
+
+        pkg = create_output_package(
+            run_id="run-1",
+            package_version="v1",
+            knowledge_snapshot_id="snap-1",
+            finding=self.finding,
+            route_outcome=RouteOutcome.AGENT_REQUIRED,
+            proposed_decision=self.make_decision(),
+            validation_result=self.make_accepted(),
+            agent_terminal_reason="decision_accepted",
+        )
+
+        self.assertEqual("decision_accepted", pkg.agent_terminal_reason)
+        self.assertEqual([], pkg.manual_review_reasons)
+
     def test_accepted_agent_package_direct_construction_succeeds(self):
         pkg = self.direct_agent_package()
         self.assertEqual(pkg.final_disposition, Disposition.CORRECT_AND_RESUBMIT)

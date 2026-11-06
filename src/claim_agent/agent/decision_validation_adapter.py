@@ -47,6 +47,20 @@ class DecisionValidationAdapter:
         self._evidence_provider = evidence_provider
         self._policy_formula_provider = policy_formula_provider
         self._as_of = as_of
+        self._last_proposed_decision: Optional[AgentDecision] = None
+        self._last_validation_result: Optional[ValidationResult] = None
+
+    @property
+    def last_proposed_decision(self) -> Optional[AgentDecision]:
+        """Return the most recent schema-valid proposal, if one exists."""
+
+        return self._last_proposed_decision
+
+    @property
+    def last_validation_result(self) -> Optional[ValidationResult]:
+        """Return the shared validator result from the latest attempt."""
+
+        return self._last_validation_result
 
     def validate(
         self,
@@ -54,6 +68,10 @@ class DecisionValidationAdapter:
     ) -> OfflineValidationResult:
         """Validate one model proposal through the shared contract boundary."""
 
+        # Each attempt replaces the previous audit artifacts. Resetting first
+        # prevents a malformed retry from exposing an earlier valid decision.
+        self._last_proposed_decision = None
+        self._last_validation_result = None
         try:
             proposed_decision = AgentDecision.model_validate_json(
                 json.dumps(dict(decision_payload))
@@ -68,6 +86,8 @@ class DecisionValidationAdapter:
                 ),
             )
 
+        self._last_proposed_decision = proposed_decision
+
         shared_result = validate_agent_decision(
             decision=proposed_decision,
             finding=self._baseline_finding,
@@ -75,6 +95,8 @@ class DecisionValidationAdapter:
             as_of=self._as_of,
             policy_formula=self._policy_formula_provider(),
         )
+
+        self._last_validation_result = shared_result
 
         return _to_runtime_validation_result(shared_result)
 
@@ -94,9 +116,7 @@ def _to_runtime_validation_result(
 
     validated_decision = None
     if shared_result.validated_decision is not None:
-        validated_decision = shared_result.validated_decision.model_dump(
-            mode="json"
-        )
+        validated_decision = shared_result.validated_decision.model_dump(mode="json")
 
     return OfflineValidationResult(
         status=status_by_outcome[shared_result.outcome],

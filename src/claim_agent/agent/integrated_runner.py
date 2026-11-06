@@ -40,6 +40,8 @@ KNOWLEDGE_ROOT = PROJECT_ROOT / "knowledge"
 DEMO_RUN_ID = "integrated-demo-medical-necessity"
 DEMO_CLAIM_ID = "CLM-2026-005097"
 DEMO_SERVICE_LINE_ID = 1
+DEMO_PACKAGE_VERSION = "v1"
+DEMO_KNOWLEDGE_SNAPSHOT_ID = "local-corpus-v1"
 
 POLICY_PASSAGE_IDS = (
     "POL-BCBSAZ-MRI-BRAIN@v1#P3",
@@ -213,6 +215,8 @@ def run_integrated_demo() -> Mapping[str, object]:
             max_runtime_seconds=30.0,
         ),
         as_of=date(2026, 11, 6),
+        package_version=DEMO_PACKAGE_VERSION,
+        knowledge_snapshot_id=DEMO_KNOWLEDGE_SNAPSHOT_ID,
     )
 
     runtime_result = integrated_result.runtime_result
@@ -225,6 +229,9 @@ def run_integrated_demo() -> Mapping[str, object]:
             dict(runtime_result.validated_decision)
             if runtime_result.validated_decision is not None
             else None
+        ),
+        "output_package": integrated_result.output_package.model_dump(
+            mode="json"
         ),
         "budget_usage": {
             "model_calls": runtime_result.budget_usage.model_calls_used,

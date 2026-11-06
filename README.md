@@ -2,7 +2,11 @@
 
 A hybrid agentic AI system for evidence-grounded triage of denied outpatient medical claims. The project combines a deterministic Python core with bounded LLM tool use, evidence retrieval, safety validation, and human review.
 
-> **Project status:** Active academic capstone. The deterministic stakeholder baseline and a scripted offline agent-runtime vertical slice are runnable and tested. Production contracts, retrieval tools, safety validators, durable traces, and hosted-model integration remain in progress.
+> **Project status:** Active academic capstone. The deterministic baseline,
+> shared contracts, local retrieval tools, safety validator, bounded runtime,
+> and a production-shaped local integration are runnable and tested. Durable
+> traces, hosted-model integration, evaluation, and the final report remain in
+> progress.
 
 ## Problem
 
@@ -75,7 +79,9 @@ The unchanged comparison baseline is preserved under [`baseline/`](baseline/) an
 
 ### Knowledge corpus v0
 
-The [`knowledge/`](knowledge/) directory contains the evidence snapshot `knowledge-v0` for the planned retrieval tools. It is still being assembled: it freezes when #11 or #12 first uses it, and after that its contents do not change under this ID.
+The [`knowledge/`](knowledge/) directory contains the local evidence snapshot
+used by the integrated runtime demonstration. Per-source provenance hashes are
+still being finalized before the snapshot is treated as frozen.
 
 It contains:
 
@@ -84,7 +90,15 @@ It contains:
 - A synthetic physical therapy policy (CPT 97110) under the `AETNA` payer profile in two dated versions, so the service date selects the criteria: v1 (`A AND B`) through 2026-03-31 and v2 (`A AND B AND C`) from 2026-04-01. It is not the payer's actual policy.
 - Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
 
-Every passage has a stable citation ID such as `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in [decision 0001](docs/decisions/0001-retrieval-method.md). `retrieve_policy_passages`, the core of the planned `retrieve_medical_policy` tool, now reads this corpus: it matches one policy by payer, procedure, and service date, then ranks its passages with BM25. `ToolDispatcher` exposes it as `retrieve_medical_policy`, and also provides `get_encounter_note`, which returns a claim's note as numbered, citable passages. Both return the shared `ToolResult` contract. Eligibility retrieval and the other lookup tools are not implemented yet, and the runtime does not call the dispatcher yet.
+Every passage has a stable citation ID such as
+`POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in
+[decision 0001](docs/decisions/0001-retrieval-method.md).
+`retrieve_policy_passages` matches one policy by payer, procedure, and service
+date, then ranks its passages with BM25. `ToolDispatcher` exposes it as
+`retrieve_medical_policy` and also provides `get_encounter_note`, which returns
+a claim's note as numbered, citable passages. Both return the shared
+`ToolResult` contract and are exercised by the integrated runtime. Eligibility
+retrieval and the other lookup tools are not implemented yet.
 
 ### Scripted offline agent runtime
 
@@ -102,7 +116,30 @@ The agent package now provides an offline vertical slice for developing and veri
 - Conservative `MANUAL_REVIEW` results when the runtime cannot continue safely.
 - A command-line demonstration and an end-to-end integration test using only synthetic data.
 
-This vertical slice establishes runtime control flow; it is not a production claim-review system. Its temporary tool, input, decision, validation, and trace boundaries will be replaced or adapted after issues #3, #5, #6, and #7 deliver the approved shared contracts.
+This vertical slice establishes runtime control flow; it is not a production
+claim-review system. Scripted boundaries remain for deterministic regression
+tests, while adapters connect the integrated path to the approved shared tool,
+routing, decision, validation, and output contracts. The internal trace format
+remains temporary pending the durable trace contract.
+
+### Production-shaped local integration
+
+The integrated local runner now exercises one authorized synthetic claim
+through the merged project boundaries:
+
+- Typed `BaselineFinding` and `RouteDecision` inputs are checked before any
+  model or tool call.
+- The route-derived tool allowlist controls real local policy and encounter
+  retrieval.
+- Retrieved passages are stored per run and passed to deterministic safety
+  validation.
+- The validated shared `AgentDecision` and `ValidationResult` are preserved as
+  audit artifacts.
+- Every run produces an `OutputPackage`; even accepted recommendations remain
+  `PENDING_REVIEW` and are never submitted automatically.
+
+The model is still scripted, so this flow is reproducible and requires no
+hosted-model credentials.
 
 ### Remaining project scaffolding
 
@@ -130,10 +167,13 @@ Directories other than the implemented baseline and scripted agent runtime remai
 
 ## Requirements
 
-The baseline and scripted offline runtime require:
+The baseline itself has no third-party dependencies. The agent, retrieval,
+validation, and output packages use the dependencies pinned in
+[`requirements.txt`](requirements.txt), including Pydantic.
+
+The local demonstrations require:
 
 - Python 3.9 or newer.
-- No third-party packages.
 - No model API key.
 - No network connection.
 
@@ -200,7 +240,10 @@ python -m unittest discover -s '.\tests\agent' -p 'test*.py' -q
 python -m unittest discover -s '.\tests\integration' -p 'test*.py' -q
 ```
 
-These tests use scripted model, tool, and validation boundaries. They do not require network access or model credentials.
+The agent tests retain scripted boundaries for deterministic regression
+coverage. The integration suite also exercises the real local dispatcher,
+same-run evidence store, safety validator, and output package. Neither suite
+requires network access or model credentials.
 
 ## Run the offline agent demonstration
 
@@ -218,6 +261,27 @@ python -m claim_agent.agent.offline_runner --pretty
 ```
 
 The JSON output reports the terminal phase, reason, accepted decision, consumed budgets, and ordered trace-event names. All model, tool, and validation responses in this demonstration are predefined fixtures rather than production services.
+
+## Run the integrated local demonstration
+
+This command keeps the deterministic scripted model but uses the shared
+routing contracts, production-shaped local dispatcher, same-run evidence
+store, safety validator, and audited output package:
+
+```bash
+PYTHONPATH=src python -m claim_agent.agent.integrated_runner --pretty
+```
+
+In PowerShell:
+
+```powershell
+$env:PYTHONPATH = '.\src'
+python -m claim_agent.agent.integrated_runner --pretty
+```
+
+The JSON includes retrieved passage IDs, the selected policy formula, ordered
+trace events, budget usage, and an `OutputPackage` whose approval state remains
+`PENDING_REVIEW`.
 
 ## Run the knowledge and retrieval tests
 
@@ -293,9 +357,10 @@ These limitations define the work assigned to the agentic extension; they are no
 
 ## Planned agentic extension
 
-- [ ] Freeze shared claim, evidence, tool, decision, and trace contracts.
-- [ ] Wrap deterministic baseline behavior behind stable interfaces.
-- [ ] Implement a validated common tool dispatcher.
+- [ ] Freeze shared claim, evidence, tool, decision, and trace contracts. The
+  runtime contracts are integrated; durable trace fields remain pending.
+- [x] Wrap deterministic baseline findings and routing behind typed interfaces.
+- [x] Implement a validated common tool dispatcher.
 - [ ] Add versioned payer-policy, encounter-note, and eligibility retrieval.
 - [x] Implement a bounded planning loop with structured model outputs behind scripted offline boundaries.
 - [ ] Replace scripted runtime boundaries with approved production adapters.

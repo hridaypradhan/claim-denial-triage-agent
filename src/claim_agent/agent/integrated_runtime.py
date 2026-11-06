@@ -24,10 +24,14 @@ from claim_agent.agent.runtime_budget import RuntimeBudgetLimits
 from claim_agent.agent.runtime_case import prepare_runtime_case
 from claim_agent.agent.tool_result_adapter import SharedToolDispatcher
 from claim_agent.contracts import (
+    AgentDecision,
     BaselineFinding,
     EvidencePassage,
+    OutputPackage,
     RouteDecision,
+    ValidationResult,
 )
+from claim_agent.output.package import create_output_package
 
 
 @dataclass(frozen=True)
@@ -37,6 +41,9 @@ class IntegratedCaseResult:
     runtime_result: OfflineRuntimeResult
     retrieved_evidence: Tuple[EvidencePassage, ...]
     policy_formula: Optional[str]
+    proposed_decision: Optional[AgentDecision]
+    validation_result: Optional[ValidationResult]
+    output_package: OutputPackage
 
 
 def run_integrated_case(
@@ -48,6 +55,8 @@ def run_integrated_case(
     route_decision: RouteDecision,
     budget_limits: RuntimeBudgetLimits,
     as_of: date,
+    package_version: str,
+    knowledge_snapshot_id: str,
     monotonic_clock: Callable[[], float] = time.monotonic,
 ) -> IntegratedCaseResult:
     """Validate, assemble, and execute one authorized agent case."""
@@ -81,8 +90,30 @@ def run_integrated_case(
         task_context=prepared_case.task_context,
     )
 
+    output_package = create_output_package(
+        run_id=run_id,
+        package_version=package_version,
+        knowledge_snapshot_id=knowledge_snapshot_id,
+        finding=baseline_finding,
+        route_outcome=route_decision.outcome,
+        proposed_decision=(
+            boundaries.decision_validator.last_proposed_decision
+        ),
+        validation_result=(
+            boundaries.decision_validator.last_validation_result
+        ),
+        agent_terminal_reason=runtime_result.final_state.terminal_reason,
+    )
+
     return IntegratedCaseResult(
         runtime_result=runtime_result,
         retrieved_evidence=boundaries.evidence_store.evidence_passages,
         policy_formula=boundaries.evidence_store.policy_formula,
+        proposed_decision=(
+            boundaries.decision_validator.last_proposed_decision
+        ),
+        validation_result=(
+            boundaries.decision_validator.last_validation_result
+        ),
+        output_package=output_package,
     )

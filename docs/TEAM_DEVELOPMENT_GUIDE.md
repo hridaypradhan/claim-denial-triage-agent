@@ -284,10 +284,14 @@ Hold two brief progress syncs and one integration demonstration per week. Each o
 
 - [x] Use Pydantic for the agent-side schema library.
 - [x] Define contract version `0.1` and contract rejection tests.
-- [ ] Implement the baseline adapter and deterministic router.
+- [x] Implement the baseline adapter and deterministic router.
 - [x] Implement the scripted fake model and fake dispatcher.
 - [x] Add the offline vertical-slice integration test.
 - [x] Select the initial payer/procedure policy subset: BCBS_AZ brain MRI and AETNA physical therapy, with dated policy versions in knowledge corpus v0.
 - [ ] Draft the dataset annotation rubric.
 
-Do not replace fake boundaries with hosted-model calls or production retrieval until the offline vertical slice passes.
+The offline vertical slice and production-shaped local retrieval path now
+pass. Keep scripted boundaries for deterministic regression coverage. Hosted
+model work must use the provider-independent model interface and preserve the
+same route authorization, budgets, safety validation, `PENDING_REVIEW` output,
+and failure-path tests.

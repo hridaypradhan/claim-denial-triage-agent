@@ -42,7 +42,10 @@ def create_output_package(
         reasons.append("DEADLINE_EXPIRED")
     if validation_result and validation_result.manual_review_reasons:
         reasons.extend(validation_result.manual_review_reasons)
-    if agent_terminal_reason:
+    if (
+        agent_terminal_reason
+        and final_disposition == Disposition.MANUAL_REVIEW
+    ):
         reasons.append(agent_terminal_reason)
 
     # Deduplicate while preserving order

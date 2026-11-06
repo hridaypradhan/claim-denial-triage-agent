@@ -23,6 +23,7 @@ from claim_agent.contracts import (
     Disposition,
     EvidencePassage,
     RootCause,
+    ValidationOutcome,
 )
 
 CLAIM_ID = "CLM-ADAPTER-001"
@@ -110,9 +111,7 @@ class DecisionValidationAdapterTests(unittest.TestCase):
     def test_read_only_runtime_payload_is_accepted(self) -> None:
         """The parser's immutable decision mapping should cross the adapter."""
 
-        protected_payload = MappingProxyType(
-            self._valid_decision_payload()
-        )
+        protected_payload = MappingProxyType(self._valid_decision_payload())
 
         result = self._make_adapter().validate(protected_payload)
 
@@ -230,6 +229,46 @@ class DecisionValidationAdapterTests(unittest.TestCase):
             OfflineValidationStatus.ACCEPTED,
             accepted_result.status,
         )
+
+    def test_shared_validation_artifacts_are_preserved(self) -> None:
+        """Accepted validation should retain audit-ready contract objects."""
+
+        adapter = self._make_adapter()
+
+        adapter.validate(self._valid_decision_payload())
+
+        self.assertIsNotNone(adapter.last_proposed_decision)
+        self.assertIsNotNone(adapter.last_validation_result)
+        self.assertEqual(
+            "DEC-ADAPTER-001",
+            adapter.last_proposed_decision.decision_id,
+        )
+        self.assertEqual(
+            ValidationOutcome.ACCEPTED,
+            adapter.last_validation_result.outcome,
+        )
+        self.assertIs(
+            adapter.last_proposed_decision,
+            adapter.last_validation_result.validated_decision,
+        )
+
+    def test_malformed_attempt_clears_previous_artifacts(self) -> None:
+        """A failed retry must not expose artifacts from an earlier attempt."""
+
+        adapter = self._make_adapter()
+        adapter.validate(self._valid_decision_payload())
+
+        malformed_payload = self._valid_decision_payload()
+        del malformed_payload["decision_id"]
+
+        result = adapter.validate(malformed_payload)
+
+        self.assertEqual(
+            OfflineValidationStatus.REPAIRABLE,
+            result.status,
+        )
+        self.assertIsNone(adapter.last_proposed_decision)
+        self.assertIsNone(adapter.last_validation_result)
 
 
 if __name__ == "__main__":

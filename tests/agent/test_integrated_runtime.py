@@ -107,11 +107,25 @@ class IntegratedRuntimeTests(unittest.TestCase):
             route_decision=make_route_decision(),
             budget_limits=make_budget_limits(),
             as_of=date(2026, 11, 6),
+            package_version="test-v1",
+            knowledge_snapshot_id="test-snapshot",
         )
 
         self.assertEqual(
             RuntimePhase.MANUAL_REVIEW,
             result.runtime_result.final_state.phase,
+        )
+        self.assertEqual(
+            "integrated-authorized-case",
+            result.output_package.run_id,
+        )
+        self.assertEqual(
+            Disposition.MANUAL_REVIEW,
+            result.output_package.final_disposition,
+        )
+        self.assertEqual(
+            "model_requested_manual_review",
+            result.output_package.agent_terminal_reason,
         )
         self.assertEqual(
             "model_requested_manual_review",
@@ -136,6 +150,8 @@ class IntegratedRuntimeTests(unittest.TestCase):
         dispatcher.dispatch.assert_not_called()
         self.assertEqual((), result.retrieved_evidence)
         self.assertIsNone(result.policy_formula)
+        self.assertIsNone(result.proposed_decision)
+        self.assertIsNone(result.validation_result)
 
     def test_non_agent_routes_stop_before_model_or_tools(self) -> None:
         """Routes owned by deterministic or human handling must bypass AI."""
@@ -163,6 +179,8 @@ class IntegratedRuntimeTests(unittest.TestCase):
                         route_decision=make_route_decision(blocked_outcome),
                         budget_limits=make_budget_limits(),
                         as_of=date(2026, 11, 6),
+                        package_version="test-v1",
+                        knowledge_snapshot_id="test-snapshot",
                     )
 
                 model_client.generate_response.assert_not_called()

@@ -20,6 +20,7 @@ from claim_agent.contracts import (
     RootCause,
     RouteDecision,
     RouteOutcome,
+    ValidationOutcome,
 )
 from claim_agent.tools.dispatcher import (
     ENCOUNTER_NOTE_TOOL,
@@ -199,6 +200,8 @@ class ProductionRuntimeFlowTests(unittest.TestCase):
                 max_runtime_seconds=30.0,
             ),
             as_of=date(2026, 11, 6),
+            package_version="test-v1",
+            knowledge_snapshot_id="test-knowledge-snapshot",
         )
 
         result = integrated_result.runtime_result
@@ -214,6 +217,40 @@ class ProductionRuntimeFlowTests(unittest.TestCase):
         self.assertEqual(
             "APPEAL_WITH_DOCUMENTATION",
             result.validated_decision["recommended_disposition"],
+        )
+        self.assertIsNotNone(integrated_result.proposed_decision)
+        self.assertIsNotNone(integrated_result.validation_result)
+        self.assertEqual(
+            "DEC-INTEGRATED-001",
+            integrated_result.proposed_decision.decision_id,
+        )
+        self.assertEqual(
+            ValidationOutcome.ACCEPTED,
+            integrated_result.validation_result.outcome,
+        )
+        self.assertEqual(
+            integrated_result.proposed_decision,
+            integrated_result.validation_result.validated_decision,
+        )
+        self.assertEqual(
+            "integrated-production-boundaries",
+            integrated_result.output_package.run_id,
+        )
+        self.assertEqual(
+            Disposition.APPEAL_WITH_DOCUMENTATION,
+            integrated_result.output_package.final_disposition,
+        )
+        self.assertEqual(
+            "PENDING_REVIEW",
+            integrated_result.output_package.validation_result.approval_state,
+        )
+        self.assertEqual(
+            "test-knowledge-snapshot",
+            integrated_result.output_package.knowledge_snapshot_id,
+        )
+        self.assertEqual(
+            [],
+            integrated_result.output_package.manual_review_reasons,
         )
         self.assertEqual(
             3,
@@ -237,7 +274,7 @@ class ProductionRuntimeFlowTests(unittest.TestCase):
         self.assertTrue(set(ENCOUNTER_PASSAGE_IDS).issubset(retrieved_passage_ids))
         self.assertEqual(
             "A AND B AND (C OR D)",
-              integrated_result.policy_formula,
+            integrated_result.policy_formula,
         )
 
         trace_event_names = [entry.event_name for entry in result.trace_entries]

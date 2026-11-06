@@ -54,6 +54,21 @@ class IntegratedRunnerTests(unittest.TestCase):
             sorted(required_passage_ids),
             sorted(summary["validated_decision"]["citation_ids"]),
         )
+
+        output_package = summary["output_package"]
+
+        self.assertEqual(
+            DEMO_RUN_ID,
+            output_package["run_id"],
+        )
+        self.assertEqual(
+            "APPEAL_WITH_DOCUMENTATION",
+            output_package["final_disposition"],
+        )
+        self.assertEqual(
+            "PENDING_REVIEW",
+            output_package["validation_result"]["approval_state"],
+        )
         self.assertEqual(
             "RUN_COMPLETED",
             summary["trace_events"][-1],
