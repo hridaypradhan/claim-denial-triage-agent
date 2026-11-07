@@ -115,6 +115,23 @@ class TraceRedactionTests(unittest.TestCase):
                 self.assertNotIn("Jane Doe", json.dumps(redacted))
                 self.assertIn(REDACTED_VALUE, json.dumps(redacted))
 
+    def test_tool_call_counter_accepts_only_integer_scalar(self) -> None:
+        """The overloaded tool_calls key must not expose non-counter values."""
+
+        self.assertEqual(
+            2,
+            redact_trace_payload({"tool_calls": 2})["tool_calls"],
+        )
+
+        for unsafe_value in ("Jane Doe", True):
+            with self.subTest(unsafe_value=unsafe_value):
+                self.assertEqual(
+                    REDACTED_VALUE,
+                    redact_trace_payload(
+                        {"tool_calls": unsafe_value}
+                    )["tool_calls"],
+                )
+
     def test_only_valid_sha256_values_are_preserved(self) -> None:
         """A hash-named field must contain an actual lowercase SHA-256."""
 

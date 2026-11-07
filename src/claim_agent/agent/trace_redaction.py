@@ -204,10 +204,16 @@ def redact_trace_payload(
         if key in STRUCTURE_KEYS:
             if isinstance(value, (Mapping, list, tuple)):
                 redacted_payload[key] = _redact_structure(value)
-            elif key in ALLOWED_VALUE_KEYS:
+            elif (
+                key in NUMERIC_AND_BOOLEAN_KEYS
+                and isinstance(value, int)
+                and not isinstance(value, bool)
+            ):
                 # ``tool_calls`` is both a numeric counter and a structured
-                # model-response field. Only its numeric scalar form is safe.
-                redacted_payload[key] = _copy_allowed_value(value)
+                # model-response field. Preserve only a real integer counter;
+                # strings and booleans could otherwise carry misleading or
+                # sensitive content under this approved key.
+                redacted_payload[key] = value
             else:
                 redacted_payload[key] = REDACTED_VALUE
             continue
