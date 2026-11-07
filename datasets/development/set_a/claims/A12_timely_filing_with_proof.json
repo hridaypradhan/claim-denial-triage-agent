@@ -1,0 +1,42 @@
+{
+  "claim_id": "CLM-2026-610112",
+  "patient_account": "PA-SYN-10112",
+  "payer": "MEDICARE_B",
+  "date_of_service": "2025-09-10",
+  "remit_date": "2026-08-15",
+  "billed_amount": 155.0,
+  "paid_amount": 0.0,
+  "place_of_service": "11",
+  "rendering_provider_npi": "1000000000",
+  "denials": [
+    {
+      "group_code": "CO",
+      "carc": "29",
+      "rarc": [],
+      "amount": 155.0,
+      "service_line": 1
+    }
+  ],
+  "service_lines": [
+    {
+      "line": 1,
+      "cpt": "99214",
+      "modifiers": [],
+      "units": 1,
+      "charge": 155.0,
+      "icd10": [
+        "I10"
+      ]
+    }
+  ],
+  "encounter": {
+    "prior_auth_number": null,
+    "referral_on_file": false,
+    "documentation_attached": [
+      "clinical_note",
+      "clearinghouse_acceptance_report"
+    ],
+    "eligibility_verified_on": "2025-09-08",
+    "proof_of_timely_filing": true
+  }
+}
