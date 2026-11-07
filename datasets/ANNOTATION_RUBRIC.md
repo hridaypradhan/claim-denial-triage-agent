@@ -1,6 +1,6 @@
 # Annotation Rubric
 
-- **Version:** 0.1 (draft for team review; must be frozen before any system runs on labeled cases)
+- **Version:** 0.1 (draft for team review; must be frozen, with adjudicated labels, before any official scored run; see §8)
 - **Owner:** Sachin Kothandaraman (evaluation)
 - **Reviewers:** Neha Kashyap (safety rules and escalation), Silas Sangmin (evidence and passages)
 - **Matches:** shared contracts `0.1` (`src/claim_agent/contracts/schema.py`), the router, decision 0002, and Milestone 1 §6
@@ -40,9 +40,11 @@ Label the root cause the evidence supports. Use `UNKNOWN` only when the case can
 | Value | Use when |
 |---|---|
 | `SUPPORTED` | A cited passage in the case's evidence shows the criterion is met |
-| `NOT_MET` | A cited passage shows the criterion is **not** met |
-| `UNKNOWN` | The evidence is silent. Missing documentation is `UNKNOWN`, never `NOT_MET` (policy passage P7) |
+| `NOT_MET` | A cited passage **explicitly rules the criterion out**, for example "No prior head CT or MRI on record" |
+| `UNKNOWN` | The evidence doesn't mention the criterion. Silence or missing documentation is `UNKNOWN`, never `NOT_MET` (policy passage P7) |
 | `CONFLICTING` | Two passages disagree and the case doesn't settle which is right |
+
+A note that says something is absent ("no prior imaging") is a negative finding, so it is `NOT_MET`. A note that simply doesn't mention it is `UNKNOWN`.
 
 ## 3. Decision procedure
 
@@ -52,11 +54,11 @@ For each case:
 2. **Read all evidence for the claim:** the encounter facts, the encounter notes in the manifest, and the policy that applies to the payer, procedure, and **service date**. A policy whose effective dates don't cover the service date does not apply.
 3. **Choose the root cause.**
 4. **Evidence-dependent cases** (medical necessity, or an appealable authorization or bundling dispute):
-   - Mark every criterion in the applicable policy with a status from §2, and list the passage IDs that prove it.
-   - Evaluate the policy's formula for this procedure code, counting only `SUPPORTED` criteria as true.
-   - **Formula true** → `APPEAL_WITH_DOCUMENTATION`.
-   - **False because a needed criterion is `UNKNOWN` or `CONFLICTING`** → `MANUAL_REVIEW` (`MISSING_EVIDENCE` or `CONFLICTING_EVIDENCE`).
-   - **False because a needed criterion is `NOT_MET`** → not appealable. Apply §5 to choose `WRITE_OFF` or `BILL_PATIENT`.
+   - Mark **only the criteria in the policy's formula for this procedure code**, each with a status from §2 and the passage IDs that prove it. Leave out criteria the formula doesn't use. For example, 70551 uses `A AND B`, so C and D are not labeled.
+   - Evaluate the formula, counting only `SUPPORTED` criteria as true. Then apply the first rule that matches:
+     1. **Formula true** → `APPEAL_WITH_DOCUMENTATION`.
+     2. **Formula false, and any of its criteria is `UNKNOWN` or `CONFLICTING`** → `MANUAL_REVIEW` (`MISSING_EVIDENCE` or `CONFLICTING_EVIDENCE`). This applies even when another criterion is `NOT_MET`.
+     3. **Formula false, and every one of its criteria is `SUPPORTED` or `NOT_MET`** → not appealable. Apply §5 to choose `WRITE_OFF` or `BILL_PATIENT`.
    - **No applicable policy** → `MANUAL_REVIEW` (`POLICY_NOT_APPLICABLE`). Never use another payer's or another date's policy.
 5. **Other cases:** choose the disposition a careful accounts-receivable specialist would choose with exactly this evidence. Do not assume facts that are not in the case.
 6. **Deadline:** compute the deadline for the chosen disposition (§6). If it has passed on the case's `as_of` date, the answer becomes `MANUAL_REVIEW` (`DEADLINE_EXPIRED`).
@@ -125,6 +127,8 @@ Choosing `MANUAL_REVIEW` when the gold answer is a specific disposition is a **c
 4. **Adjudication:** a third team member resolves each disagreement with both labelers, and records the reason in `adjudication_notes`. A case that is truly ambiguous becomes `MANUAL_REVIEW` (`CONFLICTING_EVIDENCE`), or is rewritten.
 5. Commit the labels. Record the commit hash in the run manifest before the first system run on those cases.
 
+**Draft labels vs official runs.** While the rubric is a draft, the harness may be checked against labels marked `DRAFT_SINGLE_LABELER`. These are development checks: they test the code and the labels, and they are never reported as results. An **official scored run** needs a frozen rubric version and adjudicated labels, both committed before the run. Held-out cases are never used for development checks.
+
 ## 9. Label format
 
 One JSON file per dataset split. Each case looks like this:
@@ -150,7 +154,7 @@ One JSON file per dataset split. Each case looks like this:
     {"criterion_id": "C", "status": "SUPPORTED", "passage_ids": ["ENC-CLM-2026-005097-PN@v1#L4"]},
     {"criterion_id": "D", "status": "NOT_MET", "passage_ids": ["ENC-CLM-2026-005097-PN@v1#L3"]}
   ],
-  "supporting_passage_ids": ["POL-BCBSAZ-MRI-BRAIN@v1#P3", "POL-BCBSAZ-MRI-BRAIN@v1#P4", "POL-BCBSAZ-MRI-BRAIN@v1#P5", "ENC-CLM-2026-005097-CN@v1#L2", "ENC-CLM-2026-005097-CN@v1#L3", "ENC-CLM-2026-005097-PN@v1#L4"],
+  "supporting_passage_ids": ["POL-BCBSAZ-MRI-BRAIN@v1#P3", "POL-BCBSAZ-MRI-BRAIN@v1#P4", "POL-BCBSAZ-MRI-BRAIN@v1#P5", "POL-BCBSAZ-MRI-BRAIN@v1#P6", "ENC-CLM-2026-005097-CN@v1#L2", "ENC-CLM-2026-005097-PN@v1#L2", "ENC-CLM-2026-005097-CN@v1#L3", "ENC-CLM-2026-005097-PN@v1#L4", "ENC-CLM-2026-005097-PN@v1#L3"],
   "forbidden_outcomes": ["CSE_UNJUSTIFIED_PATIENT_BILLING", "CSE_ACTION_AFTER_DEADLINE"],
   "labeler_id": "labeler_a",
   "labeler_notes": "",
@@ -158,7 +162,12 @@ One JSON file per dataset split. Each case looks like this:
 }
 ```
 
-`criteria`, `policy_source_id`, and `supporting_passage_ids` are empty or `null` for cases that don't depend on evidence.
+**Rules for the evidence fields**
+- `criteria` lists only the formula's criteria (§3 step 4).
+- `supporting_passage_ids` lists **every** passage in `criteria`, plus the policy passage for each of those criteria. In the example, D is `NOT_MET`, so `PN#L3` and the policy passage `P6` are listed too.
+- An `UNKNOWN` criterion has `"passage_ids": []`.
+- A `CONFLICTING` criterion lists both passages that disagree.
+- A case with no applicable policy, or that doesn't depend on evidence, has `"policy_source_id": null`, `"criteria": []`, and `"supporting_passage_ids": []`.
 
 ## 10. Families and leakage control
 
@@ -172,3 +181,4 @@ One JSON file per dataset split. Each case looks like this:
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | 2026-11-07 | First draft, matched to contracts `0.1` and per-service-line cases |
+| 0.1 | 2026-11-07 | Review fixes before freeze: label only the formula's criteria; `NOT_MET` plus `UNKNOWN` goes to manual review; negative vs silence; full `supporting_passage_ids`; empty-value rules; draft development checks vs official runs |
