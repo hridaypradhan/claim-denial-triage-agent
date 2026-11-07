@@ -62,15 +62,24 @@ Primary ownership means coordinating design, implementation, tests, and document
 **Owns**
 
 - Common tool dispatcher and argument validation at the tool boundary.
-- Denial-code and payer-profile lookup wrappers.
-- Policy retrieval, encounter-note retrieval, and eligibility-record retrieval.
-- Knowledge manifests, passage IDs, effective-date filtering, provenance, and no-match/error responses.
+- Fake dispatcher with scripted tool results for the offline vertical slice.
+- Denial-code and payer-profile lookup wrappers; payer profiles report their version and whether values are verified or illustrative.
+- Policy retrieval, encounter-note retrieval, and eligibility-record retrieval. All tools are read-only.
+- Policy matching that filters by payer, procedure, and service date before ranking, with no fallback to another payer's policy or a different effective date.
+- Encounter notes returned as numbered, citable passages, with unavailable documents reported explicitly.
+- Eligibility records returned without deciding eligibility. This tool is cut first if the schedule slips.
+- Knowledge manifests, passage IDs, provenance, and no-match/error responses.
+- The `calculate_deadline` tool wrapper, which calls Neha's deadline arithmetic through the dispatcher.
+- The per-claim document inventory, built from the knowledge manifest.
+- Policy corpus selection and source metadata: URL, access date, effective date, payer, procedure, section, and version. A policy is included only when its terms of use permit.
+- The retrieval-method architecture decision.
 
 **Delivers**
 
 - Typed `ToolResult` records containing status, data, source IDs, and error codes.
 - Versioned `EvidencePassage` records that can be resolved deterministically.
-- Tests for success, missing data, no match, incompatible policy, malformed request, and transient failure.
+- A fake dispatcher for Hriday's offline vertical slice.
+- Tests for success, missing data, unavailable documents, no match, incompatible policy, malformed request, transient failure, and timeout.
 
 **Does not own**
 
@@ -147,6 +156,12 @@ Primary ownership means coordinating design, implementation, tests, and document
 | Baseline adapter and deterministic router | Neha | Baseline regression tests |
 | Tool dispatcher and knowledge manifest | Silas | Contract approval from Neha; runtime review from Hriday |
 | Policy, encounter, and eligibility tools | Silas | Evaluation provenance requirements from Sachin |
+| Fake dispatcher for the offline vertical slice | Silas | Tool contracts from Neha; consumer review from Hriday |
+| Policy corpus selection and source metadata | Silas | Payer/procedure coverage needs from Sachin |
+| `calculate_deadline` tool wrapper (*default*) | Silas | Deadline arithmetic from Neha |
+| Per-claim document inventory (*default*) | Silas | Built from the knowledge manifest; case fixtures from Sachin use the same document IDs |
+| Single bounded tool retry (*default*) | Hriday | Dispatcher reports `retryable`; each retry counts against the tool-call budget, not planning turns |
+| Untrusted-text handling (*default*) | Hriday | Tools return text unmodified; the runtime passes it to the model as labelled data |
 | Fake model and offline vertical slice | Hriday | Fake dispatcher from Silas; validators from Neha |
 | Hosted-model runtime and prompts | Hriday | Stable tool and decision contracts |
 | Final validators and review package | Neha | Agent decision from Hriday; resolvable sources from Silas |
@@ -155,6 +170,8 @@ Primary ownership means coordinating design, implementation, tests, and document
 | End-to-end evaluation report | Sachin | Frozen versions of all components |
 | Public README accuracy | PR author | Reviewer verifies public claims and commands |
 | This team guide | Affected owner | All affected owners approve scope/process changes |
+
+The four rows marked *default* stand unless an affected owner objects in pull-request review.
 
 If work does not clearly fit one row, open an issue and assign an owner before implementation. Do not assume another workstream will cover it.
 
@@ -267,12 +284,19 @@ Hold two brief progress syncs and one integration demonstration per week. Each o
 
 ## Immediate shared backlog
 
-1. Decide the agent-side schema library.
-2. Define contract version `0.1` and contract rejection tests.
-3. Implement the baseline adapter and deterministic router.
-4. Implement the scripted fake model and fake dispatcher.
-5. Add the offline vertical-slice integration test.
-6. Select the initial payer/procedure policy subset.
-7. Draft the dataset annotation rubric.
+- [x] Use Pydantic for the agent-side schema library.
+- [x] Define contract version `0.1` and contract rejection tests.
+- [x] Implement the baseline adapter and deterministic router.
+- [x] Implement the scripted fake model and fake dispatcher.
+- [x] Add a provider-neutral hosted-model client and offline transport tests.
+- [ ] Select and implement the Milestone 2 provider-specific model transport.
+- [x] Add the offline vertical-slice integration test.
+- [x] Carry structured validation problems into bounded repair prompts.
+- [x] Select the initial payer/procedure policy subset: BCBS_AZ brain MRI and AETNA physical therapy, with dated policy versions in knowledge corpus v0.
+- [ ] Draft the dataset annotation rubric.
 
-Do not replace fake boundaries with hosted-model calls or production retrieval until the offline vertical slice passes.
+The offline vertical slice and production-shaped local retrieval path now
+pass. Keep scripted boundaries for deterministic regression coverage. Hosted
+model work must use the provider-independent model interface and preserve the
+same route authorization, budgets, safety validation, `PENDING_REVIEW` output,
+and failure-path tests.

@@ -1,0 +1,93 @@
+{
+  "manifest_version": "0.1",
+  "snapshot_id": "knowledge-v0",
+  "note": "Every source the read-only tools may return. Tools resolve sources only through this manifest. All entries are synthetic unless origin.url is set and origin.terms_status is 'permitted'.",
+  "sources": [
+    {
+      "source_id": "POL-BCBSAZ-MRI-BRAIN",
+      "source_type": "medical_policy",
+      "version": "1",
+      "path": "policies/POL-BCBSAZ-MRI-BRAIN.v1.json",
+      "sha256": "15fc03f9c2f578a9112dbbefa029065d424d83f0d8d783b42ef687011b6315a3",
+      "payer": "BCBS_AZ",
+      "procedure_codes": ["70551", "70552", "70553"],
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "POL-AETNA-PT-THERAPY",
+      "source_type": "medical_policy",
+      "version": "1",
+      "path": "policies/POL-AETNA-PT-THERAPY.v1.json",
+      "sha256": "def6ae8e2b06efd49a31f3e50818ec4217926c248d48fb4337cc6193cb3a4648",
+      "payer": "AETNA",
+      "procedure_codes": ["97110"],
+      "effective_from": "2025-01-01",
+      "effective_to": "2026-03-31",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "POL-AETNA-PT-THERAPY",
+      "source_type": "medical_policy",
+      "version": "2",
+      "path": "policies/POL-AETNA-PT-THERAPY.v2.json",
+      "sha256": "c087a88f84ccd00c709d9fc5c84f737e59765a5a130442354022fdf3a824b247",
+      "payer": "AETNA",
+      "procedure_codes": ["97110"],
+      "effective_from": "2026-04-01",
+      "effective_to": null,
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-005097-CN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-005097-CN.v1.json",
+      "sha256": "3dd875897615063c1122ce9ad55ede67b015940ac45f70ba937c4748ccd25ae8",
+      "claim_id": "CLM-2026-005097",
+      "document_type": "clinical_note",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-005097-PN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-005097-PN.v1.json",
+      "sha256": "ff022e0b355a92552dd89eaed9613f3e9bf9a78693eedcf0b0adef595a1fa3fd",
+      "claim_id": "CLM-2026-005097",
+      "document_type": "progress_notes",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    }
+  ]
+}

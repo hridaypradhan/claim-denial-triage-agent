@@ -2,7 +2,11 @@
 
 A hybrid agentic AI system for evidence-grounded triage of denied outpatient medical claims. The project combines a deterministic Python core with bounded LLM tool use, evidence retrieval, safety validation, and human review.
 
-> **Project status:** Active academic capstone. The deterministic stakeholder baseline is runnable and tested. The agentic extension currently has a repository skeleton but is not yet implemented.
+> **Project status:** Active academic capstone. The deterministic baseline,
+> shared contracts, local retrieval tools, safety validator, bounded runtime,
+> a provider-neutral hosted-model boundary, and a production-shaped local
+> integration are runnable and tested. A provider-specific hosted transport,
+> durable traces, evaluation, and the final report remain in progress.
 
 ## Problem
 
@@ -15,20 +19,41 @@ This project is designed to produce a review package for an accounts-receivable 
 The completed system will use a hybrid architecture:
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[Denied claim] --> B[Validate input]
-    B --> C[Deterministic baseline]
-    C --> D{Evidence-dependent?}
-    D -- No --> H[Deterministic safety validation]
-    D -- Yes --> E[Bounded LLM agent]
-    E <--> F[Read-only evidence tools]
-    F --> G[Policy and encounter evidence]
-    E --> H
-    H --> I{Supported outcome?}
-    I -- No --> J[Manual review]
-    I -- Yes --> K[Report or grounded appeal draft]
-    J --> L[Human review]
+    B --> C[Deterministic baseline rules]
+    C --> D{Rule-decidable?}
+    D -- Yes --> S[Deterministic structural checks]
+    D -- "No: policy missing or inapplicable" --> J[Manual review]
+    D -- "No: evidence-dependent" --> E[Initialize case state]
+
+    subgraph Agent["Bounded LLM agent: at most 6 planning turns and 10 tool calls"]
+        E --> P[Plan next step]
+        P --> T[Call tool]
+        T --> U[Update criteria assessments]
+        U -- Missing evidence --> P
+        U -- Supported decision --> R[Decision or MANUAL_REVIEW]
+        U -- Budget exhausted --> R
+    end
+
+    T <--> F[Common dispatcher for read-only tools]
+    F --> G[(Policy, encounter, and eligibility evidence)]
+
+    R --> S
+    S -- Rule-only finding --> O{Outcome?}
+    S -- Evidence-dependent finding --> V[Semantic check: tool-less LLM verifier]
+    V --> O
+    O -- Not appealable --> K[Report only]
+    O -- Critical failure --> J
+    O -- Eligible appeal --> W[Draft appeal from verified evidence]
+    W --> X{Draft supported?}
+    X -- Yes --> L[Report: PENDING_REVIEW]
+    X -- No --> J
     K --> L
+    J --> L
+    L -.-> Q[(Audit trace saved separately)]
+    L --> H[Human review: edit, approve, or reject]
+    H --> Z[Save outputs]
 ```
 
 The model will be used only where evidence interpretation is necessary. Exact and safety-critical behavior—including input validation, deadline arithmetic, permitted dispositions, citation checks, and final approval state—remains under deterministic control.
@@ -52,20 +77,102 @@ The frozen stakeholder baseline currently provides:
 
 The unchanged comparison baseline is preserved under [`baseline/`](baseline/) and tagged as `baseline-v1`.
 
-### Project scaffolding
+### Knowledge corpus v0
 
-The repository also contains the ownership boundaries for the planned system:
+The [`knowledge/`](knowledge/) directory contains the local evidence snapshot
+used by the integrated runtime demonstration. Per-source SHA-256 hashes pin the
+exact bytes used by a run and make later corpus changes detectable.
+
+It contains:
+
+- A [manifest](knowledge/manifest.json) listing every source with its version, `sha256` hash, payer, procedure codes or claim ID, effective dates, and origin.
+- A synthetic medical policy for brain MRI (CPT 70551–70553) under the `BCBS_AZ` payer profile, with a criteria formula for each procedure code (`A AND B` for 70551 and 70552; `A AND B AND (C OR D)` for 70553). It is not the payer's actual policy.
+- A synthetic physical therapy policy (CPT 97110) under the `AETNA` payer profile in two dated versions, so the service date selects the criteria: v1 (`A AND B`) through 2026-03-31 and v2 (`A AND B AND C`) from 2026-04-01. It is not the payer's actual policy.
+- Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
+
+Every passage has a stable citation ID such as
+`POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in
+[decision 0001](docs/decisions/0001-retrieval-method.md).
+`retrieve_policy_passages` matches one policy by payer, procedure, and service
+date, then ranks its passages with BM25. `ToolDispatcher` exposes it as
+`retrieve_medical_policy` and also provides `get_encounter_note`, which returns
+a claim's note as numbered, citable passages. It also provides
+`lookup_denial_code` and `get_payer_profile`, which read the frozen baseline
+tables. All four return the shared `ToolResult` contract. Policy and encounter
+retrieval are exercised by the integrated runtime; the new lookup tools remain
+outside the agent's route allowlist pending routing-owner approval. An unknown
+CARC or unlisted payer returns `NO_MATCH`, not the baseline's default profile.
+`calculate_deadline` and eligibility retrieval are not implemented yet.
+
+### Scripted offline agent runtime
+
+The agent package now provides an offline vertical slice for developing and verifying runtime behavior before production integrations are available:
+
+- A provider-independent model interface and deterministic scripted model.
+- Strict parsing of permitted structured model actions.
+- Explicit runtime phases and controlled state transitions.
+- Model-call, tool-call, repair, total-step, and elapsed-time budgets.
+- Repeated planning after allowlisted read-only tool observations.
+- Budget-limited correction of malformed or validation-rejected output; the
+  demonstration permits one attempt.
+- Deterministic decision validation through a temporary scripted boundary.
+- Append-only in-memory trace entries and explicit terminal reasons.
+- Conservative `MANUAL_REVIEW` results when the runtime cannot continue safely.
+- A command-line demonstration and an end-to-end integration test using only synthetic data.
+
+This vertical slice establishes runtime control flow; it is not a production
+claim-review system. Scripted boundaries remain for deterministic regression
+tests, while adapters connect the integrated path to the approved shared tool,
+routing, decision, validation, and output contracts. The internal trace format
+remains temporary pending the durable trace contract.
+
+### Production-shaped local integration
+
+The integrated local runner now exercises one authorized synthetic claim
+through the merged project boundaries:
+
+- Typed `BaselineFinding` and `RouteDecision` inputs are checked before any
+  model or tool call.
+- The route-derived tool allowlist controls real local policy and encounter
+  retrieval.
+- A claim-bound dispatcher guard requires policy payer, procedure, and service
+  date—and encounter claim ID—to match the active claim before retrieval.
+- Retrieved passages are stored per run and passed to deterministic safety
+  validation.
+- Policy-criterion formulas use a purpose-built Boolean parser rather than
+  executable expression evaluation; malformed formulas fail closed.
+- The validated shared `AgentDecision` and `ValidationResult` are preserved as
+  audit artifacts.
+- Structured validation problems retain their stable code, field path,
+  message, and repairability flag when included in the bounded repair prompt.
+- Every run produces an `OutputPackage`; even accepted recommendations remain
+  `PENDING_REVIEW` and are never submitted automatically.
+
+The model is still scripted, so this flow is reproducible and requires no
+hosted-model credentials.
+
+The runtime also provides a provider-neutral `HostedModelClient`. It translates
+the stable runtime request into a timeout-bounded transport request and maps
+provider text, request IDs, and token counts back into the runtime response.
+Its fake-transport tests run offline. No live provider transport or credential
+configuration is committed yet. Hosted-call timeouts consume the attempted
+model-call budget, emit `MODEL_FAILED`, and produce an audited `MANUAL_REVIEW`
+package with terminal reason `model_timeout`.
+
+### Remaining project scaffolding
+
+The repository also contains ownership boundaries and placeholders for the remaining system:
 
 - [`src/claim_agent/contracts/`](src/claim_agent/contracts/) — shared data contracts.
 - [`src/claim_agent/tools/`](src/claim_agent/tools/) — typed, read-only evidence tools.
-- [`src/claim_agent/agent/`](src/claim_agent/agent/) — bounded agent state and orchestration.
+- [`src/claim_agent/agent/`](src/claim_agent/agent/) — implemented scripted offline runtime and future production adapters.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
-- [`knowledge/`](knowledge/) — versioned policies and synthetic evidence.
+- [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v0 above; eligibility records not yet added).
 - [`datasets/`](datasets/) — development, held-out, and labeling artifacts.
 - [`evaluation/`](evaluation/) — metrics, fault injection, and comparison harnesses.
 
-These directories are scaffolding only unless listed under the implemented baseline above.
+Directories other than the implemented baseline and scripted agent runtime remain scaffolding unless explicitly documented otherwise.
 
 ## Safety boundaries
 
@@ -78,14 +185,17 @@ These directories are scaffolding only unless listed under the implemented basel
 
 ## Requirements
 
-The baseline requires:
+The baseline itself has no third-party dependencies. The agent, retrieval,
+validation, and output packages use the dependencies pinned in
+[`requirements.txt`](requirements.txt), including Pydantic.
+
+The local demonstrations require:
 
 - Python 3.9 or newer.
-- No third-party packages.
 - No model API key.
 - No network connection.
 
-The agentic extension will introduce separate dependencies later. Those dependencies will not be added to the frozen baseline.
+Future production integrations may introduce separate dependencies. Those dependencies will not be added to the frozen baseline.
 
 ## Setup
 
@@ -128,6 +238,90 @@ Expected result:
 
 ```text
 Ran 9 tests
+OK
+```
+
+## Run the offline agent tests
+
+The agent runtime uses a `src` layout. From the repository root, expose that directory to Python and run the component and integration suites:
+
+```bash
+PYTHONPATH=src python -m unittest discover -s tests/agent -p "test*.py" -q
+PYTHONPATH=src python -m unittest discover -s tests/integration -p "test*.py" -q
+```
+
+In PowerShell:
+
+```powershell
+$env:PYTHONPATH = '.\src'
+python -m unittest discover -s '.\tests\agent' -p 'test*.py' -q
+python -m unittest discover -s '.\tests\integration' -p 'test*.py' -q
+```
+
+The agent tests retain scripted boundaries for deterministic regression
+coverage. The integration suite also exercises the real local dispatcher,
+same-run evidence store, safety validator, and output package. Neither suite
+requires network access or model credentials.
+
+## Run the offline agent demonstration
+
+The demonstration runs a synthetic medical-necessity denial through policy retrieval, evidence-context updating, decision proposal, deterministic validation, and trace emission:
+
+```bash
+PYTHONPATH=src python -m claim_agent.agent.offline_runner --pretty
+```
+
+In PowerShell:
+
+```powershell
+$env:PYTHONPATH = '.\src'
+python -m claim_agent.agent.offline_runner --pretty
+```
+
+The JSON output reports the terminal phase, reason, accepted decision, consumed budgets, and ordered trace-event names. All model, tool, and validation responses in this demonstration are predefined fixtures rather than production services.
+
+## Run the integrated local demonstration
+
+This command keeps the deterministic scripted model but uses the shared
+routing contracts, production-shaped local dispatcher, same-run evidence
+store, safety validator, and audited output package:
+
+```bash
+PYTHONPATH=src python -m claim_agent.agent.integrated_runner --pretty
+```
+
+In PowerShell:
+
+```powershell
+$env:PYTHONPATH = '.\src'
+python -m claim_agent.agent.integrated_runner --pretty
+```
+
+The JSON includes retrieved passage IDs, the selected policy formula, ordered
+trace events, budget usage, and an `OutputPackage` whose approval state remains
+`PENDING_REVIEW`.
+
+## Run the knowledge and retrieval tests
+
+These check that the manifest, source files, passage IDs, criteria, and per-procedure formulas in [`knowledge/`](knowledge/) are consistent, that policy matching and ranking behave as decision 0001 requires, and that the dispatcher validates requests and returns `ToolResult` records. The dispatcher tests need the agent dependencies in [`requirements.txt`](requirements.txt):
+
+```bash
+python -m pip install -r requirements.txt
+PYTHONPATH=src python -m unittest discover -s tests/tools -p "test*.py" -v
+```
+
+PowerShell equivalent:
+
+```powershell
+$env:PYTHONPATH = '.\src'
+py -3 -m pip install -r requirements.txt
+py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
+```
+
+Expected result:
+
+```text
+Ran 72 tests
 OK
 ```
 
@@ -181,11 +375,13 @@ These limitations define the work assigned to the agentic extension; they are no
 
 ## Planned agentic extension
 
-- [ ] Freeze shared claim, evidence, tool, decision, and trace contracts.
-- [ ] Wrap deterministic baseline behavior behind stable interfaces.
-- [ ] Implement a validated common tool dispatcher.
+- [ ] Freeze shared claim, evidence, tool, decision, and trace contracts. The
+  runtime contracts are integrated; durable trace fields remain pending.
+- [x] Wrap deterministic baseline findings and routing behind typed interfaces.
+- [x] Implement a validated common tool dispatcher.
 - [ ] Add versioned payer-policy, encounter-note, and eligibility retrieval.
-- [ ] Implement a bounded planning loop with structured model outputs.
+- [x] Implement a bounded planning loop with structured model outputs behind scripted offline boundaries.
+- [ ] Replace scripted runtime boundaries with approved production adapters.
 - [ ] Add criterion-level evidence assessment and resolvable citations.
 - [ ] Add deterministic safety and deadline verification.
 - [ ] Generate appeal drafts only from verified evidence.
