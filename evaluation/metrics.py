@@ -55,7 +55,7 @@ class Rate:
         if self.total == 0:
             return "n/a (no cases)"
         low, high = self.wilson()
-        return "%d/%d (%.0f%%, CI %.0f–%.0f%%)" % (self.hits, self.total, 100 * self.value, 100 * low, 100 * high)
+        return "%d/%d (%.0f%%, CI %.0f-%.0f%%)" % (self.hits, self.total, 100 * self.value, 100 * low, 100 * high)
 
 
 @dataclass(frozen=True)

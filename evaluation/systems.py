@@ -2,7 +2,8 @@
 
 Each system turns one case (a denied service line) into a ``Prediction``.
 Only the frozen baseline (S1) is implemented here. The agent system (S0) and
-the single-call baseline (S2) need the hosted-model transport from #11.
+the single-call baseline (S2) need the hosted-model transport from #34;
+their evaluation integration is tracked in #12.
 """
 
 from __future__ import annotations

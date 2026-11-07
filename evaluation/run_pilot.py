@@ -90,7 +90,7 @@ def render_markdown(dataset: Dataset, score: SystemScore, label_status: str) -> 
             lines.append("| `%s` | n/a (not measurable for this system) |" % name)
         else:
             lines.append("| `%s` | %d |" % (name, score.safety_counts.get(name, 0)))
-    lines += ["", "## Disposition confusion (gold → predicted)", "", "| Gold | Predicted | Cases |", "|---|---|---|"]
+    lines += ["", "## Disposition confusion (gold -> predicted)", "", "| Gold | Predicted | Cases |", "|---|---|---|"]
     for (gold, pred), count in sorted(score.confusion.items()):
         lines.append("| %s | %s | %d |" % (gold, pred, count))
     lines += ["", "## Cases that differ from the labels", "", "| Case | Gold | Predicted | Safety errors |", "|---|---|---|---|"]
@@ -99,7 +99,7 @@ def render_markdown(dataset: Dataset, score: SystemScore, label_status: str) -> 
             lines.append("| %s | %s / %s | %s / %s | %s |" % (
                 row["case_id"], row["gold_root_cause"], row["gold_disposition"],
                 row["predicted_root_cause"], row["predicted_disposition"],
-                ", ".join(row["safety_errors"]) or "—"))
+                ", ".join(row["safety_errors"]) or "-"))
     return "\n".join(lines) + "\n"
 
 
@@ -158,9 +158,15 @@ def run(arguments: Optional[Sequence[str]] = None) -> int:
     }, indent=2) + "\n", encoding="utf-8")
     report = render_markdown(dataset, score, label_status)
     (out / "results.md").write_text(report, encoding="utf-8")
-    sys.stdout.write(report)
-    sys.stdout.write("\nWrote %s\n" % out)
+    _print_safely(report + "\nWrote %s\n" % out)
     return 0
+
+
+def _print_safely(text: str) -> None:
+    """Print text even on a console that can't encode every character (e.g. Windows cp1252)."""
+
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    sys.stdout.write(text.encode(encoding, errors="replace").decode(encoding))
 
 
 if __name__ == "__main__":

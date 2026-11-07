@@ -93,13 +93,27 @@ def load_labels(label_path: Path, dataset: Dataset) -> Dict[str, Label]:
             "label rubric %s does not match manifest rubric %s"
             % (raw["rubric_version"], dataset.rubric_version)
         )
+    for field in ("dataset", "split"):
+        if field in raw and raw[field] != getattr(dataset, _DATASET_ATTR[field]):
+            raise DatasetError(
+                "label file %s %r does not match manifest %r"
+                % (field, raw[field], getattr(dataset, _DATASET_ATTR[field]))
+            )
+    cases_by_id = {case.case_id: case for case in dataset.cases}
     labels: Dict[str, Label] = {}
     for entry in raw["cases"]:
+        if not isinstance(entry.get("requires_manual_review"), bool):
+            raise DatasetError(
+                "requires_manual_review must be a JSON true/false for %s" % entry.get("case_id")
+            )
+        case = cases_by_id.get(entry["case_id"])
+        if case is not None:
+            _check_label_identity(entry, case, dataset)
         label = Label(
             case_id=entry["case_id"],
             root_cause=entry["root_cause"],
             disposition=entry["disposition"],
-            requires_manual_review=bool(entry["requires_manual_review"]),
+            requires_manual_review=entry["requires_manual_review"],
             manual_review_reasons=tuple(entry["manual_review_reasons"]),
             deadline=entry["deadline"],
             forbidden_outcomes=tuple(entry["forbidden_outcomes"]),
@@ -116,3 +130,32 @@ def load_labels(label_path: Path, dataset: Dataset) -> Dict[str, Label]:
     if missing or extra:
         raise DatasetError("labels do not match cases; missing=%s extra=%s" % (missing, extra))
     return labels
+
+
+_DATASET_ATTR = {"dataset": "name", "split": "split", "as_of": "as_of"}
+
+
+def _check_label_identity(entry: dict, case: Case, dataset: Dataset) -> None:
+    """Reject a label whose identity fields point at a different case or dataset.
+
+    Each field is checked only when the label has it.
+    """
+
+    expected = {
+        "dataset": dataset.name,
+        "split": dataset.split,
+        "as_of": dataset.as_of,
+        "claim_id": case.claim_id,
+        "service_line_id": case.service_line_id,
+        "scenario_family_id": case.scenario_family_id,
+    }
+    for field, want in expected.items():
+        if field not in entry:
+            continue
+        got = entry[field]
+        if field == "service_line_id" and (isinstance(got, bool) or not isinstance(got, int)):
+            raise DatasetError("service_line_id must be an integer for %s" % case.case_id)
+        if got != want:
+            raise DatasetError(
+                "label %s for %s is %r but the manifest says %r" % (field, case.case_id, got, want)
+            )

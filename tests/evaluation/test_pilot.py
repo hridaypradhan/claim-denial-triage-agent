@@ -127,6 +127,51 @@ class SetADatasetTest(unittest.TestCase):
             with self.assertRaises(DatasetError):
                 load_labels(path, dataset)
 
+    def _load_with(self, change):
+        """Load Set A labels after applying ``change`` to the raw JSON."""
+
+        dataset = load_dataset(SET_A_MANIFEST)
+        raw = json.loads(SET_A_LABELS.read_text(encoding="utf-8"))
+        change(raw)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "labels.json"
+            path.write_text(json.dumps(raw), encoding="utf-8")
+            return load_labels(path, dataset)
+
+    def test_manual_review_flag_must_be_a_json_boolean(self):
+        def change(raw):
+            raw["cases"][0]["requires_manual_review"] = "false"
+        with self.assertRaisesRegex(DatasetError, "true/false"):
+            self._load_with(change)
+
+    def test_label_identity_must_match_its_case(self):
+        mismatches = {
+            "dataset": "B",
+            "split": "held_out",
+            "as_of": "2026-01-01",
+            "claim_id": "CLM-0000-000000",
+            "service_line_id": 2,
+            "scenario_family_id": "WRONG-FAMILY",
+        }
+        for field, value in mismatches.items():
+            with self.subTest(field=field):
+                def change(raw, field=field, value=value):
+                    raw["cases"][0][field] = value
+                with self.assertRaises(DatasetError):
+                    self._load_with(change)
+
+    def test_service_line_id_must_be_an_integer(self):
+        def change(raw):
+            raw["cases"][0]["service_line_id"] = str(raw["cases"][0]["service_line_id"])
+        with self.assertRaisesRegex(DatasetError, "integer"):
+            self._load_with(change)
+
+    def test_label_file_dataset_must_match_manifest(self):
+        def change(raw):
+            raw["dataset"] = "B"
+        with self.assertRaises(DatasetError):
+            self._load_with(change)
+
     def test_every_case_gets_one_baseline_prediction(self):
         dataset = load_dataset(SET_A_MANIFEST)
         for case in dataset.cases:
@@ -144,6 +189,22 @@ class SetADatasetTest(unittest.TestCase):
             for name in ("predictions.jsonl", "scores.json", "results.md", "run_manifest.json"):
                 self.assertTrue((out / name).is_file(), name)
             self.assertEqual(len((out / "predictions.jsonl").read_text(encoding="utf-8").splitlines()), 23)
+
+    def test_run_prints_on_a_windows_console(self):
+        """A cp1252 console (default Windows) must not crash the run."""
+
+        import io
+        from unittest import mock
+
+        raw = io.BytesIO()
+        console = io.TextIOWrapper(raw, encoding="cp1252", errors="strict")
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(sys, "stdout", console):
+            code = run(["--manifest", str(SET_A_MANIFEST), "--labels", str(SET_A_LABELS),
+                        "--experiment", "cp1252", "--outdir", tmp])
+            console.flush()
+            report = (Path(tmp) / "cp1252" / "results.md").read_text(encoding="utf-8")
+        self.assertEqual(code, 0)
+        self.assertTrue(report.isascii(), "results.md should use ASCII punctuation")
 
 
 if __name__ == "__main__":
