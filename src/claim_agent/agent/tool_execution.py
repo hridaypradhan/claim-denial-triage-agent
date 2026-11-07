@@ -7,6 +7,7 @@ and evidence-update rules.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 
 from claim_agent.agent.action_parser import (
@@ -91,15 +92,22 @@ def _dispatch_tool_request(
     waiting_state: AgentRuntimeState,
     budget_usage: RuntimeBudgetUsage,
     runtime_trace: InMemoryRuntimeTrace,
-) -> OfflineToolObservation:
+    attempt: int,
+) -> tuple[OfflineToolObservation, int]:
     """Dispatch one tool attempt and preserve state if its boundary raises."""
 
+    request_started_at = time.monotonic()
     try:
-        return tool_dispatcher.dispatch(
+        observation = tool_dispatcher.dispatch(
             request_id,
             tool_name,
             tool_arguments,
         )
+        elapsed_ms = max(
+            0,
+            round((time.monotonic() - request_started_at) * 1000),
+        )
+        return observation, elapsed_ms
     except Exception as error:
         # A raised exception is different from a normal ToolResult failure.
         # Preserve the budget already consumed by this exact attempt.
@@ -109,6 +117,15 @@ def _dispatch_tool_request(
                 "request_id": request_id,
                 "tool_name": tool_name,
                 "error_type": type(error).__name__,
+                "attempt": attempt,
+                "failure_class": "BOUNDARY_EXCEPTION",
+                "retryable": False,
+                "elapsed_ms": max(
+                    0,
+                    round(
+                        (time.monotonic() - request_started_at) * 1000
+                    ),
+                ),
             },
         )
         raise ToolBoundaryError(
@@ -123,8 +140,20 @@ def _record_tool_result(
     tool_name: str,
     observation: OfflineToolObservation,
     runtime_trace: InMemoryRuntimeTrace,
+    attempt: int,
+    elapsed_ms: int,
 ) -> None:
     """Record one returned observation using its matching request identity."""
+
+    evidence_passages = observation.payload.get(
+        "evidence_passages",
+        (),
+    )
+    passage_ids = [
+        passage["passage_id"]
+        for passage in evidence_passages
+        if isinstance(passage, dict) and "passage_id" in passage
+    ]
 
     runtime_trace.record(
         "TOOL_RETURNED",
@@ -134,8 +163,12 @@ def _record_tool_result(
             "succeeded": observation.succeeded,
             "error_code": observation.error_code or "",
             "retryable": observation.retryable,
+            "status": "OK" if observation.succeeded else "ERROR",
+            "attempt": attempt,
             "source_count": len(observation.source_ids),
             "source_ids": list(observation.source_ids),
+            "passage_ids": passage_ids,
+            "elapsed_ms": elapsed_ms,
         },
     )
 
@@ -179,10 +212,13 @@ def execute_tool_action(
             "tool_name": action.tool_name,
             "argument_count": len(action.tool_arguments),
             "tool_arguments": dict(action.tool_arguments),
+            "tool_args": dict(action.tool_arguments),
+            "tool_call_index": updated_budget_usage.tool_calls_used,
+            "attempt": 1,
         },
     )
 
-    observation = _dispatch_tool_request(
+    observation, elapsed_ms = _dispatch_tool_request(
         request_id=request_id,
         tool_name=action.tool_name,
         tool_arguments=dict(action.tool_arguments),
@@ -190,12 +226,15 @@ def execute_tool_action(
         waiting_state=waiting_state,
         budget_usage=updated_budget_usage,
         runtime_trace=runtime_trace,
+        attempt=1,
     )
     _record_tool_result(
         request_id=request_id,
         tool_name=action.tool_name,
         observation=observation,
         runtime_trace=runtime_trace,
+        attempt=1,
+        elapsed_ms=elapsed_ms,
     )
 
     if observation.retryable:
@@ -223,10 +262,15 @@ def execute_tool_action(
                 "error_code": observation.error_code or "",
                 "argument_count": len(action.tool_arguments),
                 "tool_arguments": dict(action.tool_arguments),
+                "tool_args": dict(action.tool_arguments),
+                "tool_call_index": (
+                    updated_budget_usage.tool_calls_used - 1
+                ),
+                "attempt": 2,
             },
         )
 
-        observation = _dispatch_tool_request(
+        observation, elapsed_ms = _dispatch_tool_request(
             request_id=request_id,
             tool_name=action.tool_name,
             tool_arguments=dict(action.tool_arguments),
@@ -234,12 +278,15 @@ def execute_tool_action(
             waiting_state=waiting_state,
             budget_usage=updated_budget_usage,
             runtime_trace=runtime_trace,
+            attempt=2,
         )
         _record_tool_result(
             request_id=request_id,
             tool_name=action.tool_name,
             observation=observation,
             runtime_trace=runtime_trace,
+            attempt=2,
+            elapsed_ms=elapsed_ms,
         )
 
     updating_state = waiting_state.transition_to(RuntimePhase.UPDATING_EVIDENCE)

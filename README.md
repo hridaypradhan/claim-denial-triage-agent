@@ -5,8 +5,9 @@ A hybrid agentic AI system for evidence-grounded triage of denied outpatient med
 > **Project status:** Active academic capstone. The deterministic baseline,
 > shared contracts, local retrieval tools, safety validator, bounded runtime,
 > a provider-neutral hosted-model boundary, and a production-shaped local
-> integration are runnable and tested. A provider-specific hosted transport,
-> durable traces, evaluation, and the final report remain in progress.
+> integration and durable canonical traces are runnable and tested. A
+> provider-specific hosted transport, evaluation, and the final report remain
+> in progress.
 
 ## Problem
 
@@ -123,8 +124,9 @@ The agent package now provides an offline vertical slice for developing and veri
 This vertical slice establishes runtime control flow; it is not a production
 claim-review system. Scripted boundaries remain for deterministic regression
 tests, while adapters connect the integrated path to the approved shared tool,
-routing, decision, validation, and output contracts. The internal trace format
-remains temporary pending the durable trace contract.
+routing, decision, validation, output, and durable trace contracts. Internal
+events remain an implementation detail; the canonical JSON Lines trace is the
+stable evaluation boundary.
 
 ### Production-shaped local integration
 
@@ -299,7 +301,21 @@ python -m claim_agent.agent.integrated_runner --pretty
 
 The JSON includes retrieved passage IDs, the selected policy formula, ordered
 trace events, budget usage, and an `OutputPackage` whose approval state remains
-`PENDING_REVIEW`.
+`PENDING_REVIEW`. To also create the immutable canonical JSON Lines trace used
+by evaluation, provide a local output directory and the exact commit being run:
+
+```powershell
+$commit = git rev-parse HEAD
+python -m claim_agent.agent.integrated_runner `
+    --pretty `
+    --trace-directory '.\artifacts\traces' `
+    --code-commit $commit
+```
+
+The generated `artifacts/traces/<run-id>.jsonl` file contains the reproducible
+run configuration, redacted model and tool events, validation results, timing,
+budget counters, and exactly one final outcome. Generated traces are local
+artifacts and should not be committed.
 
 ## Run the knowledge and retrieval tests
 
@@ -375,8 +391,8 @@ These limitations define the work assigned to the agentic extension; they are no
 
 ## Planned agentic extension
 
-- [ ] Freeze shared claim, evidence, tool, decision, and trace contracts. The
-  runtime contracts are integrated; durable trace fields remain pending.
+- [x] Freeze shared claim, evidence, tool, decision, and trace contracts and
+  connect the integrated runner to durable canonical trace emission.
 - [x] Wrap deterministic baseline findings and routing behind typed interfaces.
 - [x] Implement a validated common tool dispatcher.
 - [ ] Add versioned payer-policy, encounter-note, and eligibility retrieval.

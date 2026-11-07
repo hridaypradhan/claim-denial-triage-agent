@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import io
 import json
+import tempfile
 import unittest
 from contextlib import redirect_stdout
+from pathlib import Path
 
 from claim_agent.agent.integrated_runner import (
     DEMO_RUN_ID,
@@ -106,6 +108,40 @@ class IntegratedRunnerTests(unittest.TestCase):
             "decision_accepted",
             printed_summary["terminal_reason"],
         )
+
+    def test_cli_writes_complete_canonical_trace_when_requested(self) -> None:
+        """The CLI should create one immutable evaluation-ready artifact."""
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            trace_directory = Path(temporary_directory)
+            captured_output = io.StringIO()
+
+            with redirect_stdout(captured_output):
+                exit_code = main(
+                    [
+                        "--trace-directory",
+                        str(trace_directory),
+                        "--code-commit",
+                        "test-commit-123",
+                    ]
+                )
+
+            printed_summary = json.loads(captured_output.getvalue())
+            trace_path = trace_directory / f"{DEMO_RUN_ID}.jsonl"
+            trace_events = [
+                json.loads(line)
+                for line in trace_path.read_text(encoding="utf-8").splitlines()
+            ]
+
+            self.assertEqual(0, exit_code)
+            self.assertEqual(str(trace_path), printed_summary["canonical_trace_path"])
+            self.assertEqual("RUN_STARTED", trace_events[0]["event_type"])
+            self.assertEqual("RUN_COMPLETED", trace_events[-1]["event_type"])
+            self.assertEqual(
+                "test-commit-123",
+                trace_events[0]["payload"]["config"]["code_commit"],
+            )
+            self.assertNotIn("routing_reason", trace_events[0]["payload"]["route"])
 
 
 if __name__ == "__main__":

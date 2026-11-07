@@ -25,6 +25,7 @@ htmlcov/
 /outputs/
 /baseline/outputs/
 /traces/
+/artifacts/
 /logs/
 
 # Editors

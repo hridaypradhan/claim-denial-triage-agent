@@ -208,6 +208,10 @@ class OfflineRuntimeResilienceTests(unittest.TestCase):
                 "MANUAL_REVIEW",
             ],
         )
+        self.assertEqual(
+            "tool_call",
+            result.trace_entries[-1].details["budget_name"],
+        )
 
     def test_dispatcher_exception_stops_for_manual_review(self) -> None:
         """An unexpected tool timeout must not escape the runtime."""
