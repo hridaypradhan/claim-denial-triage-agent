@@ -5,20 +5,46 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Callable, Mapping, Sequence
 
+from claim_agent.agent.action_parser import (
+    ModelOutputParseError,
+    RuntimeActionType,
+    parse_model_action,
+)
 from claim_agent.agent.canonical_trace import (
+    TerminalReason,
     TraceComponent,
     TraceEvent,
     TraceEventType,
+    UsageStatus,
 )
 from claim_agent.agent.run_configuration import (
     AgentRunConfig,
     calculate_run_configuration_sha256,
 )
 from claim_agent.agent.runtime_trace import RuntimeTraceEntry
-from claim_agent.contracts import RouteDecision
 from claim_agent.agent.trace_redaction import redact_trace_payload
+from claim_agent.contracts import RouteDecision
 
 TimestampProvider = Callable[[], str]
+
+TERMINAL_REASON_BY_RUNTIME_REASON = {
+    "decision_accepted": TerminalReason.COMPLETED_VALIDATED,
+    "decision_requires_manual_review": TerminalReason.VALIDATOR_REQUIRED_REVIEW,
+    "model_requested_manual_review": TerminalReason.MODEL_REQUESTED_REVIEW,
+    "repair_requested_manual_review": TerminalReason.MODEL_REQUESTED_REVIEW,
+    "model_timeout": TerminalReason.MODEL_REQUEST_TIMEOUT,
+    "repair_model_timeout": TerminalReason.MODEL_REQUEST_TIMEOUT,
+    "model_budget_exhausted": TerminalReason.MODEL_CALL_BUDGET_EXHAUSTED,
+    "tool_budget_exhausted": TerminalReason.TOOL_CALL_BUDGET_EXHAUSTED,
+    "repair_budget_exhausted": TerminalReason.REPAIR_BUDGET_EXHAUSTED,
+    "runtime_timeout": TerminalReason.RUN_TIMEOUT,
+    "repair_output_invalid": TerminalReason.REPAIR_OUTPUT_INVALID,
+    "invalid_validation_repair_action": TerminalReason.INVALID_REPAIR_ACTION,
+    "tool_not_allowed": TerminalReason.TOOL_NOT_ALLOWED,
+    "model_boundary_error": TerminalReason.MODEL_BOUNDARY_ERROR,
+    "tool_boundary_error": TerminalReason.TOOL_BOUNDARY_ERROR,
+    "validation_boundary_error": TerminalReason.VALIDATOR_BOUNDARY_ERROR,
+}
 
 
 def current_utc_timestamp() -> str:
@@ -41,7 +67,7 @@ class CanonicalTraceAdapter:
         timestamp_provider: TimestampProvider = current_utc_timestamp,
         evaluation_context: Mapping[str, object] | None = None,
     ) -> None:
-        """Store the frozen run metadata shared by the canonical events."""
+        """Store frozen metadata shared by every canonical event."""
 
         self._run_configuration = run_configuration
         self._route_decision = route_decision
@@ -54,22 +80,23 @@ class CanonicalTraceAdapter:
         self,
         runtime_entries: Sequence[RuntimeTraceEntry],
     ) -> tuple[TraceEvent, ...]:
-        """Convert supported entries and assign gap-free canonical sequences."""
+        """Convert every observable entry and assign gap-free sequences."""
 
         canonical_events: list[TraceEvent] = []
+        counters = self._build_counters(runtime_entries)
 
-        for runtime_entry in runtime_entries:
+        for entry_index, runtime_entry in enumerate(runtime_entries):
             if runtime_entry.event_name == "PHASE_CHANGED":
-                # Phase changes are already implied by the surrounding
-                # model, tool, validation, and terminal events.
                 continue
 
-            next_sequence_number = len(canonical_events) + 1
-            canonical_event = self._adapt_entry(
-                runtime_entry=runtime_entry,
-                sequence_number=next_sequence_number,
+            canonical_events.append(
+                self._adapt_entry(
+                    runtime_entry=runtime_entry,
+                    sequence_number=len(canonical_events) + 1,
+                    prior_entries=runtime_entries[:entry_index],
+                    counters=counters,
+                )
             )
-            canonical_events.append(canonical_event)
 
         return tuple(canonical_events)
 
@@ -77,17 +104,156 @@ class CanonicalTraceAdapter:
         self,
         runtime_entry: RuntimeTraceEntry,
         sequence_number: int,
+        prior_entries: Sequence[RuntimeTraceEntry],
+        counters: Mapping[str, int],
     ) -> TraceEvent:
-        """Convert one currently supported internal event."""
+        """Convert one internal event without silently discarding it."""
 
         if runtime_entry.event_name == "RUN_STARTED":
-            return self._adapt_run_started(
-                runtime_entry=runtime_entry,
-                sequence_number=sequence_number,
+            return self._adapt_run_started(runtime_entry, sequence_number)
+
+        name = runtime_entry.event_name
+        details = dict(runtime_entry.details)
+        common = self._common_event_values(runtime_entry, sequence_number)
+
+        if name == "MODEL_REQUESTED":
+            return TraceEvent(
+                **common,
+                event_type=TraceEventType.MODEL_REQUESTED,
+                component=TraceComponent.MODEL_CLIENT,
+                request_id=str(details["request_id"]),
+                model_id=self._run_configuration.model_id,
+                prompt_version=self._run_configuration.prompt_version,
+                payload=redact_trace_payload(
+                    {
+                        "call_index": self._model_call_index(prior_entries),
+                        "prompt_sha256": details["prompt_sha256"],
+                        "passage_ids": self._passage_ids(prior_entries),
+                        "repair_attempt": details.get("repair_attempt", 0),
+                    }
+                ),
+            )
+
+        if name == "MODEL_RESPONDED":
+            return self._adapt_model_responded(details, common)
+
+        if name == "MODEL_OUTPUT_REJECTED":
+            return TraceEvent(
+                **common,
+                event_type=TraceEventType.MODEL_OUTPUT_REJECTED,
+                component=TraceComponent.AGENT_RUNTIME,
+                request_id=str(details["request_id"]),
+                payload=redact_trace_payload(
+                    {
+                        "rejection_code": details["rejection_code"],
+                        "schema_error_paths": details["schema_error_paths"],
+                    }
+                ),
+            )
+
+        if name == "MODEL_FAILED":
+            return TraceEvent(
+                **common,
+                event_type=TraceEventType.MODEL_FAILED,
+                component=TraceComponent.MODEL_CLIENT,
+                request_id=str(details["request_id"]),
+                elapsed_ms=int(details.get("elapsed_ms", 0)),
+                payload=redact_trace_payload(
+                    {
+                        "failure_class": details["failure_class"],
+                        "error_type": details["error_type"],
+                        "retryable": details["retryable"],
+                        "repair_attempt": details.get("repair_attempt", 0),
+                    }
+                ),
+            )
+
+        if name == "REPAIR_ATTEMPTED":
+            return TraceEvent(
+                **common,
+                event_type=TraceEventType.REPAIR_ATTEMPTED,
+                component=TraceComponent.AGENT_RUNTIME,
+                request_id=str(details["request_id"]),
+                payload=redact_trace_payload(
+                    {
+                        "repair_index": details["repair_index"],
+                        "repair_kind": details["repair_kind"],
+                        "rejected_request_id": details["rejected_request_id"],
+                    }
+                ),
+            )
+
+        if name in {"TOOL_REQUESTED", "TOOL_RETRY_REQUESTED"}:
+            return self._adapt_tool_requested(details, common, name)
+
+        if name == "TOOL_RETURNED":
+            return TraceEvent(
+                **common,
+                event_type=TraceEventType.TOOL_RETURNED,
+                component=TraceComponent.TOOL_DISPATCHER,
+                request_id=str(details["request_id"]),
+                elapsed_ms=int(details.get("elapsed_ms", 0)),
+                payload=redact_trace_payload(
+                    {
+                        "tool_name": details["tool_name"],
+                        "attempt": details["attempt"],
+                        "status": details["status"],
+                        "error_code": details["error_code"] or None,
+                        "retryable": details["retryable"],
+                        "source_ids": details["source_ids"],
+                        "passage_ids": details["passage_ids"],
+                    }
+                ),
+            )
+
+        if name == "TOOL_FAILED":
+            return TraceEvent(
+                **common,
+                event_type=TraceEventType.TOOL_FAILED,
+                component=TraceComponent.TOOL_DISPATCHER,
+                request_id=str(details["request_id"]),
+                elapsed_ms=int(details.get("elapsed_ms", 0)),
+                payload=redact_trace_payload(details),
+            )
+
+        if name == "DECISION_PROPOSED":
+            return TraceEvent(
+                **common,
+                event_type=TraceEventType.DECISION_PROPOSED,
+                component=TraceComponent.AGENT_RUNTIME,
+                payload=redact_trace_payload(
+                    {"decision": details["decision"]}
+                ),
+            )
+
+        if name == "VALIDATION_RETURNED":
+            return TraceEvent(
+                **common,
+                event_type=TraceEventType.VALIDATION_RETURNED,
+                component=TraceComponent.SAFETY_VALIDATOR,
+                payload=redact_trace_payload(
+                    self._validation_payload(details)
+                ),
+            )
+
+        if name == "VALIDATION_FAILED":
+            return TraceEvent(
+                **common,
+                event_type=TraceEventType.VALIDATION_FAILED,
+                component=TraceComponent.SAFETY_VALIDATOR,
+                payload=redact_trace_payload(details),
+            )
+
+        if name in {"RUN_COMPLETED", "MANUAL_REVIEW"}:
+            return self._adapt_terminal(
+                runtime_entry,
+                sequence_number,
+                prior_entries,
+                counters,
             )
 
         raise ValueError(
-            "Canonical trace adapter does not yet support internal event "
+            "Canonical trace adapter does not support internal event "
             f"{runtime_entry.event_name}"
         )
 
@@ -98,7 +264,6 @@ class CanonicalTraceAdapter:
     ) -> TraceEvent:
         """Build the canonical run header and reproducibility metadata."""
 
-        configuration_payload = self._run_configuration.model_dump(mode="json")
         route_payload = {
             "contract_version": self._route_decision.contract_version,
             "claim_id": self._route_decision.claim_id,
@@ -108,27 +273,248 @@ class CanonicalTraceAdapter:
             "authorized_tools": list(self._route_decision.authorized_tools),
         }
         payload: dict[str, object] = {
-            "config": configuration_payload,
+            "config": self._run_configuration.model_dump(mode="json"),
             "config_sha256": calculate_run_configuration_sha256(
                 self._run_configuration
             ),
             "route": route_payload,
         }
-
         if self._evaluation_context is not None:
             payload["evaluation_context"] = dict(self._evaluation_context)
 
-        case_id = (
-            f"{self._route_decision.claim_id}"
-            f"-L{self._route_decision.service_line_id}"
-        )
-
         return TraceEvent(
-            run_id=runtime_entry.run_id,
-            case_id=case_id,
-            sequence_number=sequence_number,
+            **self._common_event_values(runtime_entry, sequence_number),
             event_type=TraceEventType.RUN_STARTED,
             component=TraceComponent.AGENT_RUNTIME,
-            timestamp=self._timestamp_provider(),
             payload=redact_trace_payload(payload),
+        )
+
+    def _adapt_model_responded(
+        self,
+        details: Mapping[str, object],
+        common: Mapping[str, object],
+    ) -> TraceEvent:
+        """Describe one model result while redacting unrestricted text."""
+
+        response_text = str(details["response_text"])
+        try:
+            action = parse_model_action(response_text)
+            if action.action_type is RuntimeActionType.CALL_TOOL:
+                response_payload: dict[str, object] = {
+                    "response_type": "TOOL_CALLS",
+                    "tool_calls": [
+                        {
+                            "tool_name": action.tool_name,
+                            "tool_args": dict(action.tool_arguments),
+                        }
+                    ],
+                }
+            elif action.action_type is RuntimeActionType.PROPOSE_DECISION:
+                response_payload = {
+                    "response_type": "DECISION",
+                    "decision": dict(action.decision_payload),
+                }
+            else:
+                response_payload = {
+                    "response_type": "MANUAL_REVIEW_REQUEST",
+                    "manual_review_reasons": [action.manual_review_reason],
+                }
+        except ModelOutputParseError:
+            response_payload = {
+                "response_type": "INVALID",
+                "raw_output": response_text,
+            }
+
+        input_tokens = details.get("input_tokens")
+        output_tokens = details.get("output_tokens")
+        if input_tokens is not None and output_tokens is not None:
+            usage_status = UsageStatus.REPORTED
+        elif "scripted" in self._run_configuration.model_provider.lower():
+            usage_status = UsageStatus.NOT_APPLICABLE
+        else:
+            usage_status = UsageStatus.NOT_REPORTED_BY_PROVIDER
+
+        return TraceEvent(
+            **common,
+            event_type=TraceEventType.MODEL_RESPONDED,
+            component=TraceComponent.MODEL_CLIENT,
+            request_id=str(details["request_id"]),
+            model_id=self._run_configuration.model_id,
+            elapsed_ms=int(details.get("elapsed_ms", 0)),
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            usage_status=usage_status,
+            payload=redact_trace_payload(response_payload),
+        )
+
+    def _adapt_tool_requested(
+        self,
+        details: Mapping[str, object],
+        common: Mapping[str, object],
+        event_name: str,
+    ) -> TraceEvent:
+        """Convert initial and retry requests to one canonical event type."""
+
+        payload = {
+            "tool_call_index": details["tool_call_index"],
+            "attempt": details["attempt"],
+            "tool_name": details["tool_name"],
+            "tool_args": details["tool_args"],
+        }
+        if event_name == "TOOL_RETRY_REQUESTED":
+            payload["retry_of_request_id"] = details["previous_request_id"]
+
+        return TraceEvent(
+            **common,
+            event_type=TraceEventType.TOOL_REQUESTED,
+            component=TraceComponent.TOOL_DISPATCHER,
+            request_id=str(details["request_id"]),
+            payload=redact_trace_payload(payload),
+        )
+
+    def _adapt_terminal(
+        self,
+        runtime_entry: RuntimeTraceEntry,
+        sequence_number: int,
+        prior_entries: Sequence[RuntimeTraceEntry],
+        counters: Mapping[str, int],
+    ) -> TraceEvent:
+        """Map terminal reasons and preserve consumed runtime counters."""
+
+        details = dict(runtime_entry.details)
+        internal_reason = str(details["terminal_reason"])
+        terminal_reason = self._terminal_reason(internal_reason, details)
+        is_completed = runtime_entry.event_name == "RUN_COMPLETED"
+        payload: dict[str, object] = {
+            "approval_state": "PENDING_REVIEW",
+            "counters": dict(counters),
+        }
+        if is_completed:
+            decision = self._latest_validated_decision(prior_entries)
+            payload.update(
+                {
+                    "final_disposition": decision.get(
+                        "recommended_disposition", "MANUAL_REVIEW"
+                    ),
+                    "final_root_cause": decision.get(
+                        "root_cause", "UNKNOWN"
+                    ),
+                }
+            )
+        else:
+            payload["manual_review_reasons"] = [terminal_reason.value]
+            payload["during_repair"] = internal_reason.startswith("repair_")
+
+        return TraceEvent(
+            **self._common_event_values(runtime_entry, sequence_number),
+            event_type=(
+                TraceEventType.RUN_COMPLETED
+                if is_completed
+                else TraceEventType.MANUAL_REVIEW
+            ),
+            component=TraceComponent.AGENT_RUNTIME,
+            elapsed_ms=int(
+                details.get("elapsed_ms", runtime_entry.elapsed_ms)
+            ),
+            terminal_reason=terminal_reason,
+            payload=redact_trace_payload(payload),
+        )
+
+    def _common_event_values(
+        self,
+        runtime_entry: RuntimeTraceEntry,
+        sequence_number: int,
+    ) -> dict[str, object]:
+        return {
+            "run_id": runtime_entry.run_id,
+            "case_id": (
+                f"{self._route_decision.claim_id}"
+                f"-L{self._route_decision.service_line_id}"
+            ),
+            "sequence_number": sequence_number,
+            "timestamp": self._timestamp_provider(),
+        }
+
+    @staticmethod
+    def _build_counters(
+        entries: Sequence[RuntimeTraceEntry],
+    ) -> dict[str, int]:
+        model_calls = sum(e.event_name == "MODEL_REQUESTED" for e in entries)
+        tool_calls = sum(
+            e.event_name in {"TOOL_REQUESTED", "TOOL_RETRY_REQUESTED"}
+            for e in entries
+        )
+        repairs = sum(e.event_name == "REPAIR_ATTEMPTED" for e in entries)
+        tool_retries = sum(
+            e.event_name == "TOOL_RETRY_REQUESTED" for e in entries
+        )
+        return {
+            "model_calls": model_calls,
+            "tool_calls": tool_calls,
+            "tool_retries": tool_retries,
+            "repairs": repairs,
+            "total_steps": model_calls + tool_calls,
+        }
+
+    @staticmethod
+    def _model_call_index(prior_entries: Sequence[RuntimeTraceEntry]) -> int:
+        return 1 + sum(
+            entry.event_name == "MODEL_REQUESTED" for entry in prior_entries
+        )
+
+    @staticmethod
+    def _passage_ids(
+        prior_entries: Sequence[RuntimeTraceEntry],
+    ) -> list[str]:
+        passage_ids: list[str] = []
+        for entry in prior_entries:
+            if entry.event_name != "TOOL_RETURNED":
+                continue
+            for passage_id in entry.details.get("passage_ids", []):
+                if passage_id not in passage_ids:
+                    passage_ids.append(str(passage_id))
+        return passage_ids
+
+    @staticmethod
+    def _validation_payload(
+        details: Mapping[str, object],
+    ) -> dict[str, object]:
+        outcome_by_status = {
+            "ACCEPTED": "ACCEPTED",
+            "REPAIRABLE": "REPAIRABLE",
+            "MANUAL_REVIEW": "REJECTED_MANUAL_REVIEW",
+        }
+        return {
+            "contract_version": "0.1",
+            "decision_id": details["decision_id"],
+            "claim_id": details["claim_id"],
+            "service_line_id": details["service_line_id"],
+            "outcome": outcome_by_status[str(details["status"])],
+            "approval_state": "PENDING_REVIEW",
+            "validation_problems": details["validation_problems"],
+            "validated_decision": details["validated_decision"],
+            "manual_review_reasons": details["manual_review_reasons"],
+        }
+
+    @staticmethod
+    def _latest_validated_decision(
+        prior_entries: Sequence[RuntimeTraceEntry],
+    ) -> Mapping[str, object]:
+        for entry in reversed(prior_entries):
+            if entry.event_name == "VALIDATION_RETURNED":
+                decision = entry.details.get("validated_decision")
+                if isinstance(decision, Mapping):
+                    return decision
+        return {}
+
+    @staticmethod
+    def _terminal_reason(
+        internal_reason: str,
+        details: Mapping[str, object],
+    ) -> TerminalReason:
+        if "total_step" in str(details.get("problem_message", "")):
+            return TerminalReason.STEP_BUDGET_EXHAUSTED
+        return TERMINAL_REASON_BY_RUNTIME_REASON.get(
+            internal_reason,
+            TerminalReason.RUNTIME_ERROR,
         )

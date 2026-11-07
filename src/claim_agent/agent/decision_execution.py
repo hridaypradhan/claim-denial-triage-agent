@@ -45,6 +45,7 @@ def execute_decision_with_repair(
     result_factory: Callable[..., "OfflineRuntimeResult"],
     parsed_action: ParsedModelAction,
     current_response_text: str,
+    current_request_id: str,
     system_instructions: str,
     current_task_context: str,
     runtime_started_at: float,
@@ -72,7 +73,10 @@ def execute_decision_with_repair(
         runtime_state = runtime_state.transition_to(RuntimePhase.PROPOSING_DECISION)
         runtime_trace.record(
             "DECISION_PROPOSED",
-            {"decision_field_count": len(parsed_action.decision_payload)},
+            {
+                "decision_field_count": len(parsed_action.decision_payload),
+                "decision": dict(parsed_action.decision_payload),
+            },
         )
 
         runtime_state = runtime_state.transition_to(RuntimePhase.VALIDATING)
@@ -88,6 +92,12 @@ def execute_decision_with_repair(
                 "VALIDATION_FAILED",
                 {
                     "error_type": type(error).__name__,
+                    "decision_id": parsed_action.decision_payload.get(
+                        "decision_id",
+                        "UNKNOWN_DECISION",
+                    ),
+                    "failure_class": "BOUNDARY_EXCEPTION",
+                    "retryable": False,
                 },
             )
             return finish_manual_review(
@@ -102,7 +112,33 @@ def execute_decision_with_repair(
 
         runtime_trace.record(
             "VALIDATION_RETURNED",
-            {"status": validation_result.status.value},
+            {
+                "status": validation_result.status.value,
+                "decision_id": parsed_action.decision_payload.get(
+                    "decision_id",
+                    "UNKNOWN_DECISION",
+                ),
+                "claim_id": parsed_action.decision_payload.get(
+                    "claim_id",
+                    "UNKNOWN_CLAIM",
+                ),
+                "service_line_id": parsed_action.decision_payload.get(
+                    "service_line_id",
+                    0,
+                ),
+                "validation_problems": [
+                    problem.model_dump(mode="json")
+                    for problem in validation_result.validation_problems
+                ],
+                "validated_decision": (
+                    None
+                    if validation_result.validated_decision is None
+                    else dict(validation_result.validated_decision)
+                ),
+                "manual_review_reasons": list(
+                    validation_result.manual_review_reasons
+                ),
+            },
         )
 
         timeout_result = timeout_result_if_expired(
@@ -160,6 +196,8 @@ def execute_decision_with_repair(
                     validation_result.validation_problems
                 ),
                 allowed_tool_names=allowed_tool_names,
+                repair_kind="VALIDATION",
+                rejected_request_id=current_request_id,
             )
         except RepairModelBoundaryError as error:
             return finish_manual_review(
@@ -181,6 +219,7 @@ def execute_decision_with_repair(
         runtime_state = repair_outcome.runtime_state
         budget_usage = repair_outcome.budget_usage
         current_response_text = repair_outcome.repaired_response_text
+        current_request_id = repair_outcome.request_id
 
         timeout_result = timeout_result_if_expired(
             runtime_started_at=runtime_started_at,

@@ -104,12 +104,140 @@ class CanonicalTraceAdapterTests(unittest.TestCase):
 
         runtime_trace = InMemoryRuntimeTrace(run_id="run-1")
         runtime_trace.record(
-            "MODEL_REQUESTED",
-            {"request_id": "run-1:model:1"},
+            "UNMAPPED_EVENT",
+            {"example": "value"},
         )
 
         with self.assertRaisesRegex(
             ValueError,
-            "does not yet support internal event MODEL_REQUESTED",
+            "does not support internal event UNMAPPED_EVENT",
         ):
             make_adapter().adapt(runtime_trace.entries)
+
+    def test_successful_runtime_history_maps_end_to_end(self) -> None:
+        """A complete internal history should become a writable trace."""
+
+        decision = {
+            "contract_version": "0.1",
+            "decision_id": "decision-1",
+            "claim_id": "CLM-2026-005097",
+            "service_line_id": 1,
+            "root_cause": "MEDICAL_NECESSITY",
+            "recommended_disposition": "APPEAL_WITH_DOCUMENTATION",
+            "actions": ["Prepare an appeal for human review."],
+            "criterion_assessments": [],
+            "evidence_gaps": [],
+            "agent_status": "COMPLETED",
+            "manual_review_reasons": [],
+            "rationale": "The cited evidence supports the criteria.",
+            "citation_ids": ["POL-1@v1#P1"],
+        }
+        runtime_trace = InMemoryRuntimeTrace(run_id="run-1")
+        runtime_trace.record("RUN_STARTED")
+        runtime_trace.record(
+            "MODEL_REQUESTED",
+            {
+                "request_id": "run-1-model-1",
+                "prompt_sha256": "a" * 64,
+                "repair_attempt": 0,
+            },
+        )
+        runtime_trace.record(
+            "MODEL_RESPONDED",
+            {
+                "request_id": "run-1-model-1",
+                "response_text": (
+                    '{"action":"call_tool","tool_name":'
+                    '"retrieve_medical_policy","tool_arguments":'
+                    '{"payer":"BCBSAZ","query":"brain MRI"}}'
+                ),
+                "input_tokens": None,
+                "output_tokens": None,
+            },
+        )
+        runtime_trace.record(
+            "TOOL_REQUESTED",
+            {
+                "request_id": "run-1:tool:1",
+                "tool_name": "retrieve_medical_policy",
+                "tool_args": {
+                    "payer": "BCBSAZ",
+                    "query": "brain MRI",
+                },
+                "tool_call_index": 1,
+                "attempt": 1,
+            },
+        )
+        runtime_trace.record(
+            "TOOL_RETURNED",
+            {
+                "request_id": "run-1:tool:1",
+                "tool_name": "retrieve_medical_policy",
+                "attempt": 1,
+                "status": "OK",
+                "error_code": "",
+                "retryable": False,
+                "source_ids": ["POL-1@v1"],
+                "passage_ids": ["POL-1@v1#P1"],
+            },
+        )
+        runtime_trace.record(
+            "MODEL_REQUESTED",
+            {
+                "request_id": "run-1-model-2",
+                "prompt_sha256": "b" * 64,
+                "repair_attempt": 0,
+            },
+        )
+        runtime_trace.record(
+            "MODEL_RESPONDED",
+            {
+                "request_id": "run-1-model-2",
+                "response_text": (
+                    '{"action":"propose_decision","decision":'
+                    + json.dumps(decision)
+                    + "}"
+                ),
+                "input_tokens": None,
+                "output_tokens": None,
+            },
+        )
+        runtime_trace.record("DECISION_PROPOSED", {"decision": decision})
+        runtime_trace.record(
+            "VALIDATION_RETURNED",
+            {
+                "status": "ACCEPTED",
+                "decision_id": "decision-1",
+                "claim_id": "CLM-2026-005097",
+                "service_line_id": 1,
+                "validation_problems": [],
+                "validated_decision": decision,
+                "manual_review_reasons": [],
+            },
+        )
+        runtime_trace.record(
+            "RUN_COMPLETED",
+            {"terminal_reason": "decision_accepted"},
+        )
+
+        events = make_adapter().adapt(runtime_trace.entries)
+
+        self.assertEqual(events[-1].event_type.value, "RUN_COMPLETED")
+        self.assertEqual(
+            events[-1].payload["counters"],
+            {
+                "model_calls": 2,
+                "tool_calls": 1,
+                "tool_retries": 0,
+                "repairs": 0,
+                "total_steps": 3,
+            },
+        )
+        self.assertEqual(
+            events[5].payload["passage_ids"],
+            ["POL-1@v1#P1"],
+        )
+        self.assertEqual(
+            events[2].payload["tool_calls"][0]["tool_args"]["query"],
+            "[REDACTED]",
+        )

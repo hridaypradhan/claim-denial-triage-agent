@@ -7,13 +7,14 @@ entries into the schema approved through issue #7.
 
 from __future__ import annotations
 
+import time
 # TODO(#7, owner=Hriday, blocker=Sachin): Convert internal entries into the
 # approved TraceEvent schema and append-only JSON Lines storage format after
 # Sachin finalizes that contract.
 
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Mapping, Optional, Tuple
+from typing import Callable, Mapping, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,7 @@ class RuntimeTraceEntry:
     sequence_number: int
     event_name: str
     details: Mapping[str, object]
+    elapsed_ms: int = 0
 
     def __post_init__(self) -> None:
         """Validate the entry and protect its details from later mutation."""
@@ -44,6 +46,9 @@ class RuntimeTraceEntry:
 
         if not self.event_name.strip():
             raise ValueError("event_name must contain a non-whitespace value")
+
+        if self.elapsed_ms < 0:
+            raise ValueError("elapsed_ms must be zero or greater")
 
         # A model, tool, or caller may reuse its original dictionary elsewhere.
         # Copying it here ensures later changes cannot rewrite trace history.
@@ -58,7 +63,11 @@ class InMemoryRuntimeTrace:
     Persistence as JSON Lines belongs behind the final trace-contract adapter.
     """
 
-    def __init__(self, run_id: str) -> None:
+    def __init__(
+        self,
+        run_id: str,
+        monotonic_clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         """Create an empty trace associated with one run identifier."""
 
         if not run_id.strip():
@@ -66,6 +75,8 @@ class InMemoryRuntimeTrace:
 
         self._run_id = run_id
         self._entries: list[RuntimeTraceEntry] = []
+        self._monotonic_clock = monotonic_clock
+        self._started_at = monotonic_clock()
 
     @property
     def run_id(self) -> str:
@@ -101,6 +112,16 @@ class InMemoryRuntimeTrace:
             sequence_number=next_sequence_number,
             event_name=event_name,
             details={} if details is None else details,
+            elapsed_ms=max(
+                0,
+                round(
+                    (
+                        self._monotonic_clock()
+                        - self._started_at
+                    )
+                    * 1000
+                ),
+            ),
         )
         self._entries.append(entry)
 

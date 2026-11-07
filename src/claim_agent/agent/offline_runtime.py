@@ -7,6 +7,7 @@ review.
 
 from __future__ import annotations
 
+import hashlib
 import time
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -118,6 +119,8 @@ class OfflineAgentRuntime:
 
         runtime_state = AgentRuntimeState(run_id=run_id)
         budget_usage = RuntimeBudgetUsage()
+        # Trace timing uses its own monotonic clock so observing an event does
+        # not consume values from the injected runtime-budget test clock.
         runtime_trace = InMemoryRuntimeTrace(run_id=run_id)
         current_task_context = task_context
         runtime_started_at = self._monotonic_clock()
@@ -165,8 +168,19 @@ class OfflineAgentRuntime:
 
             runtime_trace.record(
                 "MODEL_REQUESTED",
-                {"request_id": request_id},
+                {
+                    "request_id": request_id,
+                    "prompt_sha256": hashlib.sha256(
+                        (
+                            system_instructions
+                            + "\n\n"
+                            + current_task_context
+                        ).encode("utf-8")
+                    ).hexdigest(),
+                    "repair_attempt": 0,
+                },
             )
+            model_request_started_at = time.monotonic()
             try:
                 model_response = self._model_client.generate_response(model_request)
             except Exception as error:
@@ -177,6 +191,23 @@ class OfflineAgentRuntime:
                     {
                         "request_id": request_id,
                         "error_type": type(error).__name__,
+                        "failure_class": (
+                            "REQUEST_TIMEOUT"
+                            if isinstance(error, TimeoutError)
+                            else "BOUNDARY_EXCEPTION"
+                        ),
+                        "retryable": False,
+                        "repair_attempt": 0,
+                        "elapsed_ms": max(
+                            0,
+                            round(
+                                (
+                                    time.monotonic()
+                                    - model_request_started_at
+                                )
+                                * 1000
+                            ),
+                        ),
                     },
                 )
                 if isinstance(error, TimeoutError):
@@ -205,6 +236,20 @@ class OfflineAgentRuntime:
                 {
                     "request_id": model_response.request_id,
                     "provider_request_id": (model_response.provider_request_id or ""),
+                    "response_text": model_response.response_text,
+                    "input_tokens": model_response.input_token_count,
+                    "output_tokens": model_response.output_token_count,
+                    "repair_attempt": 0,
+                    "elapsed_ms": max(
+                        0,
+                        round(
+                            (
+                                time.monotonic()
+                                - model_request_started_at
+                            )
+                            * 1000
+                        ),
+                    ),
                 },
             )
 
@@ -223,6 +268,14 @@ class OfflineAgentRuntime:
             try:
                 parsed_action = parse_model_action(model_response.response_text)
             except ModelOutputParseError as initial_parse_error:
+                runtime_trace.record(
+                    "MODEL_OUTPUT_REJECTED",
+                    {
+                        "request_id": model_response.request_id,
+                        "rejection_code": "OUTPUT_PARSE_ERROR",
+                        "schema_error_paths": [],
+                    },
+                )
                 try:
                     repair_outcome = execute_repair_model_call(
                         model_client=self._model_client,
@@ -235,6 +288,8 @@ class OfflineAgentRuntime:
                         rejected_output=model_response.response_text,
                         problem_messages=(str(initial_parse_error),),
                         allowed_tool_names=self._allowed_tool_names,
+                        repair_kind="OUTPUT_PARSE",
+                        rejected_request_id=model_response.request_id,
                     )
                 except RepairModelBoundaryError as error:
                     if isinstance(error.original_error, TimeoutError):
@@ -281,6 +336,14 @@ class OfflineAgentRuntime:
                         repair_outcome.repaired_response_text
                     )
                 except ModelOutputParseError as repair_parse_error:
+                    runtime_trace.record(
+                        "MODEL_OUTPUT_REJECTED",
+                        {
+                            "request_id": repair_outcome.request_id,
+                            "rejection_code": "OUTPUT_PARSE_ERROR",
+                            "schema_error_paths": [],
+                        },
+                    )
                     return self._finish_manual_review(
                         runtime_state=runtime_state,
                         budget_usage=budget_usage,
@@ -386,6 +449,7 @@ class OfflineAgentRuntime:
                 result_factory=OfflineRuntimeResult,
                 parsed_action=parsed_action,
                 current_response_text=current_response_text,
+                current_request_id=model_response.request_id,
                 system_instructions=system_instructions,
                 current_task_context=current_task_context,
                 runtime_started_at=runtime_started_at,
