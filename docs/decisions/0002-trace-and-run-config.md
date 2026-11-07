@@ -1,6 +1,6 @@
 # 0002: Trace events and agent run configuration
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Version:** 0.2 (`trace_version` and `config_version` are both `"0.2"`)
 - **Date:** 2026-11-07 (first draft 2026-10-29)
 - **Issue:** #7
@@ -401,16 +401,16 @@ Notes on the examples:
 - `config_sha256` values are real hashes of the configs shown. `prompt_sha256` values are real SHA-256 hashes of the placeholder text `EXAMPLE PROMPT <run_id> <request_id>`, because the examples have no rendered prompts.
 - `code_commit`, model names, timings, and token counts are placeholders until a real run exists.
 
-## Open points for reviewers
+## Reviewer confirmations
 
-Final confirmations needed before this becomes `Accepted`:
+The final review confirmed:
 
-- **Hriday:** The adapter can emit the revised fields, including `route`, `MODEL_REQUEST_TIMEOUT`, and the `TOOL_RETRY_REQUESTED` conversion.
-- **Silas:** The `TOOL_RETURNED`, retry, and error-mapping fields match the merged `ToolResult`, and the tool-argument table is complete.
-- **Neha:** The `DECISION_PROPOSED` and `VALIDATION_RETURNED` payloads, and copying the validator's `SAFETY_ESCALATION_*` reasons into `manual_review_reasons`, match the merged contracts.
+- **Runtime producer:** The adapter can emit the revised fields, including `route`, `MODEL_REQUEST_TIMEOUT`, and the `TOOL_RETRY_REQUESTED` conversion.
+- **Tool boundary:** The `TOOL_RETURNED`, retry, error-mapping, passage/source, and tool-argument fields match the merged `ToolResult` contract and dispatcher behavior.
+- **Validation boundary:** The `DECISION_PROPOSED` and `VALIDATION_RETURNED` payloads match the merged contracts. Validator `SAFETY_ESCALATION_*` reasons can be copied into `manual_review_reasons` after the canonical terminal reason.
 
 ## Consequences
 
 - Hriday implements the adapter in #11 from this document.
 - Evaluation code in #12 depends only on the fields listed here.
-- This record stays `Proposed` until the reviewers above confirm it. It then becomes `Accepted`, and the PR closes #7.
+- This accepted record is the contract implemented under #11 and consumed by #12.
