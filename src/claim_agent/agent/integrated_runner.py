@@ -13,13 +13,18 @@ from datetime import date
 from pathlib import Path
 from typing import Mapping, Optional, Sequence
 
+from baseline.triage.claim import load_claim
+
 from claim_agent.agent.integrated_runtime import run_integrated_case
 from claim_agent.agent.runtime_budget import RuntimeBudgetLimits
 from claim_agent.agent.scripted_model import (
     ScriptedModelClient,
     ScriptedModelOutput,
 )
-from claim_agent.agent.tool_request_guard import ClaimToolContext
+from claim_agent.agent.tool_request_guard import (
+    ClaimToolContext,
+    build_claim_tool_context,
+)
 
 from claim_agent.contracts import (
     BaselineFinding,
@@ -38,6 +43,10 @@ from claim_agent.tools.knowledge_store import KnowledgeStore
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 KNOWLEDGE_ROOT = PROJECT_ROOT / "knowledge"
 
+DEMO_CLAIM_PATH = (
+    PROJECT_ROOT / "baseline" / "examples" / "test2_medical_necessity.json"
+)
+
 DEMO_RUN_ID = "integrated-demo-medical-necessity"
 DEMO_CLAIM_ID = "CLM-2026-005097"
 DEMO_SERVICE_LINE_ID = 1
@@ -45,7 +54,6 @@ DEMO_PAYER = "BCBS_AZ"
 DEMO_PROCEDURE_CODE = "70553"
 DEMO_SERVICE_DATE = date(2026, 6, 2)
 DEMO_PACKAGE_VERSION = "v1"
-DEMO_KNOWLEDGE_SNAPSHOT_ID = "local-corpus-v1"
 
 POLICY_PASSAGE_IDS = (
     "POL-BCBSAZ-MRI-BRAIN@v1#P3",
@@ -97,20 +105,21 @@ def build_demo_route_decision() -> RouteDecision:
 
 
 def build_demo_claim_context() -> ClaimToolContext:
-    """Return the trusted retrieval fields for the demonstration claim."""
+    """Build trusted retrieval fields from the demonstration claim."""
 
-    return ClaimToolContext(
-        claim_id=DEMO_CLAIM_ID,
-        payer=DEMO_PAYER,
-        procedure_code=DEMO_PROCEDURE_CODE,
-        service_date=DEMO_SERVICE_DATE,
+    claim = load_claim(DEMO_CLAIM_PATH)
+
+    return build_claim_tool_context(
+        claim=claim,
+        service_line_id=DEMO_SERVICE_LINE_ID,
     )
 
 
-def build_demo_dispatcher() -> ToolDispatcher:
-    """Create the production dispatcher over the versioned local corpus."""
+def build_demo_dispatcher(
+    knowledge_store: KnowledgeStore,
+) -> ToolDispatcher:
+    """Create the production dispatcher over the supplied knowledge snapshot."""
 
-    knowledge_store = KnowledgeStore(KNOWLEDGE_ROOT)
     return ToolDispatcher(knowledge_store)
 
 
@@ -211,6 +220,8 @@ def build_demo_model() -> ScriptedModelClient:
 def run_integrated_demo() -> Mapping[str, object]:
     """Run the routed case through real local tools and validation."""
 
+    knowledge_store = KnowledgeStore(KNOWLEDGE_ROOT)
+
     integrated_result = run_integrated_case(
         run_id=DEMO_RUN_ID,
         system_instructions=(
@@ -218,7 +229,7 @@ def run_integrated_demo() -> Mapping[str, object]:
             "action per turn. Never submit an appeal."
         ),
         model_client=build_demo_model(),
-        dispatcher=build_demo_dispatcher(),
+        dispatcher=build_demo_dispatcher(knowledge_store),
         baseline_finding=build_demo_baseline_finding(),
         claim_context=build_demo_claim_context(),
         route_decision=build_demo_route_decision(),
@@ -231,7 +242,7 @@ def run_integrated_demo() -> Mapping[str, object]:
         ),
         as_of=date(2026, 11, 6),
         package_version=DEMO_PACKAGE_VERSION,
-        knowledge_snapshot_id=DEMO_KNOWLEDGE_SNAPSHOT_ID,
+        knowledge_snapshot_id=knowledge_store.snapshot_id,
     )
 
     runtime_result = integrated_result.runtime_result

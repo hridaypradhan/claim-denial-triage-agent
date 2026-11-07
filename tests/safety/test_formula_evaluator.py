@@ -101,6 +101,7 @@ class FormulaEvaluatorTests(unittest.TestCase):
             "A AND",
             "OR A",
             "A B",
+            "A ORB",
             "A AND (B OR C",
             "A AND ()",
             "A && B",

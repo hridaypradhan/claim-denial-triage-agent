@@ -6,10 +6,15 @@ import unittest
 from datetime import date
 from typing import Mapping
 
+from baseline.triage.claim import Claim
+
 from claim_agent.agent.tool_request_guard import (
     ClaimBoundToolDispatcher,
     ClaimToolContext,
+    ClaimToolContextError,
     ToolArgumentMismatchError,
+    UnsupportedClaimBoundToolError,
+    build_claim_tool_context,
 )
 from claim_agent.contracts import ToolResult, ToolStatus
 from claim_agent.tools.dispatcher import (
@@ -21,6 +26,27 @@ CLAIM_ID = "CLM-2026-005097"
 PAYER = "BCBS_AZ"
 PROCEDURE_CODE = "70553"
 SERVICE_DATE = date(2026, 6, 2)
+
+
+def make_claim() -> Claim:
+    """Create a synthetic claim containing the protected service line."""
+
+    return Claim(
+        claim_id=CLAIM_ID,
+        payer=PAYER,
+        date_of_service=SERVICE_DATE,
+        remit_date=date(2026, 7, 11),
+        billed_amount=1450.00,
+        paid_amount=0.00,
+        denials=[],
+        service_lines=[
+            {
+                "line": 1,
+                "cpt": PROCEDURE_CODE,
+            }
+        ],
+        encounter={},
+    )
 
 
 class RecordingDispatcher:
@@ -83,6 +109,31 @@ def make_policy_arguments() -> dict[str, object]:
 
 class ClaimBoundToolDispatcherTests(unittest.TestCase):
     """Verify that tools cannot retrieve evidence for another claim."""
+
+    def test_context_is_built_from_claim_service_line(self) -> None:
+        """Trusted retrieval fields should come from the selected claim line."""
+
+        context = build_claim_tool_context(
+            claim=make_claim(),
+            service_line_id=1,
+        )
+
+        self.assertEqual(CLAIM_ID, context.claim_id)
+        self.assertEqual(PAYER, context.payer)
+        self.assertEqual(PROCEDURE_CODE, context.procedure_code)
+        self.assertEqual(SERVICE_DATE, context.service_date)
+
+    def test_missing_service_line_cannot_create_context(self) -> None:
+        """A nonexistent service line must fail before retrieval begins."""
+
+        with self.assertRaisesRegex(
+            ClaimToolContextError,
+            "has no service line 99",
+        ):
+            build_claim_tool_context(
+                claim=make_claim(),
+                service_line_id=99,
+            )
 
     def test_matching_policy_request_reaches_dispatcher(self) -> None:
         """A request matching the active claim should proceed normally."""
@@ -185,6 +236,26 @@ class ClaimBoundToolDispatcherTests(unittest.TestCase):
                 tool_arguments={
                     "claim_id": "CLM-ANOTHER-PATIENT",
                     "document_id": "ENC-ANOTHER-PATIENT-PN",
+                },
+            )
+
+        self.assertEqual([], dispatcher.received_requests)
+
+    def test_unknown_tool_is_rejected_before_dispatch(self) -> None:
+        """A tool without an explicit claim-binding rule must fail closed."""
+
+        dispatcher = RecordingDispatcher()
+        guard = make_guard(dispatcher)
+
+        with self.assertRaisesRegex(
+            UnsupportedClaimBoundToolError,
+            "not supported by the claim-bound dispatcher",
+        ):
+            guard.dispatch(
+                request_id="run-1:tool:1",
+                tool_name="get_eligibility_record",
+                tool_arguments={
+                    "claim_id": CLAIM_ID,
                 },
             )
 

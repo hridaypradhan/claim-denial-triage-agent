@@ -10,10 +10,12 @@ from contextlib import redirect_stdout
 from claim_agent.agent.integrated_runner import (
     DEMO_RUN_ID,
     ENCOUNTER_PASSAGE_IDS,
+    KNOWLEDGE_ROOT,
     POLICY_PASSAGE_IDS,
     main,
     run_integrated_demo,
 )
+from claim_agent.tools.knowledge_store import KnowledgeStore
 
 
 class IntegratedRunnerTests(unittest.TestCase):
@@ -56,6 +58,13 @@ class IntegratedRunnerTests(unittest.TestCase):
         )
 
         output_package = summary["output_package"]
+
+        expected_snapshot_id = KnowledgeStore(KNOWLEDGE_ROOT).snapshot_id
+
+        self.assertEqual(
+            expected_snapshot_id,
+            output_package["knowledge_snapshot_id"],
+        )
 
         self.assertEqual(
             DEMO_RUN_ID,

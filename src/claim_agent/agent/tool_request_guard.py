@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Mapping
 
+from baseline.triage.claim import Claim
+
 from claim_agent.agent.tool_result_adapter import SharedToolDispatcher
 from claim_agent.contracts import ToolResult
 from claim_agent.tools.dispatcher import (
@@ -23,6 +25,14 @@ class ToolArgumentMismatchError(ValueError):
     """Raised when model-selected arguments do not belong to the active claim."""
 
 
+class UnsupportedClaimBoundToolError(ValueError):
+    """Raised when the claim guard has no validation rule for a tool."""
+
+
+class ClaimToolContextError(ValueError):
+    """Raised when a claim lacks fields required to constrain retrieval."""
+
+
 @dataclass(frozen=True)
 class ClaimToolContext:
     """Authoritative claim fields that constrain evidence retrieval."""
@@ -31,6 +41,40 @@ class ClaimToolContext:
     payer: str
     procedure_code: str
     service_date: date
+
+
+def build_claim_tool_context(
+    claim: Claim,
+    service_line_id: int,
+) -> ClaimToolContext:
+    """Build trusted retrieval constraints from a claim service line."""
+
+    service_line = claim.line(service_line_id)
+    procedure_code = service_line.get("cpt")
+
+    if not service_line:
+        raise ClaimToolContextError(
+            f"Claim {claim.claim_id!r} has no service line {service_line_id}."
+        )
+
+    if not isinstance(procedure_code, str) or not procedure_code.strip():
+        raise ClaimToolContextError(
+            f"Claim {claim.claim_id!r} service line {service_line_id} "
+            "has no procedure code."
+        )
+
+    if not claim.claim_id or not claim.payer or claim.date_of_service is None:
+        raise ClaimToolContextError(
+            "The claim lacks an ID, payer, or service date required "
+            "for claim-bound retrieval."
+        )
+
+    return ClaimToolContext(
+        claim_id=claim.claim_id,
+        payer=claim.payer,
+        procedure_code=procedure_code,
+        service_date=claim.date_of_service,
+    )
 
 
 class ClaimBoundToolDispatcher:
@@ -89,4 +133,8 @@ class ClaimBoundToolDispatcher:
                 "claim_id": self._claim_context.claim_id,
             }
 
-        return {}
+        # Fail closed until the tool has an explicit claim-binding rule.
+        # This prevents a newly added retrieval tool from bypassing the guard.
+        raise UnsupportedClaimBoundToolError(
+            f"{tool_name!r} is not supported by the claim-bound dispatcher."
+        )

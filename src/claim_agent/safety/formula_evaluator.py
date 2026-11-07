@@ -11,7 +11,11 @@ import re
 from dataclasses import dataclass
 from typing import Optional, Sequence, Set, Tuple
 
-_TOKEN_PATTERN = re.compile(r"AND|OR|\(|\)|[A-Za-z0-9_-]+")
+# Boolean operators must be complete words. For example, "ORB" is one
+# criterion identifier and must not be split into the operator "OR" plus "B".
+_TOKEN_PATTERN = re.compile(
+    r"\b(?:AND|OR)\b|\(|\)|[A-Za-z0-9_-]+"
+)
 _OPERATOR_TOKENS = frozenset({"AND", "OR", "(", ")"})
 
 
