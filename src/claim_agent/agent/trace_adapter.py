@@ -22,6 +22,13 @@ from claim_agent.agent.run_configuration import (
     calculate_run_configuration_sha256,
 )
 from claim_agent.agent.runtime_trace import RuntimeTraceEntry
+from claim_agent.agent.trace_adapter_helpers import (
+    build_runtime_counters,
+    build_validation_payload,
+    collected_passage_ids,
+    latest_validated_decision,
+    next_model_call_index,
+)
 from claim_agent.agent.trace_redaction import redact_trace_payload
 from claim_agent.contracts import RouteDecision
 
@@ -83,7 +90,7 @@ class CanonicalTraceAdapter:
         """Convert every observable entry and assign gap-free sequences."""
 
         canonical_events: list[TraceEvent] = []
-        counters = self._build_counters(runtime_entries)
+        counters = build_runtime_counters(runtime_entries)
 
         for entry_index, runtime_entry in enumerate(runtime_entries):
             if runtime_entry.event_name == "PHASE_CHANGED":
@@ -126,9 +133,9 @@ class CanonicalTraceAdapter:
                 prompt_version=self._run_configuration.prompt_version,
                 payload=redact_trace_payload(
                     {
-                        "call_index": self._model_call_index(prior_entries),
+                        "call_index": next_model_call_index(prior_entries),
                         "prompt_sha256": details["prompt_sha256"],
-                        "passage_ids": self._passage_ids(prior_entries),
+                        "passage_ids": collected_passage_ids(prior_entries),
                         "repair_attempt": details.get("repair_attempt", 0),
                     }
                 ),
@@ -232,7 +239,7 @@ class CanonicalTraceAdapter:
                 event_type=TraceEventType.VALIDATION_RETURNED,
                 component=TraceComponent.SAFETY_VALIDATOR,
                 payload=redact_trace_payload(
-                    self._validation_payload(details)
+                    build_validation_payload(details)
                 ),
             )
 
@@ -390,7 +397,7 @@ class CanonicalTraceAdapter:
             "counters": dict(counters),
         }
         if is_completed:
-            decision = self._latest_validated_decision(prior_entries)
+            decision = latest_validated_decision(prior_entries)
             payload.update(
                 {
                     "final_disposition": decision.get(
@@ -434,78 +441,6 @@ class CanonicalTraceAdapter:
             "sequence_number": sequence_number,
             "timestamp": self._timestamp_provider(),
         }
-
-    @staticmethod
-    def _build_counters(
-        entries: Sequence[RuntimeTraceEntry],
-    ) -> dict[str, int]:
-        model_calls = sum(e.event_name == "MODEL_REQUESTED" for e in entries)
-        tool_calls = sum(
-            e.event_name in {"TOOL_REQUESTED", "TOOL_RETRY_REQUESTED"}
-            for e in entries
-        )
-        repairs = sum(e.event_name == "REPAIR_ATTEMPTED" for e in entries)
-        tool_retries = sum(
-            e.event_name == "TOOL_RETRY_REQUESTED" for e in entries
-        )
-        return {
-            "model_calls": model_calls,
-            "tool_calls": tool_calls,
-            "tool_retries": tool_retries,
-            "repairs": repairs,
-            "total_steps": model_calls + tool_calls,
-        }
-
-    @staticmethod
-    def _model_call_index(prior_entries: Sequence[RuntimeTraceEntry]) -> int:
-        return 1 + sum(
-            entry.event_name == "MODEL_REQUESTED" for entry in prior_entries
-        )
-
-    @staticmethod
-    def _passage_ids(
-        prior_entries: Sequence[RuntimeTraceEntry],
-    ) -> list[str]:
-        passage_ids: list[str] = []
-        for entry in prior_entries:
-            if entry.event_name != "TOOL_RETURNED":
-                continue
-            for passage_id in entry.details.get("passage_ids", []):
-                if passage_id not in passage_ids:
-                    passage_ids.append(str(passage_id))
-        return passage_ids
-
-    @staticmethod
-    def _validation_payload(
-        details: Mapping[str, object],
-    ) -> dict[str, object]:
-        outcome_by_status = {
-            "ACCEPTED": "ACCEPTED",
-            "REPAIRABLE": "REPAIRABLE",
-            "MANUAL_REVIEW": "REJECTED_MANUAL_REVIEW",
-        }
-        return {
-            "contract_version": "0.1",
-            "decision_id": details["decision_id"],
-            "claim_id": details["claim_id"],
-            "service_line_id": details["service_line_id"],
-            "outcome": outcome_by_status[str(details["status"])],
-            "approval_state": "PENDING_REVIEW",
-            "validation_problems": details["validation_problems"],
-            "validated_decision": details["validated_decision"],
-            "manual_review_reasons": details["manual_review_reasons"],
-        }
-
-    @staticmethod
-    def _latest_validated_decision(
-        prior_entries: Sequence[RuntimeTraceEntry],
-    ) -> Mapping[str, object]:
-        for entry in reversed(prior_entries):
-            if entry.event_name == "VALIDATION_RETURNED":
-                decision = entry.details.get("validated_decision")
-                if isinstance(decision, Mapping):
-                    return decision
-        return {}
 
     @staticmethod
     def _terminal_reason(
