@@ -282,12 +282,19 @@ Hold two brief progress syncs and one integration demonstration per week. Each o
 
 ## Immediate shared backlog
 
-1. Decide the agent-side schema library.
-2. Define contract version `0.1` and contract rejection tests.
-3. Implement the baseline adapter and deterministic router.
-4. Implement the scripted fake model and fake dispatcher.
-5. Add the offline vertical-slice integration test.
-6. ~~Select the initial payer/procedure policy subset~~ — done: BCBS_AZ brain MRI and AETNA physical therapy, with dated policy versions (knowledge corpus v0).
-7. Draft the dataset annotation rubric.
+- [x] Use Pydantic for the agent-side schema library.
+- [x] Define contract version `0.1` and contract rejection tests.
+- [x] Implement the baseline adapter and deterministic router.
+- [x] Implement the scripted fake model and fake dispatcher.
+- [x] Add a provider-neutral hosted-model client and offline transport tests.
+- [ ] Select and implement the Milestone 2 provider-specific model transport.
+- [x] Add the offline vertical-slice integration test.
+- [x] Carry structured validation problems into bounded repair prompts.
+- [x] Select the initial payer/procedure policy subset: BCBS_AZ brain MRI and AETNA physical therapy, with dated policy versions in knowledge corpus v0.
+- [ ] Draft the dataset annotation rubric.
 
-Do not replace fake boundaries with hosted-model calls or production retrieval until the offline vertical slice passes.
+The offline vertical slice and production-shaped local retrieval path now
+pass. Keep scripted boundaries for deterministic regression coverage. Hosted
+model work must use the provider-independent model interface and preserve the
+same route authorization, budgets, safety validation, `PENDING_REVIEW` output,
+and failure-path tests.
