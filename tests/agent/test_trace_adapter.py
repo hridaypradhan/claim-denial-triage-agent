@@ -241,3 +241,104 @@ class CanonicalTraceAdapterTests(unittest.TestCase):
             events[2].payload["tool_calls"][0]["tool_args"]["query"],
             "[REDACTED]",
         )
+        proposed_event = next(
+            event
+            for event in events
+            if event.event_type.value == "DECISION_PROPOSED"
+        )
+        self.assertEqual("decision-1", proposed_event.payload["decision_id"])
+        self.assertNotIn("decision", proposed_event.payload)
+
+    def test_manual_review_preserves_validator_and_evidence_reasons(self) -> None:
+        """Evaluation should retain every coded reason for escalation."""
+
+        runtime_trace = InMemoryRuntimeTrace(run_id="run-1")
+        runtime_trace.record("RUN_STARTED")
+        runtime_trace.record(
+            "TOOL_RETURNED",
+            {
+                "request_id": "run-1:tool:1",
+                "tool_name": "get_encounter_note",
+                "attempt": 1,
+                "status": "ERROR",
+                "error_code": "DOCUMENT_UNAVAILABLE",
+                "retryable": False,
+                "source_ids": [],
+                "passage_ids": [],
+            },
+        )
+        runtime_trace.record(
+            "VALIDATION_RETURNED",
+            {
+                "status": "MANUAL_REVIEW",
+                "decision_id": "decision-1",
+                "claim_id": "CLM-2026-005097",
+                "service_line_id": 1,
+                "validation_problems": [],
+                "validated_decision": None,
+                "manual_review_reasons": [
+                    "SAFETY_ESCALATION_MISSING_EVIDENCE"
+                ],
+            },
+        )
+        runtime_trace.record(
+            "MANUAL_REVIEW",
+            {"terminal_reason": "decision_requires_manual_review"},
+        )
+
+        terminal_event = make_adapter().adapt(runtime_trace.entries)[-1]
+
+        self.assertEqual(
+            [
+                "VALIDATOR_REQUIRED_REVIEW",
+                "SAFETY_ESCALATION_MISSING_EVIDENCE",
+                "MISSING_EVIDENCE",
+            ],
+            terminal_event.payload["manual_review_reasons"],
+        )
+
+    def test_budget_terminal_reasons_use_structured_budget_name(self) -> None:
+        """Budget outcomes must not depend on parsing human-readable text."""
+
+        expected_reason_by_budget = {
+            "model_call": "MODEL_CALL_BUDGET_EXHAUSTED",
+            "tool_call": "TOOL_CALL_BUDGET_EXHAUSTED",
+            "repair_attempt": "REPAIR_BUDGET_EXHAUSTED",
+            "total_step": "STEP_BUDGET_EXHAUSTED",
+        }
+
+        for budget_name, expected_reason in expected_reason_by_budget.items():
+            with self.subTest(budget_name=budget_name):
+                runtime_trace = InMemoryRuntimeTrace(run_id="run-1")
+                runtime_trace.record("RUN_STARTED")
+                runtime_trace.record(
+                    "MANUAL_REVIEW",
+                    {
+                        "terminal_reason": "repair_budget_exhausted",
+                        "budget_name": budget_name,
+                        "problem_message": "wording intentionally irrelevant",
+                    },
+                )
+
+                terminal_event = make_adapter().adapt(runtime_trace.entries)[-1]
+
+                self.assertEqual(
+                    expected_reason,
+                    terminal_event.terminal_reason.value,
+                )
+
+    def test_completed_run_requires_a_validated_decision(self) -> None:
+        """The audit trail must not invent defaults for an impossible success."""
+
+        runtime_trace = InMemoryRuntimeTrace(run_id="run-1")
+        runtime_trace.record("RUN_STARTED")
+        runtime_trace.record(
+            "RUN_COMPLETED",
+            {"terminal_reason": "decision_accepted"},
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "requires a preceding validated decision",
+        ):
+            make_adapter().adapt(runtime_trace.entries)

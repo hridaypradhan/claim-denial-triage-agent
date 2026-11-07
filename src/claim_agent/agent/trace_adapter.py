@@ -23,6 +23,7 @@ from claim_agent.agent.run_configuration import (
 )
 from claim_agent.agent.runtime_trace import RuntimeTraceEntry
 from claim_agent.agent.trace_adapter_helpers import (
+    build_manual_review_reasons,
     build_runtime_counters,
     build_validation_payload,
     collected_passage_ids,
@@ -228,9 +229,7 @@ class CanonicalTraceAdapter:
                 **common,
                 event_type=TraceEventType.DECISION_PROPOSED,
                 component=TraceComponent.AGENT_RUNTIME,
-                payload=redact_trace_payload(
-                    {"decision": details["decision"]}
-                ),
+                payload=redact_trace_payload(dict(details["decision"])),
             )
 
         if name == "VALIDATION_RETURNED":
@@ -398,18 +397,21 @@ class CanonicalTraceAdapter:
         }
         if is_completed:
             decision = latest_validated_decision(prior_entries)
+            if not decision:
+                raise ValueError(
+                    "RUN_COMPLETED requires a preceding validated decision"
+                )
             payload.update(
                 {
-                    "final_disposition": decision.get(
-                        "recommended_disposition", "MANUAL_REVIEW"
-                    ),
-                    "final_root_cause": decision.get(
-                        "root_cause", "UNKNOWN"
-                    ),
+                    "final_disposition": decision["recommended_disposition"],
+                    "final_root_cause": decision["root_cause"],
                 }
             )
         else:
-            payload["manual_review_reasons"] = [terminal_reason.value]
+            payload["manual_review_reasons"] = build_manual_review_reasons(
+                terminal_reason=terminal_reason.value,
+                prior_entries=prior_entries,
+            )
             payload["during_repair"] = internal_reason.startswith("repair_")
 
         return TraceEvent(
@@ -447,8 +449,20 @@ class CanonicalTraceAdapter:
         internal_reason: str,
         details: Mapping[str, object],
     ) -> TerminalReason:
-        if "total_step" in str(details.get("problem_message", "")):
-            return TerminalReason.STEP_BUDGET_EXHAUSTED
+        budget_reason_by_name = {
+            "model_call": TerminalReason.MODEL_CALL_BUDGET_EXHAUSTED,
+            "tool_call": TerminalReason.TOOL_CALL_BUDGET_EXHAUSTED,
+            "repair_attempt": TerminalReason.REPAIR_BUDGET_EXHAUSTED,
+            "total_step": TerminalReason.STEP_BUDGET_EXHAUSTED,
+        }
+        budget_name = details.get("budget_name")
+        if budget_name is not None:
+            try:
+                return budget_reason_by_name[str(budget_name)]
+            except KeyError as error:
+                raise ValueError(
+                    f"Unsupported runtime budget name: {budget_name}"
+                ) from error
         return TERMINAL_REASON_BY_RUNTIME_REASON.get(
             internal_reason,
             TerminalReason.RUNTIME_ERROR,

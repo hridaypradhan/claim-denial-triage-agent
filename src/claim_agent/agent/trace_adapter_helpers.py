@@ -10,6 +10,12 @@ from typing import Mapping, Sequence
 
 from claim_agent.agent.runtime_trace import RuntimeTraceEntry
 
+EVIDENCE_REASON_BY_ERROR_CODE = {
+    "AMBIGUOUS_POLICY": "POLICY_NOT_APPLICABLE",
+    "DOCUMENT_UNAVAILABLE": "MISSING_EVIDENCE",
+    "MALFORMED_REQUEST": "MALFORMED_TOOL_REQUEST",
+}
+
 
 def build_runtime_counters(
     entries: Sequence[RuntimeTraceEntry],
@@ -101,3 +107,40 @@ def latest_validated_decision(
             return decision
 
     return {}
+
+
+def build_manual_review_reasons(
+    terminal_reason: str,
+    prior_entries: Sequence[RuntimeTraceEntry],
+) -> list[str]:
+    """Collect the terminal, validator, and evidence reasons in stable order."""
+
+    reasons = [terminal_reason]
+
+    # Safety reasons come immediately after the terminal reason, even when a
+    # tool error occurred earlier in chronological runtime history.
+    for entry in prior_entries:
+        if entry.event_name == "VALIDATION_RETURNED":
+            reasons.extend(
+                str(reason)
+                for reason in entry.details.get("manual_review_reasons", [])
+            )
+
+    for entry in prior_entries:
+        if entry.event_name != "TOOL_RETURNED":
+            continue
+
+        error_code = str(entry.details.get("error_code") or "")
+        if error_code == "NO_MATCH":
+            tool_name = str(entry.details.get("tool_name") or "")
+            reasons.append(
+                "POLICY_NOT_APPLICABLE"
+                if tool_name == "retrieve_medical_policy"
+                else "MISSING_EVIDENCE"
+            )
+        elif error_code in EVIDENCE_REASON_BY_ERROR_CODE:
+            reasons.append(EVIDENCE_REASON_BY_ERROR_CODE[error_code])
+
+    # Dictionary keys preserve insertion order and remove duplicates without
+    # losing the required terminal-reason-first convention.
+    return list(dict.fromkeys(reasons))

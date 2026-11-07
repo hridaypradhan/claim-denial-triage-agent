@@ -214,6 +214,7 @@ def execute_decision_with_repair(
                 runtime_trace=runtime_trace,
                 terminal_reason="repair_budget_exhausted",
                 problem_message=str(budget_error),
+                budget_name=budget_error.budget_name,
             )
 
         runtime_state = repair_outcome.runtime_state

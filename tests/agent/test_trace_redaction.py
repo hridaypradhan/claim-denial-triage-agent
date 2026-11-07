@@ -99,3 +99,34 @@ class TraceRedactionTests(unittest.TestCase):
             redacted["unreviewed_provider_field"],
             REDACTED_VALUE,
         )
+
+    def test_structure_keys_do_not_authorize_scalar_content(self) -> None:
+        """Malformed scalar structures must remain default denied."""
+
+        payloads = (
+            {"decision": "Patient Jane Doe DOB 1970-01-01 needs MRI"},
+            {"tool_calls": ["call retrieve for Jane Doe"]},
+            {"criterion_assessments": ["free text note"]},
+        )
+
+        for payload in payloads:
+            with self.subTest(payload=payload):
+                redacted = redact_trace_payload(payload)
+                self.assertNotIn("Jane Doe", json.dumps(redacted))
+                self.assertIn(REDACTED_VALUE, json.dumps(redacted))
+
+    def test_only_valid_sha256_values_are_preserved(self) -> None:
+        """A hash-named field must contain an actual lowercase SHA-256."""
+
+        valid_hash = "a" * 64
+
+        self.assertEqual(
+            valid_hash,
+            redact_trace_payload({"note_sha256": valid_hash})["note_sha256"],
+        )
+        self.assertEqual(
+            REDACTED_VALUE,
+            redact_trace_payload(
+                {"note_sha256": "Jane Doe, member ID 12345"}
+            )["note_sha256"],
+        )

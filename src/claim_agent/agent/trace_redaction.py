@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from typing import Mapping
 
 REDACTED_VALUE = "[REDACTED]"
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 CLAIM_KEYS = frozenset(
     {
@@ -187,7 +189,11 @@ def redact_trace_payload(
 
     for key, value in payload.items():
         if key.endswith("_sha256"):
-            redacted_payload[key] = value
+            redacted_payload[key] = (
+                value
+                if isinstance(value, str) and SHA256_PATTERN.fullmatch(value)
+                else REDACTED_VALUE
+            )
             continue
 
         if key in FREE_TEXT_KEYS:
@@ -196,7 +202,14 @@ def redact_trace_payload(
             continue
 
         if key in STRUCTURE_KEYS:
-            redacted_payload[key] = _redact_structure(value)
+            if isinstance(value, (Mapping, list, tuple)):
+                redacted_payload[key] = _redact_structure(value)
+            elif key in ALLOWED_VALUE_KEYS:
+                # ``tool_calls`` is both a numeric counter and a structured
+                # model-response field. Only its numeric scalar form is safe.
+                redacted_payload[key] = _copy_allowed_value(value)
+            else:
+                redacted_payload[key] = REDACTED_VALUE
             continue
 
         if key in ALLOWED_VALUE_KEYS:
@@ -218,15 +231,13 @@ def _redact_structure(value: object) -> object:
 
     if isinstance(value, (list, tuple)):
         return [
-            (
-                _redact_structure(item)
-                if isinstance(item, (Mapping, list, tuple))
-                else item
-            )
+            _redact_structure(item)
             for item in value
         ]
 
-    return value
+    # A structure key authorizes a container shape, not arbitrary scalar
+    # content placed directly inside that container.
+    return REDACTED_VALUE
 
 
 def _copy_allowed_value(value: object) -> object:

@@ -155,6 +155,7 @@ class OfflineAgentRuntime:
                     runtime_trace=runtime_trace,
                     terminal_reason="model_budget_exhausted",
                     problem_message=str(error),
+                    budget_name=error.budget_name,
                 )
 
             model_call_number = budget_usage.model_calls_used
@@ -316,6 +317,7 @@ class OfflineAgentRuntime:
                         runtime_trace=runtime_trace,
                         terminal_reason="repair_budget_exhausted",
                         problem_message=str(budget_error),
+                        budget_name=budget_error.budget_name,
                     )
 
                 runtime_state = repair_outcome.runtime_state
@@ -413,6 +415,7 @@ class OfflineAgentRuntime:
                         runtime_trace=runtime_trace,
                         terminal_reason="tool_budget_exhausted",
                         problem_message=str(error.original_error),
+                        budget_name=error.original_error.budget_name,
                     )
                 except RuntimeBudgetExceededError as error:
                     return self._finish_manual_review(
@@ -421,6 +424,7 @@ class OfflineAgentRuntime:
                         runtime_trace=runtime_trace,
                         terminal_reason="tool_budget_exhausted",
                         problem_message=str(error),
+                        budget_name=error.budget_name,
                     )
 
                 runtime_state = tool_outcome.runtime_state
@@ -496,6 +500,7 @@ class OfflineAgentRuntime:
         runtime_trace: InMemoryRuntimeTrace,
         terminal_reason: str,
         problem_message: str,
+        budget_name: Optional[str] = None,
     ) -> OfflineRuntimeResult:
         """Create a terminal manual-review result and its trace entry."""
 
@@ -503,13 +508,14 @@ class OfflineAgentRuntime:
             RuntimePhase.MANUAL_REVIEW,
             terminal_reason=terminal_reason,
         )
-        runtime_trace.record(
-            "MANUAL_REVIEW",
-            {
-                "terminal_reason": terminal_reason,
-                "problem_message": problem_message,
-            },
-        )
+        terminal_details = {
+            "terminal_reason": terminal_reason,
+            "problem_message": problem_message,
+        }
+        if budget_name is not None:
+            terminal_details["budget_name"] = budget_name
+
+        runtime_trace.record("MANUAL_REVIEW", terminal_details)
 
         return OfflineRuntimeResult(
             final_state=manual_review_state,
