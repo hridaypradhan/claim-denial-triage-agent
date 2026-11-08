@@ -150,7 +150,7 @@
       "disposition": "APPEAL_WITH_DOCUMENTATION",
       "requires_manual_review": false,
       "manual_review_reasons": [],
-      "deadline": "2027-01-17",
+      "deadline": "2027-01-20",
       "policy_source_id": "POL-BCBSAZ-MRI-BRAIN@v1",
       "criteria": [
         {
@@ -381,7 +381,7 @@
       "disposition": "APPEAL_WITH_DOCUMENTATION",
       "requires_manual_review": false,
       "manual_review_reasons": [],
-      "deadline": "2026-10-13",
+      "deadline": "2026-10-11",
       "policy_source_id": "POL-AETNA-PT-THERAPY@v1",
       "criteria": [
         {

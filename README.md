@@ -366,7 +366,9 @@ OK
 The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot (#12) scores a compared system against labeled cases, one case per denied service line. Two development datasets have draft single-labeler labels in [`datasets/labels/`](datasets/labels/), written with the [annotation rubric](datasets/ANNOTATION_RUBRIC.md):
 
 - **Dataset A**, rule and safety triage (23 cases): [`datasets/development/set_a/`](datasets/development/set_a/).
-- **Dataset B**, evidence-dependent policy review (12 CO-50 medical-necessity cases on `knowledge-v1`): [`datasets/development/set_b/`](datasets/development/set_b/). Labels cite criterion statuses and note passages. Only the frozen baseline can be run so far; the agent and single-call systems still need the hosted-model transport tracked in #34 and the generic evaluation entry point tracked in #12. The harness uses only the standard library.
+- **Dataset B**, evidence-dependent policy review (12 CO-50 medical-necessity cases on `knowledge-v1`): [`datasets/development/set_b/`](datasets/development/set_b/). Labels cite criterion statuses and note passages.
+
+Only the frozen baseline can be run so far; the agent and single-call systems still need the hosted-model transport tracked in #34 and the generic evaluation entry point tracked in #12. The harness uses only the standard library.
 
 From the repository root:
 
