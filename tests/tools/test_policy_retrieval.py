@@ -268,7 +268,7 @@ class RetrievalEdgeCaseTest(unittest.TestCase):
 
 class KnowledgeStoreTest(unittest.TestCase):
     def test_snapshot_id_comes_from_the_manifest(self):
-        self.assertEqual(KnowledgeStore(KNOWLEDGE).snapshot_id, "knowledge-v0")
+        self.assertEqual(KnowledgeStore(KNOWLEDGE).snapshot_id, "knowledge-v1")
 
     def test_missing_manifest_raises_store_error(self):
         with tempfile.TemporaryDirectory() as directory:

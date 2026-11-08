@@ -86,11 +86,14 @@ The frozen stakeholder baseline currently provides:
 
 The unchanged comparison baseline is preserved under [`baseline/`](baseline/) and tagged as `baseline-v1`.
 
-### Knowledge corpus v0
+### Knowledge corpus v1
 
 The [`knowledge/`](knowledge/) directory contains the local evidence snapshot
-used by the integrated runtime demonstration. Per-source SHA-256 hashes pin the
-exact bytes used by a run and make later corpus changes detectable.
+`knowledge-v1`, used by the integrated runtime demonstration and the Milestone 2
+pilot. Per-source SHA-256 hashes pin the exact bytes used by a run and make
+later corpus changes detectable. `knowledge-v1` adds the Dataset B encounter
+notes to `knowledge-v0` without changing any earlier file, so earlier passage
+IDs still resolve.
 
 It contains:
 
@@ -98,6 +101,7 @@ It contains:
 - A synthetic medical policy for brain MRI (CPT 70551–70553) under the `BCBS_AZ` payer profile, with a criteria formula for each procedure code (`A AND B` for 70551 and 70552; `A AND B AND (C OR D)` for 70553). It is not the payer's actual policy.
 - A synthetic physical therapy policy (CPT 97110) under the `AETNA` payer profile in two dated versions, so the service date selects the criteria: v1 (`A AND B`) through 2026-03-31 and v2 (`A AND B AND C`) from 2026-04-01. It is not the payer's actual policy.
 - Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
+- Thirteen synthetic encounter documents for the Dataset B pilot claims `CLM-2026-620102` to `CLM-2026-620112` (case list in issue #12). They cover missing, explicitly negative, and conflicting evidence, a prior imaging report, physical therapy evaluations on either side of the policy version date, and a note containing instruction-like text.
 
 Every passage has a stable citation ID such as
 `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in
@@ -181,7 +185,7 @@ explicitly tracked extension points:
   boundary; provider-specific transport and grounded drafting remain in #34.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
-- [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v0 above; eligibility records not yet added).
+- [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v1 above; eligibility records not yet added).
 - [`datasets/`](datasets/) — development, held-out, and labeling artifacts being
   completed through #12 and PR #32. Labels follow the frozen
   [annotation rubric](datasets/ANNOTATION_RUBRIC.md) (v0.1).
@@ -353,7 +357,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 72 tests
+Ran 77 tests
 OK
 ```
 

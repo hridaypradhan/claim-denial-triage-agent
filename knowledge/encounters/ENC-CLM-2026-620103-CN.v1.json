@@ -1,0 +1,32 @@
+{
+  "source_id": "ENC-CLM-2026-620103-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-620103",
+  "document_type": "clinical_note",
+  "note_date": "2026-06-10",
+  "author_role": "Ordering primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-620103-CN@v1#L1",
+      "text": "Chief complaint: headache for three weeks, worse with bending forward."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620103-CN@v1#L2",
+      "text": "History: intermittent double vision over the past ten days. No recent head trauma."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620103-CN@v1#L3",
+      "text": "Neurologic exam: cranial nerves II through XII assessed; mild weakness of left lateral gaze with horizontal diplopia. Strength, sensation, and gait normal."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620103-CN@v1#L4",
+      "text": "Assessment: headache with intermittent diplopia (R51.9, H53.2). Neurologic red flag present."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620103-CN@v1#L5",
+      "text": "Plan: order MRI brain (CPT 70553). Head CT from 2026-06-02 reviewed; see radiology report."
+    }
+  ]
+}
