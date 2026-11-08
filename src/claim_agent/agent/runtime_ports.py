@@ -6,8 +6,8 @@ merged production contracts are connected through adapters.
 
 from __future__ import annotations
 
-# TODO(#11, owner=Hriday): After Milestone 2, decide whether replacing the
-# internal OfflineToolObservation is worth the scripted-test migration cost.
+# These compatibility types intentionally keep deterministic regression tests
+# small while production-shaped adapters consume the shared team contracts.
 
 from dataclasses import dataclass, field
 from enum import Enum
@@ -72,6 +72,7 @@ class OfflineValidationResult:
     problem_messages: Tuple[str, ...] = ()
     validation_problems: Tuple[ValidationProblem, ...] = ()
     validated_decision: Optional[Mapping[str, object]] = None
+    manual_review_reasons: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """Ensure accepted and rejected outcomes contain consistent data."""
@@ -86,6 +87,14 @@ class OfflineValidationResult:
 
         if any(not message.strip() for message in self.problem_messages):
             raise ValueError("problem_messages cannot contain blank values")
+
+        if any(
+            not reason.strip()
+            for reason in self.manual_review_reasons
+        ):
+            raise ValueError(
+                "manual_review_reasons cannot contain blank values"
+            )
 
         if self.validation_problems:
             structured_messages = tuple(

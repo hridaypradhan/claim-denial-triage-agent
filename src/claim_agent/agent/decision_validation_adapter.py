@@ -127,4 +127,7 @@ def _to_runtime_validation_result(
         ),
         validation_problems=tuple(shared_result.validation_problems),
         validated_decision=validated_decision,
+        manual_review_reasons=tuple(
+            shared_result.manual_review_reasons
+        ),
     )

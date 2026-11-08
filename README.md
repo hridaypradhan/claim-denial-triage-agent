@@ -5,8 +5,9 @@ A hybrid agentic AI system for evidence-grounded triage of denied outpatient med
 > **Project status:** Active academic capstone. The deterministic baseline,
 > shared contracts, local retrieval tools, safety validator, bounded runtime,
 > a provider-neutral hosted-model boundary, and a production-shaped local
-> integration are runnable and tested. A provider-specific hosted transport,
-> durable traces, evaluation, and the final report remain in progress.
+> integration and durable canonical traces are runnable and tested. A
+> provider-specific hosted transport, evaluation, and the final report remain
+> in progress.
 
 ## Problem
 
@@ -14,9 +15,11 @@ Outpatient practices lose recoverable revenue when denied claims are triaged lat
 
 This project is designed to produce a review package for an accounts-receivable specialist. It does **not** submit claims or appeals, connect to a live payer or EHR, or make an autonomous final decision.
 
-## Intended system
+## Current and target architecture
 
-The completed system will use a hybrid architecture:
+The solid path below is implemented in the local integrated demonstration.
+Dashed nodes are tracked final-phase extensions; they are not required to
+describe the current Milestone 2 runtime as implemented.
 
 ```mermaid
 flowchart TD
@@ -37,7 +40,8 @@ flowchart TD
     end
 
     T <--> F[Common dispatcher for read-only tools]
-    F --> G[(Policy, encounter, and eligibility evidence)]
+    F --> G[(Policy and encounter evidence)]
+    F -. planned .-> I[(Eligibility evidence)]
 
     R --> S
     S -- Rule-only finding --> O{Outcome?}
@@ -54,6 +58,11 @@ flowchart TD
     L -.-> Q[(Audit trace saved separately)]
     L --> H[Human review: edit, approve, or reject]
     H --> Z[Save outputs]
+
+    M[Provider-specific hosted transport] -. planned .-> P
+
+    classDef planned stroke-dasharray: 5 5,fill:#fff;
+    class I,M,V,W,X planned;
 ```
 
 The model will be used only where evidence interpretation is necessary. Exact and safety-critical behavior—including input validation, deadline arithmetic, permitted dispositions, citation checks, and final approval state—remains under deterministic control.
@@ -123,8 +132,9 @@ The agent package now provides an offline vertical slice for developing and veri
 This vertical slice establishes runtime control flow; it is not a production
 claim-review system. Scripted boundaries remain for deterministic regression
 tests, while adapters connect the integrated path to the approved shared tool,
-routing, decision, validation, and output contracts. The internal trace format
-remains temporary pending the durable trace contract.
+routing, decision, validation, output, and durable trace contracts. Internal
+events remain an implementation detail; the canonical JSON Lines trace is the
+stable evaluation boundary.
 
 ### Production-shaped local integration
 
@@ -159,20 +169,27 @@ configuration is committed yet. Hosted-call timeouts consume the attempted
 model-call budget, emit `MODEL_FAILED`, and produce an audited `MANUAL_REVIEW`
 package with terminal reason `model_timeout`.
 
-### Remaining project scaffolding
+### Implemented packages and remaining boundaries
 
-The repository also contains ownership boundaries and placeholders for the remaining system:
+The repository is organized around the following implemented packages and
+explicitly tracked extension points:
 
 - [`src/claim_agent/contracts/`](src/claim_agent/contracts/) — shared data contracts.
 - [`src/claim_agent/tools/`](src/claim_agent/tools/) — typed, read-only evidence tools.
-- [`src/claim_agent/agent/`](src/claim_agent/agent/) — implemented scripted offline runtime and future production adapters.
+- [`src/claim_agent/agent/`](src/claim_agent/agent/) — bounded runtime,
+  production-shaped adapters, canonical traces, and the provider-neutral hosted
+  boundary; provider-specific transport and grounded drafting remain in #34.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
 - [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v0 above; eligibility records not yet added).
-- [`datasets/`](datasets/) — development, held-out, and labeling artifacts.
-- [`evaluation/`](evaluation/) — metrics, fault injection, and comparison harnesses.
+- [`datasets/`](datasets/) — development, held-out, and labeling artifacts being
+  completed through #12 and PRs #31–#32.
+- [`evaluation/`](evaluation/) — accepted trace examples plus the comparison
+  harness being completed through #12 and PR #32.
 
-Directories other than the implemented baseline and scripted agent runtime remain scaffolding unless explicitly documented otherwise.
+Eligibility retrieval, an agent-callable deadline wrapper, hosted-model
+transport, evidence verification, grounded drafting, and the full comparative
+evaluation remain explicitly tracked rather than implied by directory names.
 
 ## Safety boundaries
 
@@ -299,7 +316,21 @@ python -m claim_agent.agent.integrated_runner --pretty
 
 The JSON includes retrieved passage IDs, the selected policy formula, ordered
 trace events, budget usage, and an `OutputPackage` whose approval state remains
-`PENDING_REVIEW`.
+`PENDING_REVIEW`. To also create the immutable canonical JSON Lines trace used
+by evaluation, provide a local output directory and the exact commit being run:
+
+```powershell
+$commit = git rev-parse HEAD
+python -m claim_agent.agent.integrated_runner `
+    --pretty `
+    --trace-directory '.\artifacts\traces' `
+    --code-commit $commit
+```
+
+The generated `artifacts/traces/<run-id>.jsonl` file contains the reproducible
+run configuration, redacted model and tool events, validation results, timing,
+budget counters, and exactly one final outcome. Generated traces are local
+artifacts and should not be committed.
 
 ## Run the knowledge and retrieval tests
 
@@ -391,16 +422,18 @@ These limitations define the work assigned to the agentic extension; they are no
 
 ## Planned agentic extension
 
-- [ ] Freeze shared claim, evidence, tool, decision, and trace contracts. The
-  runtime contracts are integrated; durable trace fields remain pending.
+- [x] Freeze shared claim, evidence, tool, decision, and trace contracts and
+  connect the integrated runner to durable canonical trace emission.
 - [x] Wrap deterministic baseline findings and routing behind typed interfaces.
 - [x] Implement a validated common tool dispatcher.
-- [ ] Add versioned payer-policy, encounter-note, and eligibility retrieval.
+- [x] Add versioned payer-policy and encounter-note retrieval.
+- [ ] Add eligibility retrieval if retained after the scope decision in #30.
 - [x] Implement a bounded planning loop with structured model outputs behind scripted offline boundaries.
-- [ ] Replace scripted runtime boundaries with approved production adapters.
-- [ ] Add criterion-level evidence assessment and resolvable citations.
-- [ ] Add deterministic safety and deadline verification.
-- [ ] Generate appeal drafts only from verified evidence.
+- [x] Connect typed routing, tool, validation, output, and canonical-trace adapters.
+- [x] Add criterion-level evidence assessment and resolvable citations.
+- [x] Add deterministic safety, citation, formula, and filing-deadline validation.
+- [ ] Add provider-specific hosted transport, tool-less evidence verification,
+  and grounded drafting through #34.
 - [ ] Build development and held-out synthetic datasets.
 - [ ] Compare the agentic system against the unchanged baseline.
 - [ ] Conduct stakeholder review of representative system reports.

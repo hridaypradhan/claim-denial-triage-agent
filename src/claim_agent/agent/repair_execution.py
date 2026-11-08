@@ -6,6 +6,8 @@ repairable validation failures follow the same budget, request, and trace rules.
 
 from __future__ import annotations
 
+import hashlib
+import time
 from dataclasses import dataclass
 from typing import Tuple
 
@@ -48,6 +50,7 @@ class RepairExecutionOutcome:
     budget_usage: RuntimeBudgetUsage
     repaired_response_text: str
     repair_task_context: str
+    request_id: str
 
 
 def execute_repair_model_call(
@@ -62,6 +65,8 @@ def execute_repair_model_call(
     problem_messages: Tuple[str, ...],
     allowed_tool_names: Tuple[str, ...],
     validation_problems: Tuple[ValidationProblem, ...] = (),
+    repair_kind: str = "OUTPUT_PARSE",
+    rejected_request_id: str | None = None,
 ) -> RepairExecutionOutcome:
     """Perform one model call dedicated to correcting rejected output.
 
@@ -93,6 +98,9 @@ def execute_repair_model_call(
         {
             "request_id": request_id,
             "problem_count": len(problem_messages),
+            "repair_index": updated_budget_usage.repair_attempts_used,
+            "repair_kind": repair_kind,
+            "rejected_request_id": rejected_request_id or request_id,
         },
     )
     runtime_trace.record(
@@ -100,9 +108,18 @@ def execute_repair_model_call(
         {
             "request_id": request_id,
             "is_repair": True,
+            "prompt_sha256": hashlib.sha256(
+                (
+                    system_instructions
+                    + "\n\n"
+                    + repair_task_context
+                ).encode("utf-8")
+            ).hexdigest(),
+            "repair_attempt": updated_budget_usage.repair_attempts_used,
         },
     )
 
+    model_request_started_at = time.monotonic()
     try:
         repair_response = model_client.generate_response(repair_request)
     except Exception as error:
@@ -114,6 +131,23 @@ def execute_repair_model_call(
                 "request_id": request_id,
                 "error_type": type(error).__name__,
                 "is_repair": True,
+                "failure_class": (
+                    "REQUEST_TIMEOUT"
+                    if isinstance(error, TimeoutError)
+                    else "BOUNDARY_EXCEPTION"
+                ),
+                "retryable": False,
+                "repair_attempt": updated_budget_usage.repair_attempts_used,
+                "elapsed_ms": max(
+                    0,
+                    round(
+                        (
+                            time.monotonic()
+                            - model_request_started_at
+                        )
+                        * 1000
+                    ),
+                ),
             },
         )
         raise RepairModelBoundaryError(
@@ -128,6 +162,20 @@ def execute_repair_model_call(
             "request_id": repair_response.request_id,
             "provider_request_id": (repair_response.provider_request_id or ""),
             "is_repair": True,
+            "response_text": repair_response.response_text,
+            "input_tokens": repair_response.input_token_count,
+            "output_tokens": repair_response.output_token_count,
+            "repair_attempt": updated_budget_usage.repair_attempts_used,
+            "elapsed_ms": max(
+                0,
+                round(
+                    (
+                        time.monotonic()
+                        - model_request_started_at
+                    )
+                    * 1000
+                ),
+            ),
         },
     )
 
@@ -136,4 +184,5 @@ def execute_repair_model_call(
         budget_usage=updated_budget_usage,
         repaired_response_text=repair_response.response_text,
         repair_task_context=repair_task_context,
+        request_id=request_id,
     )

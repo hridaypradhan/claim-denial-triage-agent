@@ -16,8 +16,8 @@ from claim_agent.agent.model_interface import (
     ModelResponse,
 )
 
-# TODO(#11, owner=Hriday): Implement one provider-specific transport after
-# the team selects the Milestone 2 hosted model and credential convention.
+# TODO(#34, owner=Hriday): Implement the selected provider-specific transport
+# after the team freezes the hosted model, prompt, and credential convention.
 
 
 class HostedModelTimeoutError(TimeoutError):

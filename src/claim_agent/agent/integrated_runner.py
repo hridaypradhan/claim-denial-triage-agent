@@ -13,214 +13,39 @@ from datetime import date
 from pathlib import Path
 from typing import Mapping, Optional, Sequence
 
-from baseline.triage.claim import load_claim
-
+from claim_agent.agent.integrated_demo_setup import (
+    DEMO_BUDGET_LIMITS,
+    DEMO_CODE_COMMIT,
+    DEMO_PACKAGE_VERSION,
+    DEMO_RUN_ID,
+    ENCOUNTER_PASSAGE_IDS,
+    KNOWLEDGE_ROOT,
+    POLICY_PASSAGE_IDS,
+    build_demo_baseline_finding,
+    build_demo_claim_context,
+    build_demo_dispatcher,
+    build_demo_model,
+    build_demo_route_decision,
+    build_demo_run_configuration,
+)
 from claim_agent.agent.integrated_runtime import run_integrated_case
-from claim_agent.agent.runtime_budget import RuntimeBudgetLimits
-from claim_agent.agent.scripted_model import (
-    ScriptedModelClient,
-    ScriptedModelOutput,
-)
-from claim_agent.agent.tool_request_guard import (
-    ClaimToolContext,
-    build_claim_tool_context,
-)
-
-from claim_agent.contracts import (
-    BaselineFinding,
-    Disposition,
-    RootCause,
-    RouteDecision,
-    RouteOutcome,
-)
-from claim_agent.tools.dispatcher import (
-    ENCOUNTER_NOTE_TOOL,
-    MEDICAL_POLICY_TOOL,
-    ToolDispatcher,
-)
+from claim_agent.agent.trace_adapter import CanonicalTraceAdapter
+from claim_agent.agent.trace_writer import JsonLinesTraceWriter
 from claim_agent.tools.knowledge_store import KnowledgeStore
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-KNOWLEDGE_ROOT = PROJECT_ROOT / "knowledge"
 
-DEMO_CLAIM_PATH = (
-    PROJECT_ROOT / "baseline" / "examples" / "test2_medical_necessity.json"
-)
-
-DEMO_RUN_ID = "integrated-demo-medical-necessity"
-DEMO_CLAIM_ID = "CLM-2026-005097"
-DEMO_SERVICE_LINE_ID = 1
-DEMO_PAYER = "BCBS_AZ"
-DEMO_PROCEDURE_CODE = "70553"
-DEMO_SERVICE_DATE = date(2026, 6, 2)
-DEMO_PACKAGE_VERSION = "v1"
-
-POLICY_PASSAGE_IDS = (
-    "POL-BCBSAZ-MRI-BRAIN@v1#P3",
-    "POL-BCBSAZ-MRI-BRAIN@v1#P4",
-    "POL-BCBSAZ-MRI-BRAIN@v1#P5",
-)
-ENCOUNTER_PASSAGE_IDS = (
-    "ENC-CLM-2026-005097-PN@v1#L1",
-    "ENC-CLM-2026-005097-PN@v1#L2",
-    "ENC-CLM-2026-005097-PN@v1#L4",
-)
-
-
-def build_demo_baseline_finding() -> BaselineFinding:
-    """Create the deterministic finding that sends this case to the agent."""
-
-    return BaselineFinding(
-        claim_id=DEMO_CLAIM_ID,
-        service_line_id=DEMO_SERVICE_LINE_ID,
-        denial_codes=["CO-50"],
-        root_cause=RootCause.MEDICAL_NECESSITY,
-        baseline_disposition=Disposition.APPEAL_WITH_DOCUMENTATION,
-        required_evidence=[
-            "medical_policy",
-            "encounter_note",
-        ],
-        rationale=("Medical-necessity review requires policy and encounter evidence."),
-        filing_deadline=date(2026, 12, 31),
-        deadline_status="ACTIVE",
-    )
-
-
-def build_demo_route_decision() -> RouteDecision:
-    """Authorize only the retrieval tools required by the demo case."""
-
-    return RouteDecision(
-        claim_id=DEMO_CLAIM_ID,
-        service_line_id=DEMO_SERVICE_LINE_ID,
-        outcome=RouteOutcome.AGENT_REQUIRED,
-        reason_code="EVIDENCE_EVALUATION_REQUIRED",
-        routing_reason=(
-            "The agent must compare the medical policy with the encounter note."
-        ),
-        authorized_tools=[
-            MEDICAL_POLICY_TOOL,
-            ENCOUNTER_NOTE_TOOL,
-        ],
-    )
-
-
-def build_demo_claim_context() -> ClaimToolContext:
-    """Build trusted retrieval fields from the demonstration claim."""
-
-    claim = load_claim(DEMO_CLAIM_PATH)
-
-    return build_claim_tool_context(
-        claim=claim,
-        service_line_id=DEMO_SERVICE_LINE_ID,
-    )
-
-
-def build_demo_dispatcher(
-    knowledge_store: KnowledgeStore,
-) -> ToolDispatcher:
-    """Create the production dispatcher over the supplied knowledge snapshot."""
-
-    return ToolDispatcher(knowledge_store)
-
-
-def build_demo_model() -> ScriptedModelClient:
-    """Create deterministic model actions for the production-shaped demo."""
-
-    policy_request = {
-        "action": "call_tool",
-        "tool_name": MEDICAL_POLICY_TOOL,
-        "tool_arguments": {
-            "payer": DEMO_PAYER,
-            "procedure_code": DEMO_PROCEDURE_CODE,
-            "service_date": DEMO_SERVICE_DATE.isoformat(),
-            "query": (
-                "headache diplopia neurologic examination " "possible mass contrast"
-            ),
-        },
-    }
-    encounter_request = {
-        "action": "call_tool",
-        "tool_name": ENCOUNTER_NOTE_TOOL,
-        "tool_arguments": {
-            "claim_id": DEMO_CLAIM_ID,
-            "document_id": "ENC-CLM-2026-005097-PN",
-        },
-    }
-    proposed_decision = {
-        "action": "propose_decision",
-        "decision": {
-            "decision_id": "DEC-INTEGRATED-DEMO-001",
-            "claim_id": DEMO_CLAIM_ID,
-            "service_line_id": DEMO_SERVICE_LINE_ID,
-            "root_cause": "MEDICAL_NECESSITY",
-            "recommended_disposition": "APPEAL_WITH_DOCUMENTATION",
-            "actions": [
-                "Prepare a documented appeal for human review.",
-            ],
-            "criterion_assessments": [
-                {
-                    "criterion_id": "A",
-                    "status": "SUPPORTED",
-                    "explanation": ("The record documents headache with diplopia."),
-                    "citation_ids": [
-                        "ENC-CLM-2026-005097-PN@v1#L1",
-                    ],
-                },
-                {
-                    "criterion_id": "B",
-                    "status": "SUPPORTED",
-                    "explanation": (
-                        "The neurologic examination documents a "
-                        "cranial nerve finding."
-                    ),
-                    "citation_ids": [
-                        "ENC-CLM-2026-005097-PN@v1#L2",
-                    ],
-                },
-                {
-                    "criterion_id": "C",
-                    "status": "SUPPORTED",
-                    "explanation": (
-                        "The consultant documents concern for a "
-                        "possible intracranial mass."
-                    ),
-                    "citation_ids": [
-                        "ENC-CLM-2026-005097-PN@v1#L4",
-                    ],
-                },
-            ],
-            "evidence_gaps": [],
-            "agent_status": "COMPLETED",
-            "manual_review_reasons": [],
-            "rationale": (
-                "The retrieved policy criteria are supported by " "the encounter note."
-            ),
-            "citation_ids": [
-                *POLICY_PASSAGE_IDS,
-                *ENCOUNTER_PASSAGE_IDS,
-            ],
-        },
-    }
-
-    return ScriptedModelClient(
-        [
-            ScriptedModelOutput(
-                response_text=json.dumps(policy_request),
-            ),
-            ScriptedModelOutput(
-                response_text=json.dumps(encounter_request),
-            ),
-            ScriptedModelOutput(
-                response_text=json.dumps(proposed_decision),
-            ),
-        ]
-    )
-
-
-def run_integrated_demo() -> Mapping[str, object]:
-    """Run the routed case through real local tools and validation."""
+def run_integrated_demo(
+    trace_output_directory: Path | None = None,
+    code_commit: str = DEMO_CODE_COMMIT,
+) -> Mapping[str, object]:
+    """Run the routed case and optionally persist its canonical audit trace."""
 
     knowledge_store = KnowledgeStore(KNOWLEDGE_ROOT)
+    route_decision = build_demo_route_decision()
+    run_configuration = build_demo_run_configuration(
+        knowledge_snapshot_id=knowledge_store.snapshot_id,
+        code_commit=code_commit,
+    )
 
     integrated_result = run_integrated_case(
         run_id=DEMO_RUN_ID,
@@ -232,20 +57,23 @@ def run_integrated_demo() -> Mapping[str, object]:
         dispatcher=build_demo_dispatcher(knowledge_store),
         baseline_finding=build_demo_baseline_finding(),
         claim_context=build_demo_claim_context(),
-        route_decision=build_demo_route_decision(),
-        budget_limits=RuntimeBudgetLimits(
-            max_model_calls=3,
-            max_tool_calls=2,
-            max_repair_attempts=1,
-            max_total_steps=5,
-            max_runtime_seconds=30.0,
-        ),
+        route_decision=route_decision,
+        budget_limits=DEMO_BUDGET_LIMITS,
         as_of=date(2026, 11, 6),
         package_version=DEMO_PACKAGE_VERSION,
         knowledge_snapshot_id=knowledge_store.snapshot_id,
     )
 
     runtime_result = integrated_result.runtime_result
+    canonical_trace_events = CanonicalTraceAdapter(
+        run_configuration=run_configuration,
+        route_decision=route_decision,
+    ).adapt(runtime_result.trace_entries)
+    trace_path = None
+    if trace_output_directory is not None:
+        trace_path = JsonLinesTraceWriter(trace_output_directory).write(
+            canonical_trace_events
+        )
 
     return {
         "run_id": runtime_result.final_state.run_id,
@@ -270,6 +98,12 @@ def run_integrated_demo() -> Mapping[str, object]:
         "trace_events": [
             trace_entry.event_name for trace_entry in runtime_result.trace_entries
         ],
+        "canonical_trace_events": [
+            event.event_type.value for event in canonical_trace_events
+        ],
+        "canonical_trace_path": (
+            str(trace_path) if trace_path is not None else None
+        ),
     }
 
 
@@ -287,9 +121,27 @@ def main(arguments: Optional[Sequence[str]] = None) -> int:
         action="store_true",
         help="Indent the JSON output for easier human reading.",
     )
+    argument_parser.add_argument(
+        "--trace-directory",
+        type=Path,
+        help=(
+            "Write the completed canonical JSON Lines trace to this local "
+            "directory. Existing traces are never overwritten."
+        ),
+    )
+    argument_parser.add_argument(
+        "--code-commit",
+        default=DEMO_CODE_COMMIT,
+        help=(
+            "Commit identifier recorded in the reproducible run configuration."
+        ),
+    )
     parsed_arguments = argument_parser.parse_args(arguments)
 
-    summary = run_integrated_demo()
+    summary = run_integrated_demo(
+        trace_output_directory=parsed_arguments.trace_directory,
+        code_commit=parsed_arguments.code_commit,
+    )
     indentation = 2 if parsed_arguments.pretty else None
 
     print(

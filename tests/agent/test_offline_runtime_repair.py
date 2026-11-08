@@ -273,6 +273,10 @@ class OfflineRuntimeRepairTests(unittest.TestCase):
         self.assertEqual(result.budget_usage.repair_attempts_used, 1)
         self.assertEqual(len(model_client.received_requests), 2)
         self.assertEqual(len(decision_validator.received_decisions), 2)
+        self.assertEqual(
+            "repair_attempt",
+            result.trace_entries[-1].details["budget_name"],
+        )
 
 
 if __name__ == "__main__":

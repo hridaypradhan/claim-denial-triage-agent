@@ -11,8 +11,8 @@ import json
 
 from claim_agent.agent.runtime_ports import OfflineToolObservation
 
-# TODO(#11, owner=Hriday): If OfflineToolObservation is retired after
-# Milestone 2, serialize ToolResult and EvidencePassage here directly.
+# OfflineToolObservation intentionally keeps the deterministic teaching and
+# regression path independent of the shared production tool contract.
 
 
 def append_tool_observation(
