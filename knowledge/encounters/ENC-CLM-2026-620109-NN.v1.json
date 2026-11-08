@@ -1,0 +1,24 @@
+{
+  "source_id": "ENC-CLM-2026-620109-NN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-620109",
+  "document_type": "nursing_note",
+  "note_date": "2026-06-12",
+  "author_role": "Clinic nurse",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-620109-NN@v1#L1",
+      "text": "Visit 2026-06-12: rooming completed and vital signs recorded."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620109-NN@v1#L2",
+      "text": "The patient left the clinic before the physician examination because of a family emergency."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620109-NN@v1#L3",
+      "text": "Follow-up visit to be scheduled."
+    }
+  ]
+}
