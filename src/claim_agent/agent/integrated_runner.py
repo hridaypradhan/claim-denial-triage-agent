@@ -9,11 +9,11 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import date
 from pathlib import Path
 from typing import Mapping, Optional, Sequence
 
 from claim_agent.agent.integrated_demo_setup import (
+    DEMO_AS_OF,
     DEMO_BUDGET_LIMITS,
     DEMO_CODE_COMMIT,
     DEMO_PACKAGE_VERSION,
@@ -59,7 +59,7 @@ def run_integrated_demo(
         claim_context=build_demo_claim_context(),
         route_decision=route_decision,
         budget_limits=DEMO_BUDGET_LIMITS,
-        as_of=date(2026, 11, 6),
+        as_of=DEMO_AS_OF,
         package_version=DEMO_PACKAGE_VERSION,
         knowledge_snapshot_id=knowledge_store.snapshot_id,
     )

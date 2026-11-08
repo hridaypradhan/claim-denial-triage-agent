@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import date
 from pathlib import Path
+from typing import Tuple
 
 from baseline.triage.claim import load_claim
 
@@ -22,12 +23,10 @@ from claim_agent.agent.tool_request_guard import (
     ClaimToolContext,
     build_claim_tool_context,
 )
+from claim_agent.agent.router import analyze_and_route_claim
 from claim_agent.contracts import (
     BaselineFinding,
-    Disposition,
-    RootCause,
     RouteDecision,
-    RouteOutcome,
 )
 from claim_agent.tools.dispatcher import (
     ENCOUNTER_NOTE_TOOL,
@@ -47,6 +46,7 @@ DEMO_CLAIM_ID = "CLM-2026-005097"
 DEMO_SERVICE_LINE_ID = 1
 DEMO_PACKAGE_VERSION = "v1"
 DEMO_CODE_COMMIT = "working-tree"
+DEMO_AS_OF = date(2026, 11, 6)
 
 DEMO_BUDGET_LIMITS = RuntimeBudgetLimits(
     max_model_calls=3,
@@ -68,35 +68,32 @@ ENCOUNTER_PASSAGE_IDS = (
 )
 
 
-def build_demo_baseline_finding() -> BaselineFinding:
-    """Create the deterministic finding that sends this case to the agent."""
+def build_demo_routed_case() -> Tuple[BaselineFinding, RouteDecision]:
+    """Run the baseline and router on the demo claim's service line.
 
-    return BaselineFinding(
-        claim_id=DEMO_CLAIM_ID,
-        service_line_id=DEMO_SERVICE_LINE_ID,
-        denial_codes=["CO-50"],
-        root_cause=RootCause.MEDICAL_NECESSITY,
-        baseline_disposition=Disposition.APPEAL_WITH_DOCUMENTATION,
-        required_evidence=["medical_policy", "encounter_note"],
-        rationale="Medical-necessity review requires policy and encounter evidence.",
-        filing_deadline=date(2026, 12, 31),
-        deadline_status="ACTIVE",
+    The finding's deadline and the route come from the same deterministic
+    code a real run uses, so the demo never shows a hand-written deadline.
+    """
+
+    claim = load_claim(DEMO_CLAIM_PATH)
+    for finding, route in analyze_and_route_claim(claim, DEMO_AS_OF):
+        if finding.service_line_id == DEMO_SERVICE_LINE_ID:
+            return finding, route
+    raise ValueError(
+        f"Demo claim has no finding for service line {DEMO_SERVICE_LINE_ID}."
     )
+
+
+def build_demo_baseline_finding() -> BaselineFinding:
+    """Return the router's finding that sends this case to the agent."""
+
+    return build_demo_routed_case()[0]
 
 
 def build_demo_route_decision() -> RouteDecision:
-    """Authorize only the retrieval tools required by the demo case."""
+    """Return the router's decision, which authorizes the retrieval tools."""
 
-    return RouteDecision(
-        claim_id=DEMO_CLAIM_ID,
-        service_line_id=DEMO_SERVICE_LINE_ID,
-        outcome=RouteOutcome.AGENT_REQUIRED,
-        reason_code="EVIDENCE_EVALUATION_REQUIRED",
-        routing_reason=(
-            "The agent must compare the medical policy with the encounter note."
-        ),
-        authorized_tools=[MEDICAL_POLICY_TOOL, ENCOUNTER_NOTE_TOOL],
-    )
+    return build_demo_routed_case()[1]
 
 
 def build_demo_claim_context() -> ClaimToolContext:

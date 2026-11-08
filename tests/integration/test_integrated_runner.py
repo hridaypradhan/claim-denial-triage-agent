@@ -85,6 +85,17 @@ class IntegratedRunnerTests(unittest.TestCase):
             summary["trace_events"][-1],
         )
 
+    def test_demo_deadline_comes_from_baseline_calculation(self) -> None:
+        """The package should carry the deadline the baseline calculates.
+
+        BCBS_AZ allows 180 days to appeal from the 2026-07-11 remittance.
+        """
+
+        finding = run_integrated_demo()["output_package"]["baseline_finding"]
+
+        self.assertEqual("2027-01-07", finding["filing_deadline"])
+        self.assertEqual("ACTIVE", finding["deadline_status"])
+
     def test_main_prints_machine_readable_json(self) -> None:
         """Automation should be able to parse the default CLI output."""
 
