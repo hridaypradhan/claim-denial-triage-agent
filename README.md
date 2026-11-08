@@ -187,7 +187,7 @@ explicitly tracked extension points:
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
 - [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v1 above; eligibility records not yet added).
 - [`datasets/`](datasets/) — development, held-out, and labeling artifacts being
-  completed through #12 and PR #32. Labels follow the frozen
+  completed through #12 (Datasets A and B, development). Labels follow the frozen
   [annotation rubric](datasets/ANNOTATION_RUBRIC.md) (v0.1).
 - [`evaluation/`](evaluation/) — accepted trace examples plus the comparison
   harness being completed through #12 and PR #32.
@@ -363,7 +363,12 @@ OK
 
 ## Run the pilot evaluation
 
-The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot (#12) scores a compared system against labeled cases, one case per denied service line. Dataset A, rule and safety triage, is in [`datasets/development/set_a/`](datasets/development/set_a/), with draft single-labeler labels in [`datasets/labels/`](datasets/labels/) written with the [annotation rubric](datasets/ANNOTATION_RUBRIC.md). Only the frozen baseline can be run so far; the agent and single-call systems still need the hosted-model transport tracked in #34 and the generic evaluation entry point tracked in #12. The harness uses only the standard library.
+The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot (#12) scores a compared system against labeled cases, one case per denied service line. Two development datasets have draft single-labeler labels in [`datasets/labels/`](datasets/labels/), written with the [annotation rubric](datasets/ANNOTATION_RUBRIC.md):
+
+- **Dataset A**, rule and safety triage (23 cases): [`datasets/development/set_a/`](datasets/development/set_a/).
+- **Dataset B**, evidence-dependent policy review (12 CO-50 medical-necessity cases on `knowledge-v1`): [`datasets/development/set_b/`](datasets/development/set_b/). Labels cite criterion statuses and note passages.
+
+Only the frozen baseline can be run so far; the agent and single-call systems still need the hosted-model transport tracked in #34 and the generic evaluation entry point tracked in #12. The harness uses only the standard library.
 
 From the repository root:
 
@@ -372,6 +377,10 @@ python -m evaluation.run_pilot \
   --manifest datasets/development/set_a/manifest.json \
   --labels datasets/labels/set_a_development.labeler_a.json \
   --experiment set-a-dev-baseline
+python -m evaluation.run_pilot \
+  --manifest datasets/development/set_b/manifest.json \
+  --labels datasets/labels/set_b_development.labeler_a.json \
+  --experiment set-b-dev-baseline
 python -m unittest discover -s tests/evaluation -p "test*.py" -q
 ```
 
