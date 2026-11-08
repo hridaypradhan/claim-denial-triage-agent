@@ -64,7 +64,7 @@ class PolicyToolTest(unittest.TestCase):
 
         self.assertEqual(data["criteria_formula"], "A AND B")
         self.assertEqual(len(data["criteria"]), 4)
-        self.assertEqual(data["knowledge_snapshot_id"], "knowledge-v0")
+        self.assertEqual(data["knowledge_snapshot_id"], "knowledge-v1")
 
     def test_service_date_selects_the_policy_version(self):
         arguments = {"payer": "AETNA", "procedure_code": "97110"}

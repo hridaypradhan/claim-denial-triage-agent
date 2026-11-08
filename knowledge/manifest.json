@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.1",
-  "snapshot_id": "knowledge-v0",
+  "snapshot_id": "knowledge-v1",
   "note": "Every source the read-only tools may return. Tools resolve sources only through this manifest. All entries are synthetic unless origin.url is set and origin.terms_status is 'permitted'.",
   "sources": [
     {
@@ -81,6 +81,214 @@
       "sha256": "ff022e0b355a92552dd89eaed9613f3e9bf9a78693eedcf0b0adef595a1fa3fd",
       "claim_id": "CLM-2026-005097",
       "document_type": "progress_notes",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620102-CN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620102-CN.v1.json",
+      "sha256": "410facd9985b495eacda6d4d78be0f62e9e222fdcd571f4adf33386fda0738de",
+      "claim_id": "CLM-2026-620102",
+      "document_type": "clinical_note",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620103-CN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620103-CN.v1.json",
+      "sha256": "11404dfcfe20402491f6949e274efe4cf789a1e395b30b00ec729c06ced267b1",
+      "claim_id": "CLM-2026-620103",
+      "document_type": "clinical_note",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620103-RAD",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620103-RAD.v1.json",
+      "sha256": "d97ea46d94dae43797e34e5685ecf44958778bedc09ab30e8ef85e870d3d999f",
+      "claim_id": "CLM-2026-620103",
+      "document_type": "imaging_report",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620104-CN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620104-CN.v1.json",
+      "sha256": "888a566851376bb44f2dcef2ecb88fde8f1764e111a6fcff1bfbc093ae408e85",
+      "claim_id": "CLM-2026-620104",
+      "document_type": "clinical_note",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620105-CN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620105-CN.v1.json",
+      "sha256": "5132a9df28f2ac452f5a1fea1ed6e0e88bbbae8fc6e90a9d9c1739b9cc458588",
+      "claim_id": "CLM-2026-620105",
+      "document_type": "clinical_note",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620106-CN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620106-CN.v1.json",
+      "sha256": "ad20c5c31ec0b4c313ffd1001619c4673f1d785b5e76b677f255d312ebd81a3a",
+      "claim_id": "CLM-2026-620106",
+      "document_type": "clinical_note",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620107-PT",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620107-PT.v1.json",
+      "sha256": "e07414e8d922acbb8d956b13ab21ff2fd7128e8ddc662f598e42cf109f29abee",
+      "claim_id": "CLM-2026-620107",
+      "document_type": "pt_evaluation",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620108-PT",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620108-PT.v1.json",
+      "sha256": "907dd3c5cf66141b8312f63209107ec3e9bd36e2fd7e8d7d58be52517faf21b0",
+      "claim_id": "CLM-2026-620108",
+      "document_type": "pt_evaluation",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620109-CN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620109-CN.v1.json",
+      "sha256": "65ca7aa676ae75e262ec31acc3c5a61972d796397a8061028113d4ff097abe00",
+      "claim_id": "CLM-2026-620109",
+      "document_type": "clinical_note",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620109-NN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620109-NN.v1.json",
+      "sha256": "f1570157951338a4028087849ac18952692a8129b1d2d2078b7e78e8efc20e76",
+      "claim_id": "CLM-2026-620109",
+      "document_type": "nursing_note",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620110-CN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620110-CN.v1.json",
+      "sha256": "b98615344aaf56d49ed25b9c45c94b0a5cd22a69588ca1d5cacf2c1909c240ad",
+      "claim_id": "CLM-2026-620110",
+      "document_type": "clinical_note",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620111-CN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620111-CN.v1.json",
+      "sha256": "c01165118c3dac0c68dd57c686daa1ef9e7f812eec7266ce59c7b42a94ad3873",
+      "claim_id": "CLM-2026-620111",
+      "document_type": "clinical_note",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "ENC-CLM-2026-620112-CN",
+      "source_type": "encounter_note",
+      "version": "1",
+      "path": "encounters/ENC-CLM-2026-620112-CN.v1.json",
+      "sha256": "d98964edab3517e5a53aaa7d38b072f494c5d76dc26cf26be152cca3f3c5597f",
+      "claim_id": "CLM-2026-620112",
+      "document_type": "clinical_note",
       "synthetic": true,
       "origin": {
         "url": null,

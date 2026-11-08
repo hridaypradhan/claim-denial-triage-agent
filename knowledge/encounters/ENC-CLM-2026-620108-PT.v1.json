@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-620108-PT",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-620108",
+  "document_type": "pt_evaluation",
+  "note_date": "2026-04-07",
+  "author_role": "Treating physical therapist",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-620108-PT@v1#L1",
+      "text": "Reason for referral: right knee pain and stiffness after a fall six weeks ago."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620108-PT@v1#L2",
+      "text": "Evaluation: right knee flexion limited to 95 degrees. Quadriceps strength 3+/5. Antalgic gait. The patient reports difficulty climbing stairs at home."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620108-PT@v1#L3",
+      "text": "Plan of care: therapeutic exercise (CPT 97110) twice weekly for six weeks. Goals: knee flexion to 120 degrees and independent stair climbing."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620108-PT@v1#L4",
+      "text": "Plan of care signed by the treating physical therapist on 2026-04-07, before therapy began."
+    }
+  ]
+}

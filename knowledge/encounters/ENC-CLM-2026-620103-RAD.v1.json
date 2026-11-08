@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-620103-RAD",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-620103",
+  "document_type": "imaging_report",
+  "note_date": "2026-06-02",
+  "author_role": "Radiologist",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-620103-RAD@v1#L1",
+      "text": "Exam: CT head without contrast, performed 2026-06-02."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620103-RAD@v1#L2",
+      "text": "Indication: headache with intermittent diplopia."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620103-RAD@v1#L3",
+      "text": "Findings: the study is degraded by motion artifact through the posterior fossa and orbits. No acute hemorrhage is identified."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-620103-RAD@v1#L4",
+      "text": "Impression: non-diagnostic for the clinical question. The posterior fossa and orbits are not adequately evaluated."
+    }
+  ]
+}

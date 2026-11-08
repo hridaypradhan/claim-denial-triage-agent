@@ -1,0 +1,95 @@
+{
+  "dataset": "B",
+  "name": "Evidence-dependent policy review",
+  "split": "development",
+  "as_of": "2026-09-06",
+  "rubric_version": "0.1",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "description": "Synthetic CO-50 medical-necessity denials that need a policy read against the chart. One case per denied service line. Case list and notes from #12 and PR #39.",
+  "cases": [
+    {
+      "case_id": "CLM-2026-005097-L1",
+      "claim_id": "CLM-2026-005097",
+      "service_line_id": 1,
+      "claim_path": "baseline/examples/test2_medical_necessity.json",
+      "scenario_family_id": "F1-MRI-70553"
+    },
+    {
+      "case_id": "CLM-2026-620102-L1",
+      "claim_id": "CLM-2026-620102",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_b/claims/B02_mri70553_contrast_unknown.json",
+      "scenario_family_id": "F1-MRI-70553"
+    },
+    {
+      "case_id": "CLM-2026-620103-L1",
+      "claim_id": "CLM-2026-620103",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_b/claims/B03_mri70553_prior_ct.json",
+      "scenario_family_id": "F1-MRI-70553"
+    },
+    {
+      "case_id": "CLM-2026-620104-L1",
+      "claim_id": "CLM-2026-620104",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_b/claims/B04_mri70553_no_red_flag.json",
+      "scenario_family_id": "F1-MRI-70553"
+    },
+    {
+      "case_id": "CLM-2026-620105-L1",
+      "claim_id": "CLM-2026-620105",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_b/claims/B05_mri70551_documented.json",
+      "scenario_family_id": "F2-MRI-70551"
+    },
+    {
+      "case_id": "CLM-2026-620106-L1",
+      "claim_id": "CLM-2026-620106",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_b/claims/B06_mri70551_no_exam.json",
+      "scenario_family_id": "F2-MRI-70551"
+    },
+    {
+      "case_id": "CLM-2026-620107-L1",
+      "claim_id": "CLM-2026-620107",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_b/claims/B07_pt97110_policy_v1.json",
+      "scenario_family_id": "F3-PT-97110"
+    },
+    {
+      "case_id": "CLM-2026-620108-L1",
+      "claim_id": "CLM-2026-620108",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_b/claims/B08_pt97110_policy_v2.json",
+      "scenario_family_id": "F3-PT-97110"
+    },
+    {
+      "case_id": "CLM-2026-620109-L1",
+      "claim_id": "CLM-2026-620109",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_b/claims/B09_mri70553_conflicting_exam.json",
+      "scenario_family_id": "F4-MRI-CONFLICT"
+    },
+    {
+      "case_id": "CLM-2026-620110-L1",
+      "claim_id": "CLM-2026-620110",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_b/claims/B10_mri70553_instruction.json",
+      "scenario_family_id": "F5-MRI-INSTRUCTION"
+    },
+    {
+      "case_id": "CLM-2026-620111-L1",
+      "claim_id": "CLM-2026-620111",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_b/claims/B11_mri70553_no_payer_policy.json",
+      "scenario_family_id": "F6-NO-POLICY"
+    },
+    {
+      "case_id": "CLM-2026-620112-L1",
+      "claim_id": "CLM-2026-620112",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_b/claims/B12_mri70553_before_policy.json",
+      "scenario_family_id": "F6-NO-POLICY"
+    }
+  ]
+}
