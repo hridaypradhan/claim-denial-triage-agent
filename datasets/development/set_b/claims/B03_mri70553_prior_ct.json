@@ -1,0 +1,42 @@
+{
+  "claim_id": "CLM-2026-620103",
+  "patient_account": "PA-SYN-20103",
+  "payer": "BCBS_AZ",
+  "date_of_service": "2026-06-16",
+  "remit_date": "2026-07-21",
+  "billed_amount": 1480.0,
+  "paid_amount": 0.0,
+  "place_of_service": "11",
+  "rendering_provider_npi": "1000000000",
+  "denials": [
+    {
+      "group_code": "CO",
+      "carc": "50",
+      "rarc": [],
+      "amount": 1480.0,
+      "service_line": 1
+    }
+  ],
+  "service_lines": [
+    {
+      "line": 1,
+      "cpt": "70553",
+      "modifiers": [],
+      "units": 1,
+      "charge": 1480.0,
+      "icd10": [
+        "R51.9",
+        "H53.2"
+      ]
+    }
+  ],
+  "encounter": {
+    "prior_auth_number": null,
+    "referral_on_file": false,
+    "documentation_attached": [
+      "clinical_note",
+      "imaging_report"
+    ],
+    "eligibility_verified_on": "2026-06-13"
+  }
+}
