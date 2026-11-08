@@ -2,7 +2,8 @@
 
 This is the operating agreement for the four-person Claim Denial Triage Agent team. It assigns one directly responsible owner to every major area, defines cross-team handoffs, and sets the rules for merging and documenting work.
 
-Assignments are proposed until all four members confirm them. Any ownership or interface change must update this file in the same pull request.
+These assignments are the current team ownership agreement. Any ownership or
+interface change must update this file in the same pull request.
 
 ## Shared objective and boundaries
 
@@ -64,12 +65,16 @@ Primary ownership means coordinating design, implementation, tests, and document
 - Common tool dispatcher and argument validation at the tool boundary.
 - Fake dispatcher with scripted tool results for the offline vertical slice.
 - Denial-code and payer-profile lookup wrappers; payer profiles report their version and whether values are verified or illustrative.
-- Policy retrieval, encounter-note retrieval, and eligibility-record retrieval. All tools are read-only.
+- Implemented policy and encounter-note retrieval, plus eligibility-record
+  retrieval if the team later retains that extension under #30. All tools are
+  read-only.
 - Policy matching that filters by payer, procedure, and service date before ranking, with no fallback to another payer's policy or a different effective date.
 - Encounter notes returned as numbered, citable passages, with unavailable documents reported explicitly.
-- Eligibility records returned without deciding eligibility. This tool is cut first if the schedule slips.
+- Eligibility records, if implemented after #30, report evidence without
+  deciding eligibility.
 - Knowledge manifests, passage IDs, provenance, and no-match/error responses.
-- The `calculate_deadline` tool wrapper, which calls Neha's deadline arithmetic through the dispatcher.
+- The optional `calculate_deadline` dispatcher wrapper tracked by #29; the
+  frozen baseline currently supplies deterministic deadline arithmetic.
 - The per-claim document inventory, built from the knowledge manifest.
 - Policy corpus selection and source metadata: URL, access date, effective date, payer, procedure, section, and version. A policy is included only when its terms of use permit.
 - The retrieval-method architecture decision.
@@ -100,7 +105,8 @@ Primary ownership means coordinating design, implementation, tests, and document
 - Provider-independent model interface and scripted fake model.
 - Agent state, deterministic state updates, planning loop, and model/tool budgets.
 - Tool selection, structured model output, invalid-output repair, and trace emission.
-- Separate tool-less evidence-verification and appeal-drafting model calls.
+- Separate tool-less evidence-verification and appeal-drafting model calls
+  planned under #34.
 - Agent CLI and the offline vertical-slice runner.
 
 **Delivers**
@@ -155,10 +161,10 @@ Primary ownership means coordinating design, implementation, tests, and document
 | Shared contracts v0.1 | Neha | All affected owners approve breaking fields |
 | Baseline adapter and deterministic router | Neha | Baseline regression tests |
 | Tool dispatcher and knowledge manifest | Silas | Contract approval from Neha; runtime review from Hriday |
-| Policy, encounter, and eligibility tools | Silas | Evaluation provenance requirements from Sachin |
+| Policy and encounter tools; optional eligibility tool under #30 | Silas | Evaluation provenance requirements from Sachin |
 | Fake dispatcher for the offline vertical slice | Silas | Tool contracts from Neha; consumer review from Hriday |
 | Policy corpus selection and source metadata | Silas | Payer/procedure coverage needs from Sachin |
-| `calculate_deadline` tool wrapper (*default*) | Silas | Deadline arithmetic from Neha |
+| Optional `calculate_deadline` tool wrapper under #29 | Silas | Scope decision and deadline arithmetic from Neha |
 | Per-claim document inventory (*default*) | Silas | Built from the knowledge manifest; case fixtures from Sachin use the same document IDs |
 | Single bounded tool retry (*default*) | Hriday | Dispatcher reports `retryable`; each retry counts against the tool-call budget, not planning turns |
 | Untrusted-text handling (*default*) | Hriday | Tools return text unmodified; the runtime passes it to the model as labelled data |
@@ -213,7 +219,10 @@ Later work may be developed behind fake interfaces, but it cannot merge before i
 7. Run the baseline once and the agent three times per held-out case.
 8. Never tune against held-out failures; preserve them for final analysis.
 
-The proposed trace and run-configuration format that evaluation depends on is in [decision 0002](decisions/0002-trace-and-run-config.md), with example traces and a config-hash test vector in [`evaluation/examples/`](../evaluation/examples/). It is not authoritative until the decision's status is `Accepted`.
+The accepted trace and run-configuration format that evaluation depends on is
+in [decision 0002](decisions/0002-trace-and-run-config.md), with example traces
+and a config-hash test vector in [`evaluation/examples/`](../evaluation/examples/).
+PR #33 implements its canonical adapter and JSON Lines persistence boundary.
 
 ## Git and pull-request workflow
 

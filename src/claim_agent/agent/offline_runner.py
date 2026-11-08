@@ -28,8 +28,9 @@ from claim_agent.agent.scripted_ports import (
     ScriptedToolDispatcher,
 )
 
-# TODO(#7, owner=Hriday, blocker=Sachin): Emit the durable trace format after
-# Sachin finalizes TraceEvent fields and persistence requirements.
+# This small teaching demo retains the readable internal event summary. The
+# production-shaped integrated runner adapts the same runtime events to the
+# accepted canonical trace contract and persists them as JSON Lines.
 
 DEMO_RUN_ID = "offline-demo-medical-necessity"
 # The fragment identifies the exact passage supporting the recommendation,

@@ -6,8 +6,8 @@ merged production contracts are connected through adapters.
 
 from __future__ import annotations
 
-# TODO(#11, owner=Hriday): After Milestone 2, decide whether replacing the
-# internal OfflineToolObservation is worth the scripted-test migration cost.
+# These compatibility types intentionally keep deterministic regression tests
+# small while production-shaped adapters consume the shared team contracts.
 
 from dataclasses import dataclass, field
 from enum import Enum

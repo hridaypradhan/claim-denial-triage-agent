@@ -1,16 +1,15 @@
-"""Temporary in-memory audit trail for the offline agent runtime.
+"""Internal in-memory event history for the bounded agent runtime.
 
-This module implements trace ordering and storage without defining the team's
-final shared TraceEvent contract. A later adapter will translate these internal
-entries into the schema approved through issue #7.
+The runtime records small implementation-facing entries here. The integrated
+runner converts them to the accepted canonical ``TraceEvent`` contract through
+``trace_adapter`` and persists that evaluation-facing history as JSON Lines.
+Keeping the internal type separate prevents the planning loop from depending
+on storage and reporting details.
 """
 
 from __future__ import annotations
 
 import time
-# TODO(#7, owner=Hriday, blocker=Sachin): Convert internal entries into the
-# approved TraceEvent schema and append-only JSON Lines storage format after
-# Sachin finalizes that contract.
 
 from dataclasses import dataclass
 from types import MappingProxyType
