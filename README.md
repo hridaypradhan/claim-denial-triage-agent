@@ -183,7 +183,8 @@ explicitly tracked extension points:
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
 - [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v0 above; eligibility records not yet added).
 - [`datasets/`](datasets/) — development, held-out, and labeling artifacts being
-  completed through #12 and PRs #31–#32.
+  completed through #12 and PR #32. Labels follow the frozen
+  [annotation rubric](datasets/ANNOTATION_RUBRIC.md) (v0.1).
 - [`evaluation/`](evaluation/) — accepted trace examples plus the comparison
   harness being completed through #12 and PR #32.
 
@@ -355,6 +356,22 @@ Expected result:
 Ran 72 tests
 OK
 ```
+
+## Run the pilot evaluation
+
+The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot (#12) scores a compared system against labeled cases, one case per denied service line. Dataset A, rule and safety triage, is in [`datasets/development/set_a/`](datasets/development/set_a/), with draft single-labeler labels in [`datasets/labels/`](datasets/labels/) written with the [annotation rubric](datasets/ANNOTATION_RUBRIC.md). Only the frozen baseline can be run so far; the agent and single-call systems still need the hosted-model transport tracked in #34 and the generic evaluation entry point tracked in #12. The harness uses only the standard library.
+
+From the repository root:
+
+```bash
+python -m evaluation.run_pilot \
+  --manifest datasets/development/set_a/manifest.json \
+  --labels datasets/labels/set_a_development.labeler_a.json \
+  --experiment set-a-dev-baseline
+python -m unittest discover -s tests/evaluation -p "test*.py" -q
+```
+
+Results go to `.local-output/eval/<experiment>/`: `predictions.jsonl`, `scores.json`, `results.md`, and `run_manifest.json`, which records the dataset and label hashes and the code commit. Rates are reported with counts and 95% Wilson intervals. Critical safety errors that need traces are reported as not measurable rather than zero. The labels are drafts until a second labeler and adjudication are complete, so these numbers are development checks, not results.
 
 ## Run one reproducible example
 

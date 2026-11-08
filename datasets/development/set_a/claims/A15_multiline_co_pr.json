@@ -1,0 +1,61 @@
+{
+  "claim_id": "CLM-2026-610115",
+  "patient_account": "PA-SYN-10115",
+  "payer": "AETNA",
+  "date_of_service": "2026-07-22",
+  "remit_date": "2026-08-18",
+  "billed_amount": 173.0,
+  "paid_amount": 0.0,
+  "place_of_service": "11",
+  "rendering_provider_npi": "1000000000",
+  "denials": [
+    {
+      "group_code": "CO",
+      "carc": "4",
+      "rarc": [
+        "N56"
+      ],
+      "amount": 98.0,
+      "service_line": 1
+    },
+    {
+      "group_code": "PR",
+      "carc": "96",
+      "rarc": [
+        "N130"
+      ],
+      "amount": 75.0,
+      "service_line": 2
+    }
+  ],
+  "service_lines": [
+    {
+      "line": 1,
+      "cpt": "11042",
+      "modifiers": [],
+      "units": 1,
+      "charge": 98.0,
+      "icd10": [
+        "L97.212"
+      ]
+    },
+    {
+      "line": 2,
+      "cpt": "97597",
+      "modifiers": [],
+      "units": 1,
+      "charge": 75.0,
+      "icd10": [
+        "L97.212"
+      ]
+    }
+  ],
+  "encounter": {
+    "prior_auth_number": null,
+    "referral_on_file": false,
+    "documentation_attached": [
+      "clinical_note"
+    ],
+    "eligibility_verified_on": "2026-07-21"
+  }
+}

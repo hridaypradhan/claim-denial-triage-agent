@@ -1,0 +1,171 @@
+{
+  "dataset": "A",
+  "name": "Rule and safety triage",
+  "split": "development",
+  "as_of": "2026-09-06",
+  "rubric_version": "0.1",
+  "description": "Synthetic professional outpatient claims, one case per denied service line. CLM-2026-005097 (medical necessity) belongs to Dataset B, family F1.",
+  "cases": [
+    {
+      "case_id": "CLM-2025-009930-L1",
+      "claim_id": "CLM-2025-009930",
+      "service_line_id": 1,
+      "claim_path": "baseline/examples/test5_timely_filing.json",
+      "scenario_family_id": "A-EX-TIMELY-NO-PROOF"
+    },
+    {
+      "case_id": "CLM-2026-004812-L1",
+      "claim_id": "CLM-2026-004812",
+      "service_line_id": 1,
+      "claim_path": "baseline/examples/test1_auth_missing.json",
+      "scenario_family_id": "A-EX-AUTH-ON-FILE"
+    },
+    {
+      "case_id": "CLM-2026-005311-L1",
+      "claim_id": "CLM-2026-005311",
+      "service_line_id": 1,
+      "claim_path": "baseline/examples/test3_coding_incomplete.json",
+      "scenario_family_id": "A-EX-CODING-NPI"
+    },
+    {
+      "case_id": "CLM-2026-005644-L1",
+      "claim_id": "CLM-2026-005644",
+      "service_line_id": 1,
+      "claim_path": "baseline/examples/test4_contractual_and_patient.json",
+      "scenario_family_id": "A-EX-CONTRACTUAL-PR"
+    },
+    {
+      "case_id": "CLM-2026-005644-L2",
+      "claim_id": "CLM-2026-005644",
+      "service_line_id": 2,
+      "claim_path": "baseline/examples/test4_contractual_and_patient.json",
+      "scenario_family_id": "A-EX-CONTRACTUAL-PR"
+    },
+    {
+      "case_id": "CLM-2026-005882-L1",
+      "claim_id": "CLM-2026-005882",
+      "service_line_id": 1,
+      "claim_path": "baseline/examples/test6_ambiguous.json",
+      "scenario_family_id": "A-EX-BARE-CO16"
+    },
+    {
+      "case_id": "CLM-2026-610101-L1",
+      "claim_id": "CLM-2026-610101",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A01_bundling_no_modifier.json",
+      "scenario_family_id": "A-BUNDLING"
+    },
+    {
+      "case_id": "CLM-2026-610102-L1",
+      "claim_id": "CLM-2026-610102",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A02_bundling_modifier_59.json",
+      "scenario_family_id": "A-BUNDLING"
+    },
+    {
+      "case_id": "CLM-2026-610103-L1",
+      "claim_id": "CLM-2026-610103",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A03_duplicate.json",
+      "scenario_family_id": "A-DUPLICATE"
+    },
+    {
+      "case_id": "CLM-2026-610104-L1",
+      "claim_id": "CLM-2026-610104",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A04_eligibility_alternate_coverage.json",
+      "scenario_family_id": "A-ELIGIBILITY"
+    },
+    {
+      "case_id": "CLM-2026-610105-L1",
+      "claim_id": "CLM-2026-610105",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A05_eligibility_no_coverage.json",
+      "scenario_family_id": "A-ELIGIBILITY"
+    },
+    {
+      "case_id": "CLM-2026-610106-L1",
+      "claim_id": "CLM-2026-610106",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A06_cob_primary_eob_on_file.json",
+      "scenario_family_id": "A-COB"
+    },
+    {
+      "case_id": "CLM-2026-610107-L1",
+      "claim_id": "CLM-2026-610107",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A07_cob_no_primary_eob.json",
+      "scenario_family_id": "A-COB"
+    },
+    {
+      "case_id": "CLM-2026-610108-L1",
+      "claim_id": "CLM-2026-610108",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A08_noncovered_abn_signed.json",
+      "scenario_family_id": "A-NONCOVERED"
+    },
+    {
+      "case_id": "CLM-2026-610109-L1",
+      "claim_id": "CLM-2026-610109",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A09_noncovered_no_abn.json",
+      "scenario_family_id": "A-NONCOVERED"
+    },
+    {
+      "case_id": "CLM-2026-610110-L1",
+      "claim_id": "CLM-2026-610110",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A10_auth_missing_retro_window_open.json",
+      "scenario_family_id": "A-AUTH"
+    },
+    {
+      "case_id": "CLM-2026-610111-L1",
+      "claim_id": "CLM-2026-610111",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A11_auth_missing_retro_window_closed.json",
+      "scenario_family_id": "A-AUTH"
+    },
+    {
+      "case_id": "CLM-2026-610112-L1",
+      "claim_id": "CLM-2026-610112",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A12_timely_filing_with_proof.json",
+      "scenario_family_id": "A-TIMELY"
+    },
+    {
+      "case_id": "CLM-2026-610113-L1",
+      "claim_id": "CLM-2026-610113",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A13_unmapped_carc.json",
+      "scenario_family_id": "A-UNMAPPED"
+    },
+    {
+      "case_id": "CLM-2026-610114-L1",
+      "claim_id": "CLM-2026-610114",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A14_coding_deadline_expired.json",
+      "scenario_family_id": "A-EXPIRED"
+    },
+    {
+      "case_id": "CLM-2026-610115-L1",
+      "claim_id": "CLM-2026-610115",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A15_multiline_co_pr.json",
+      "scenario_family_id": "A-MULTILINE"
+    },
+    {
+      "case_id": "CLM-2026-610115-L2",
+      "claim_id": "CLM-2026-610115",
+      "service_line_id": 2,
+      "claim_path": "datasets/development/set_a/claims/A15_multiline_co_pr.json",
+      "scenario_family_id": "A-MULTILINE"
+    },
+    {
+      "case_id": "CLM-2026-610116-L1",
+      "claim_id": "CLM-2026-610116",
+      "service_line_id": 1,
+      "claim_path": "datasets/development/set_a/claims/A16_unknown_payer_contractual.json",
+      "scenario_family_id": "A-UNKNOWN-PAYER"
+    }
+  ]
+}

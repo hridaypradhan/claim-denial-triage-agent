@@ -1,0 +1,40 @@
+{
+  "claim_id": "CLM-2026-610111",
+  "patient_account": "PA-SYN-10111",
+  "payer": "UHC",
+  "date_of_service": "2026-06-01",
+  "remit_date": "2026-07-01",
+  "billed_amount": 640.0,
+  "paid_amount": 0.0,
+  "place_of_service": "11",
+  "rendering_provider_npi": "1000000000",
+  "denials": [
+    {
+      "group_code": "CO",
+      "carc": "197",
+      "rarc": [],
+      "amount": 640.0,
+      "service_line": 1
+    }
+  ],
+  "service_lines": [
+    {
+      "line": 1,
+      "cpt": "73721",
+      "modifiers": [],
+      "units": 1,
+      "charge": 640.0,
+      "icd10": [
+        "M23.205"
+      ]
+    }
+  ],
+  "encounter": {
+    "prior_auth_number": null,
+    "referral_on_file": false,
+    "documentation_attached": [
+      "clinical_note"
+    ],
+    "eligibility_verified_on": "2026-05-28"
+  }
+}

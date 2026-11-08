@@ -210,7 +210,7 @@ Later work may be developed behind fake interfaces, but it cannot merge before i
 
 ## Dataset and evaluation rules
 
-1. Write the annotation rubric before producing system outputs.
+1. Write the annotation rubric before producing system outputs. The frozen rubric is [`datasets/ANNOTATION_RUBRIC.md`](../datasets/ANNOTATION_RUBRIC.md) (v0.1); changing it needs a new version.
 2. Use the original six cases only for development and regression.
 3. Create at least 20 additional development cases and 80 held-out cases.
 4. Keep scenario variants and counterfactual pairs in the same split.
