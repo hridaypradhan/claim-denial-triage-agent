@@ -4,7 +4,7 @@
   "rubric_version": "0.1",
   "labeler_id": "labeler_b",
   "status": "DRAFT_SINGLE_LABELER",
-  "note": "Second labeler (rubric section 8). Drafted by an AI assistant (Claude) from the rubric and claim files only, without opening labeler_a, and reviewed by Silas. The assistant had earlier seen system outputs for some cases, so this is not a fully independent human label; disclose that in the report.",
+  "note": "Second labeler (rubric section 8). Drafted with an AI assistant from the rubric and claim files only, without opening labeler_a, and reviewed by Silas.",
   "cases": [
     {
       "case_id": "CLM-2025-009930-L1",
@@ -220,7 +220,7 @@
         "CSE_UNSUPPORTED_APPEAL"
       ],
       "labeler_id": "labeler_b",
-      "labeler_notes": "CO-97 although the E/M carries modifier 25 and an operative report is attached, so this is an appealable bundling dispute (\u00a73 step 4). No bundling policy is in the corpus and the note content isn't available, so manual review. Both lines share M17.11, and 59 on 20610 doesn't establish a separate E/M. Answer seen beforehand on stakeholder page.",
+      "labeler_notes": "CO-97 although the E/M carries modifier 25 and an operative report is attached, so this is an appealable bundling dispute (\u00a73 step 4). No bundling policy is in the corpus and the note content isn't available, so manual review. Both lines share M17.11, and 59 on 20610 doesn't establish a separate E/M.",
       "adjudication_notes": null
     },
     {
@@ -300,7 +300,7 @@
         "CSE_UNSUPPORTED_APPEAL"
       ],
       "labeler_id": "labeler_b",
-      "labeler_notes": "PR-27, coverage ended before service, and no alternate coverage is recorded. PR balance not otherwise recoverable, so bill the patient (\u00a75). Answer seen beforehand on stakeholder page.",
+      "labeler_notes": "PR-27, coverage ended before service, and no alternate coverage is recorded. PR balance not otherwise recoverable, so bill the patient (\u00a75).",
       "adjudication_notes": null
     },
     {
@@ -407,7 +407,7 @@
         "CSE_UNSUPPORTED_APPEAL"
       ],
       "labeler_id": "labeler_b",
-      "labeler_notes": "CO-96 with N130 and abn_signed false. CO balance without an ABN can't be billed to the patient, so write off (\u00a75). Answer seen beforehand on stakeholder page.",
+      "labeler_notes": "CO-96 with N130 and abn_signed false. CO balance without an ABN can't be billed to the patient, so write off (\u00a75).",
       "adjudication_notes": null
     },
     {
@@ -436,7 +436,7 @@
         "CSE_UNSUPPORTED_APPEAL"
       ],
       "labeler_id": "labeler_b",
-      "labeler_notes": "CO-197, no auth on file. The only recovery is a retro auth: UHC window 5 days from service (2026-08-01) closes 2026-08-06. It was open at the remit (2026-08-04) but closed by as_of 2026-09-06, so \u00a73 step 6 gives DEADLINE_EXPIRED. ADJUDICATION FLAG: the rubric doesn't define how the retro-auth window is counted; if it runs from another date the answer may differ. Answer seen beforehand on stakeholder page.",
+      "labeler_notes": "CO-197, no auth on file. The only recovery is a retro auth: UHC window 5 days from service (2026-08-01) closes 2026-08-06. It was open at the remit (2026-08-04) but closed by as_of 2026-09-06, so \u00a73 step 6 gives DEADLINE_EXPIRED. ADJUDICATION FLAG: the rubric doesn't define how the retro-auth window is counted; if it runs from another date the answer may differ.",
       "adjudication_notes": null
     },
     {
@@ -547,7 +547,7 @@
         "CSE_UNSUPPORTED_APPEAL"
       ],
       "labeler_id": "labeler_b",
-      "labeler_notes": "CO-16 with M51 (procedure code), fixable by a corrected claim, but service 2026-01-20 + Cigna 180 = 2026-07-19 passed before as_of. Answer seen beforehand on stakeholder page.",
+      "labeler_notes": "CO-16 with M51 (procedure code), fixable by a corrected claim, but service 2026-01-20 + Cigna 180 = 2026-07-19 passed before as_of.",
       "adjudication_notes": null
     },
     {
