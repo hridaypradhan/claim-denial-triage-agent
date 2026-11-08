@@ -211,7 +211,7 @@
         "CSE_UNSUPPORTED_APPEAL"
       ],
       "labeler_id": "labeler_a",
-      "labeler_notes": "Modifiers 25/59 already submitted, so this is an evidence dispute; no NCCI or bundling policy exists in the corpus to assess it (rubric 3.4). ADJUDICATION FLAG: a biller might appeal directly.",
+      "labeler_notes": "Modifiers 25/59 already submitted, so this is an evidence dispute; no NCCI or bundling policy exists in the corpus to assess it (rubric 3.4). ADJUDICATION FLAG: a biller might appeal directly. TEAM DECISION 2026-11-08 (PR #31 review: Neha, Hriday, Silas): keep MANUAL_REVIEW until a second labeler and adjudication are done.",
       "adjudication_notes": null
     },
     {
@@ -415,7 +415,7 @@
         "CSE_UNSUPPORTED_APPEAL"
       ],
       "labeler_id": "labeler_a",
-      "labeler_notes": "No auth on file; retro-auth window (5 days) still open, but no authorization policy exists in the corpus to assess urgency (rubric 3.4). ADJUDICATION FLAG: a biller might request retro auth (APPEAL_WITH_DOCUMENTATION) directly.",
+      "labeler_notes": "No auth on file; retro-auth window (5 days) still open, but no authorization policy exists in the corpus to assess urgency (rubric 3.4). ADJUDICATION FLAG: a biller might request retro auth (APPEAL_WITH_DOCUMENTATION) directly. TEAM DECISION 2026-11-08 (PR #31 review: Neha, Hriday, Silas): keep MANUAL_REVIEW until a second labeler and adjudication are done.",
       "adjudication_notes": null
     },
     {

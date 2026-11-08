@@ -183,7 +183,8 @@ explicitly tracked extension points:
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
 - [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v0 above; eligibility records not yet added).
 - [`datasets/`](datasets/) — development, held-out, and labeling artifacts being
-  completed through #12 and PRs #31–#32.
+  completed through #12 and PR #32. Labels follow the frozen
+  [annotation rubric](datasets/ANNOTATION_RUBRIC.md) (v0.1).
 - [`evaluation/`](evaluation/) — accepted trace examples plus the comparison
   harness being completed through #12 and PR #32.
 

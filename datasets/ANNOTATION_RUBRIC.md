@@ -1,6 +1,6 @@
 # Annotation Rubric
 
-- **Version:** 0.1 (draft for team review; must be frozen, with adjudicated labels, before any official scored run; see §8)
+- **Version:** 0.1, **frozen 2026-11-08** after review by Silas, Neha, and Hriday (PR #31). Changes now need a new version. Official scored runs also need adjudicated labels (§8).
 - **Owner:** Sachin Kothandaraman (evaluation)
 - **Reviewers:** Neha Kashyap (safety rules and escalation), Silas Sangmin (evidence and passages)
 - **Matches:** shared contracts `0.1` (`src/claim_agent/contracts/schema.py`), the router, decision 0002, and Milestone 1 §6
@@ -181,4 +181,5 @@ One JSON file per dataset split. Each case looks like this:
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | 2026-11-07 | First draft, matched to contracts `0.1` and per-service-line cases |
+| 0.1 | 2026-11-08 | Frozen. Team decision: the two disputed Dataset A cases (610102-L1, 610110-L1) stay `MANUAL_REVIEW` until a second labeler and adjudication. Neha will update validator rule 10 to ignore criteria the formula doesn't need |
 | 0.1 | 2026-11-07 | Review fixes before freeze: label only the formula's criteria; `NOT_MET` plus `UNKNOWN` goes to manual review; negative vs silence; full `supporting_passage_ids`; empty-value rules; draft development checks vs official runs |
