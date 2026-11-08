@@ -359,7 +359,7 @@ OK
 
 ## Run the pilot evaluation
 
-The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot (#12) scores a compared system against labeled cases, one case per denied service line. Dataset A, rule and safety triage, is in [`datasets/development/set_a/`](datasets/development/set_a/), with draft single-labeler labels in [`datasets/labels/`](datasets/labels/) written with the [annotation rubric](datasets/ANNOTATION_RUBRIC.md). Only the frozen baseline can be run so far; the agent and single-call systems need the hosted-model transport tracked in #11. The harness uses only the standard library.
+The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot (#12) scores a compared system against labeled cases, one case per denied service line. Dataset A, rule and safety triage, is in [`datasets/development/set_a/`](datasets/development/set_a/), with draft single-labeler labels in [`datasets/labels/`](datasets/labels/) written with the [annotation rubric](datasets/ANNOTATION_RUBRIC.md). Only the frozen baseline can be run so far; the agent and single-call systems still need the hosted-model transport tracked in #34 and the generic evaluation entry point tracked in #12. The harness uses only the standard library.
 
 From the repository root:
 
