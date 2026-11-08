@@ -187,8 +187,14 @@ def validate_agent_decision(
         )
         manual_review_reasons.append(ESCALATION_MISSING_EVIDENCE)
 
-    # 9. Policy Formula Checks (Terminal)
-    if decision.recommended_disposition == Disposition.APPEAL_WITH_DOCUMENTATION:
+    # 9. Policy Formula Check (Terminal, appeals only)
+    # formula_satisfied is True only for an appeal with a present formula
+    # that the supported criteria satisfy.
+    formula_satisfied = False
+    if (
+        not recommends_manual_review
+        and decision.recommended_disposition == Disposition.APPEAL_WITH_DOCUMENTATION
+    ):
         if not policy_formula:
             problems.append(
                 ValidationProblem(
@@ -205,10 +211,11 @@ def validate_agent_decision(
                 for criterion in decision.criterion_assessments
                 if criterion.status == CriterionStatus.SUPPORTED
             }
-            if not evaluate_criteria_formula(
+            formula_satisfied = evaluate_criteria_formula(
                 policy_formula,
                 supported_criterion_ids,
-            ):
+            )
+            if not formula_satisfied:
                 problems.append(
                     ValidationProblem(
                         code=PROBLEM_FORMULA_NOT_SATISFIED,
@@ -219,8 +226,9 @@ def validate_agent_decision(
                 )
                 manual_review_reasons.append(ESCALATION_FORMULA_NOT_SATISFIED)
 
-    # 10. UNKNOWN or CONFLICTING Criteria (Terminal)
-    if not recommends_manual_review:
+    # 10. Unsupported Criteria (Terminal)
+    # Skipped only when rule 9 confirmed an appeal formula is satisfied.
+    if not recommends_manual_review and not formula_satisfied:
         has_unsupported_criterion = any(
             criterion.status in (CriterionStatus.UNKNOWN, CriterionStatus.CONFLICTING)
             for criterion in decision.criterion_assessments
