@@ -220,17 +220,19 @@ class TestValidatorFaultInjection(unittest.TestCase):
         )
         self.assertIn(PROBLEM_UNSUPPORTED_CRITERION, self.problem_codes(result))
 
-    def test_satisfied_formula_skips_unsupported_criterion_rule(self):
+    def test_satisfied_formula_ignores_unused_unknown_alternative(self):
         self.decision.criterion_assessments = [
             self.make_criterion("A", CriterionStatus.SUPPORTED),
-            self.make_criterion("B", CriterionStatus.UNKNOWN),
+            self.make_criterion("B", CriterionStatus.SUPPORTED),
+            self.make_criterion("C", CriterionStatus.UNKNOWN),
+            self.make_criterion("D", CriterionStatus.SUPPORTED),
         ]
         result = validate_agent_decision(
             self.decision,
             self.finding,
             self.evidence,
             self.as_of,
-            policy_formula="A",
+            policy_formula="A AND B AND (C OR D)",
         )
         self.assertEqual(result.outcome, ValidationOutcome.ACCEPTED)
         self.assertNotIn(PROBLEM_UNSUPPORTED_CRITERION, self.problem_codes(result))
