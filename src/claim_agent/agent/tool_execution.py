@@ -27,8 +27,8 @@ from claim_agent.agent.runtime_ports import (
 from claim_agent.agent.runtime_state import AgentRuntimeState, RuntimePhase
 from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace
 
-# TODO(#11, owner=Hriday): If the internal observation compatibility layer is
-# retired after Milestone 2, consume ToolResult directly in this control loop.
+# This control loop uses the stable scripted compatibility type. The integrated
+# production boundary adapts shared ToolResult records before they enter here.
 
 
 class ToolNotAllowedError(ValueError):
