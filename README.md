@@ -389,10 +389,29 @@ Three systems are compared on both datasets:
 To run all three systems on both datasets and write the comparison, from the
 repository root:
 
+Set the source-module path for the current shell.
+
+macOS or Linux (Bash/Zsh):
+
 ```bash
+export PYTHONPATH=./src
+```
+
+Windows (PowerShell):
+
+```powershell
+$env:PYTHONPATH = '.\src'
+```
+
+Then run the same commands on any platform:
+
+```text
 python -m evaluation.compare_pilot
 python -m unittest discover -s tests/evaluation -p "test*.py" -q
 ```
+
+If the platform exposes Python as `python3` or `py -3`, substitute that
+launcher for `python` in both commands.
 
 The comparison command writes new artifacts under
 `.local-output/eval/m2-pilot/`, which Git ignores. Audit traces are immutable,
@@ -413,12 +432,8 @@ keep their output packages, and S0 keeps its canonical traces.
 
 To run one system on one dataset instead:
 
-```bash
-python -m evaluation.run_pilot \
-  --manifest datasets/development/set_b/manifest.json \
-  --labels datasets/labels/set_b_development.adjudicated.json \
-  --experiment set-b-dev-escalate-all \
-  --system escalate-all
+```text
+python -m evaluation.run_pilot --manifest datasets/development/set_b/manifest.json --labels datasets/labels/set_b_development.adjudicated.json --experiment set-b-dev-escalate-all --system escalate-all
 ```
 
 Results go to `.local-output/eval/<experiment>/`. Rates are reported with
