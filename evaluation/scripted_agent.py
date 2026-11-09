@@ -42,11 +42,13 @@ from claim_agent.tools.dispatcher import ToolDispatcher
 from claim_agent.tools.knowledge_store import KnowledgeStore
 from evaluation.pilot_data import Case
 
+# Most cases need one policy and one encounter lookup. Cases with evidence
+# spread across two encounter documents need one additional bounded tool call.
 SCRIPTED_EVALUATION_BUDGETS = RuntimeBudgetLimits(
-    max_model_calls=3,
-    max_tool_calls=2,
+    max_model_calls=4,
+    max_tool_calls=3,
     max_repair_attempts=1,
-    max_total_steps=5,
+    max_total_steps=7,
     max_runtime_seconds=30.0,
 )
 

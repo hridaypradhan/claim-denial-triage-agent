@@ -375,10 +375,13 @@ the frozen [annotation rubric](datasets/ANNOTATION_RUBRIC.md):
   medical-necessity cases on `knowledge-v1`):
   [`datasets/development/set_b/`](datasets/development/set_b/).
 
-The frozen baseline is runnable from `main`. The scripted-agent adapter and the
-escalate-all baseline are being completed through #12. Hosted-model execution
-is deferred beyond Milestone 2; the current pilot is deterministic and
-reproducible.
+The frozen baseline and the current scripted-agent system (`S0`) are runnable.
+S0 executes the real router, bounded runtime, retrieval tools, validator,
+output-package builder, and canonical trace adapter. Its model responses are
+case-specific deterministic scripts, so its results verify the integrated
+system behavior but do not measure LLM generalization. Hosted-model execution
+is deferred beyond Milestone 2. The escalate-all comparison baseline remains
+tracked through #12.
 
 From the repository root:
 
@@ -386,11 +389,13 @@ From the repository root:
 python -m evaluation.run_pilot \
   --manifest datasets/development/set_a/manifest.json \
   --labels datasets/labels/set_a_development.adjudicated.json \
-  --experiment set-a-dev-baseline
+  --experiment set-a-dev-scripted-agent \
+  --system scripted-agent
 python -m evaluation.run_pilot \
   --manifest datasets/development/set_b/manifest.json \
   --labels datasets/labels/set_b_development.adjudicated.json \
-  --experiment set-b-dev-baseline
+  --experiment set-b-dev-scripted-agent \
+  --system scripted-agent
 python -m unittest discover -s tests/evaluation -p "test*.py" -q
 ```
 

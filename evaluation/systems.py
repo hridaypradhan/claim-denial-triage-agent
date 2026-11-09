@@ -15,9 +15,10 @@ from baseline.triage.claim import load_claim
 from baseline.triage.rules import triage_claim
 
 from claim_agent.agent.canonical_trace import TraceEvent
-from claim_agent.contracts import OutputPackage
+from claim_agent.contracts import Disposition, OutputPackage
 from claim_agent.tools.knowledge_store import KnowledgeStore
 from evaluation.dataset_a_scripts import DATASET_A_SCRIPTED_PLANS
+from evaluation.dataset_b_scripts import DATASET_B_SCRIPTED_PLANS
 from evaluation.pilot_data import REPO_ROOT, Case
 from evaluation.scripted_agent import (
     build_non_agent_output_package,
@@ -50,6 +51,17 @@ BASELINE_V1 = "baseline-v1"
 SCRIPTED_AGENT = "scripted-agent"
 KNOWLEDGE_ROOT = REPO_ROOT / "knowledge"
 PACKAGE_VERSION = "v1"
+
+DEADLINE_BEARING_DISPOSITIONS = {
+    Disposition.APPEAL_WITH_DOCUMENTATION,
+    Disposition.CORRECT_AND_RESUBMIT,
+    Disposition.ROUTE_TO_CORRECT_PAYER,
+}
+
+SCRIPTED_PLANS = {
+    **DATASET_A_SCRIPTED_PLANS,
+    **DATASET_B_SCRIPTED_PLANS,
+}
 
 
 def predict_baseline_v1(case: Case, as_of: date) -> Prediction:
@@ -102,7 +114,7 @@ def predict_scripted_agent(case: Case, as_of: date) -> Prediction:
     if prepared_case.requires_agent:
         plan = scripted_plan_for_case(
             case_id=case.case_id,
-            plans_by_case_id=DATASET_A_SCRIPTED_PLANS,
+            plans_by_case_id=SCRIPTED_PLANS,
         )
         execution = execute_scripted_agent_case(
             prepared_case=prepared_case,
@@ -122,7 +134,14 @@ def predict_scripted_agent(case: Case, as_of: date) -> Prediction:
         )
         trace_events = ()
 
-    filing_deadline = output_package.baseline_finding.filing_deadline
+    # Only dispositions that authorize a time-bounded follow-up action expose
+    # the baseline filing deadline in evaluation results.
+    filing_deadline = (
+        output_package.baseline_finding.filing_deadline
+        if output_package.final_disposition
+        in DEADLINE_BEARING_DISPOSITIONS
+        else None
+    )
 
     return Prediction(
         case_id=case.case_id,

@@ -4,8 +4,9 @@ Example, from the repository root:
 
     python -m evaluation.run_pilot \
         --manifest datasets/development/set_a/manifest.json \
-        --labels datasets/labels/set_a_development.labeler_a.json \
-        --experiment set-a-dev-baseline
+        --labels datasets/labels/set_a_development.adjudicated.json \
+        --experiment set-a-dev-scripted-agent \
+        --system scripted-agent
 
 Outputs go to ``.local-output/eval/<experiment>/``, which Git ignores.
 """
