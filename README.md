@@ -363,28 +363,43 @@ OK
 
 ## Run the pilot evaluation
 
-The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot (#12) scores a compared system against labeled cases, one case per denied service line. Two development datasets have draft single-labeler labels in [`datasets/labels/`](datasets/labels/), written with the [annotation rubric](datasets/ANNOTATION_RUBRIC.md):
+The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot (#12)
+scores each compared system against one case per denied service line. Two
+synthetic development datasets have independent labeler artifacts and separate
+adjudicated answer keys in [`datasets/labels/`](datasets/labels/), following
+the frozen [annotation rubric](datasets/ANNOTATION_RUBRIC.md):
 
-- **Dataset A**, rule and safety triage (23 cases): [`datasets/development/set_a/`](datasets/development/set_a/).
-- **Dataset B**, evidence-dependent policy review (12 CO-50 medical-necessity cases on `knowledge-v1`): [`datasets/development/set_b/`](datasets/development/set_b/). Labels cite criterion statuses and note passages.
+- **Dataset A**, rule and safety triage (23 cases):
+  [`datasets/development/set_a/`](datasets/development/set_a/).
+- **Dataset B**, evidence-dependent policy review (12 CO-50
+  medical-necessity cases on `knowledge-v1`):
+  [`datasets/development/set_b/`](datasets/development/set_b/).
 
-Only the frozen baseline can be run so far; the agent and single-call systems still need the hosted-model transport tracked in #34 and the generic evaluation entry point tracked in #12. The harness uses only the standard library.
+The frozen baseline is runnable from `main`. The scripted-agent adapter and the
+escalate-all baseline are being completed through #12. Hosted-model execution
+is deferred beyond Milestone 2; the current pilot is deterministic and
+reproducible.
 
 From the repository root:
 
 ```bash
 python -m evaluation.run_pilot \
   --manifest datasets/development/set_a/manifest.json \
-  --labels datasets/labels/set_a_development.labeler_a.json \
+  --labels datasets/labels/set_a_development.adjudicated.json \
   --experiment set-a-dev-baseline
 python -m evaluation.run_pilot \
   --manifest datasets/development/set_b/manifest.json \
-  --labels datasets/labels/set_b_development.labeler_a.json \
+  --labels datasets/labels/set_b_development.adjudicated.json \
   --experiment set-b-dev-baseline
 python -m unittest discover -s tests/evaluation -p "test*.py" -q
 ```
 
-Results go to `.local-output/eval/<experiment>/`: `predictions.jsonl`, `scores.json`, `results.md`, and `run_manifest.json`, which records the dataset and label hashes and the code commit. Rates are reported with counts and 95% Wilson intervals. Critical safety errors that need traces are reported as not measurable rather than zero. The labels are drafts until a second labeler and adjudication are complete, so these numbers are development checks, not results.
+Results go to `.local-output/eval/<experiment>/`: `predictions.jsonl`,
+`scores.json`, `results.md`, and `run_manifest.json`, which records the dataset
+and label hashes and the code commit. Rates are reported with counts and 95%
+Wilson intervals. Critical safety errors that require traces are reported as
+not measurable rather than zero for systems without traces. These are small
+synthetic development-pilot results, not held-out performance claims.
 
 ## Run one reproducible example
 
