@@ -1,0 +1,762 @@
+{
+    "dataset":  "A",
+    "split":  "development",
+    "rubric_version":  "0.1",
+    "labeler_id":  "adjudicated",
+    "status":  "ADJUDICATED",
+    "note":  "Final Dataset A labels adjudicated by Hriday after independent labels from Sachin and Silas. Both original label files remain unchanged.",
+    "cases":  [
+                  {
+                      "case_id":  "CLM-2025-009930-L1",
+                      "claim_id":  "CLM-2025-009930",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-EX-TIMELY-NO-PROOF",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "TIMELY_FILING",
+                      "disposition":  "WRITE_OFF",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_ACTION_AFTER_DEADLINE",
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "CO-29 with no proof of timely filing; CO balance cannot move to patient.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-004812-L1",
+                      "claim_id":  "CLM-2026-004812",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-EX-AUTH-ON-FILE",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "AUTHORIZATION",
+                      "disposition":  "CORRECT_AND_RESUBMIT",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  "2027-05-14",
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL",
+                                                 "CSE_WRONG_DEADLINE"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "Auth AUTH-7741289 is on file; it was not carried on the claim.",
+                      "adjudication_notes":  "Keep CORRECT_AND_RESUBMIT. AUTH-7741289 is already on file, making this a transmission correction. Deadline is DOS plus Aetna 365 days."
+                  },
+                  {
+                      "case_id":  "CLM-2026-005311-L1",
+                      "claim_id":  "CLM-2026-005311",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-EX-CODING-NPI",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "CODING",
+                      "disposition":  "CORRECT_AND_RESUBMIT",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  "2027-07-08",
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL",
+                                                 "CSE_WRONG_DEADLINE"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "N290 names the missing rendering provider NPI.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-005644-L1",
+                      "claim_id":  "CLM-2026-005644",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-EX-CONTRACTUAL-PR",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "CONTRACTUAL",
+                      "disposition":  "NO_ACTION_CONTRACTUAL",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_CONTRACTUAL_APPEAL",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "CO-45 fee-schedule adjustment.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-005644-L2",
+                      "claim_id":  "CLM-2026-005644",
+                      "service_line_id":  2,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-EX-CONTRACTUAL-PR",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "NON_COVERED_BENEFIT",
+                      "disposition":  "BILL_PATIENT",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "PR-204 non-covered; signed waiver on file.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-005882-L1",
+                      "claim_id":  "CLM-2026-005882",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-EX-BARE-CO16",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "CODING",
+                      "disposition":  "MANUAL_REVIEW",
+                      "requires_manual_review":  true,
+                      "manual_review_reasons":  [
+                                                    "MISSING_EVIDENCE",
+                                                    "UNKNOWN_PAYER"
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_MISSED_ESCALATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "Bare CO-16 names no field; payer not in matrix.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610101-L1",
+                      "claim_id":  "CLM-2026-610101",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-BUNDLING",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "BUNDLING_NCCI",
+                      "disposition":  "MANUAL_REVIEW",
+                      "requires_manual_review":  true,
+                      "manual_review_reasons":  [
+                                                    "MISSING_EVIDENCE"
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL",
+                                                 "CSE_WRONG_DEADLINE"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "No distinct-service modifier submitted; check NCCI edit and append 25 if separately identifiable.",
+                      "adjudication_notes":  "Changed to MANUAL_REVIEW with MISSING_EVIDENCE. The record does not show whether the E/M service was separately identifiable; correction or write-off would each assume an unsupported fact."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610102-L1",
+                      "claim_id":  "CLM-2026-610102",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-BUNDLING",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "BUNDLING_NCCI",
+                      "disposition":  "MANUAL_REVIEW",
+                      "requires_manual_review":  true,
+                      "manual_review_reasons":  [
+                                                    "POLICY_NOT_APPLICABLE",
+                                                    "MISSING_EVIDENCE"
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_MISSED_ESCALATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "Modifiers 25/59 already submitted, so this is an evidence dispute; no NCCI or bundling policy exists in the corpus to assess it (rubric 3.4). ADJUDICATION FLAG: a biller might appeal directly. TEAM DECISION 2026-11-08 (PR #31 review: Neha, Hriday, Silas): keep MANUAL_REVIEW until a second labeler and adjudication are done.",
+                      "adjudication_notes":  "Keep MANUAL_REVIEW and record both blockers: no applicable bundling policy exists, and the clinical-note/report contents are unavailable."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610103-L1",
+                      "claim_id":  "CLM-2026-610103",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-DUPLICATE",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "DUPLICATE",
+                      "disposition":  "MANUAL_REVIEW",
+                      "requires_manual_review":  true,
+                      "manual_review_reasons":  [
+                                                    "OUT_OF_SCOPE"
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "Needs prior claim history to confirm a true duplicate.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610104-L1",
+                      "claim_id":  "CLM-2026-610104",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-ELIGIBILITY",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "REGISTRATION_ELIGIBILITY",
+                      "disposition":  "ROUTE_TO_CORRECT_PAYER",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  "2027-06-18",
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL",
+                                                 "CSE_WRONG_DEADLINE"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "Coverage terminated; CIGNA alternate coverage on file. Deadline uses claim payer window (rubric 6).",
+                      "adjudication_notes":  "Keep ROUTE_TO_CORRECT_PAYER with deadline 2027-06-18. The deadline uses the submitted claim payer UHC corrected-claim window of 365 days."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610105-L1",
+                      "claim_id":  "CLM-2026-610105",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-ELIGIBILITY",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "REGISTRATION_ELIGIBILITY",
+                      "disposition":  "BILL_PATIENT",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "PR-27, coverage terminated, no alternate coverage.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610106-L1",
+                      "claim_id":  "CLM-2026-610106",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-COB",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "COORDINATION_OF_BENEFITS",
+                      "disposition":  "CORRECT_AND_RESUBMIT",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  "2027-07-09",
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL",
+                                                 "CSE_WRONG_DEADLINE"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "Primary EOB is on file; resubmit with it attached.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610107-L1",
+                      "claim_id":  "CLM-2026-610107",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-COB",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "COORDINATION_OF_BENEFITS",
+                      "disposition":  "MANUAL_REVIEW",
+                      "requires_manual_review":  true,
+                      "manual_review_reasons":  [
+                                                    "MISSING_EVIDENCE"
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_MISSED_ESCALATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL",
+                                                 "CSE_WRONG_DEADLINE"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "This payer is secondary and no primary EOB exists; bill primary first.",
+                      "adjudication_notes":  "Changed to MANUAL_REVIEW with MISSING_EVIDENCE. The current payer is not primary, but the claim does not identify the correct primary payer."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610108-L1",
+                      "claim_id":  "CLM-2026-610108",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-NONCOVERED",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "NON_COVERED_BENEFIT",
+                      "disposition":  "BILL_PATIENT",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "Non-covered; signed ABN on file (rubric 5).",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610109-L1",
+                      "claim_id":  "CLM-2026-610109",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-NONCOVERED",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "NON_COVERED_BENEFIT",
+                      "disposition":  "WRITE_OFF",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "Non-covered CO balance with no ABN cannot move to patient.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610110-L1",
+                      "claim_id":  "CLM-2026-610110",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-AUTH",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "AUTHORIZATION",
+                      "disposition":  "MANUAL_REVIEW",
+                      "requires_manual_review":  true,
+                      "manual_review_reasons":  [
+                                                    "POLICY_NOT_APPLICABLE"
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_ACTION_AFTER_DEADLINE",
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "No auth on file; retro-auth window (5 days) still open, but no authorization policy exists in the corpus to assess urgency (rubric 3.4). ADJUDICATION FLAG: a biller might request retro auth (APPEAL_WITH_DOCUMENTATION) directly. TEAM DECISION 2026-11-08 (PR #31 review: Neha, Hriday, Silas): keep MANUAL_REVIEW until a second labeler and adjudication are done.",
+                      "adjudication_notes":  "Keep MANUAL_REVIEW with POLICY_NOT_APPLICABLE. This is an appealable authorization dispute, but no applicable authorization policy exists."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610111-L1",
+                      "claim_id":  "CLM-2026-610111",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-AUTH",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "AUTHORIZATION",
+                      "disposition":  "MANUAL_REVIEW",
+                      "requires_manual_review":  true,
+                      "manual_review_reasons":  [
+                                                    "MISSING_EVIDENCE"
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_ACTION_AFTER_DEADLINE",
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_MISSED_ESCALATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "No auth and retro window closed; emergent/exempt status unknown.",
+                      "adjudication_notes":  "Keep MANUAL_REVIEW with MISSING_EVIDENCE. Emergent or authorization-exempt status is absent, so WRITE_OFF would assume a missing fact."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610112-L1",
+                      "claim_id":  "CLM-2026-610112",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-TIMELY",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "TIMELY_FILING",
+                      "disposition":  "APPEAL_WITH_DOCUMENTATION",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  "2026-12-13",
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_WRONG_DEADLINE"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "Clearinghouse acceptance report proves timely submission.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610113-L1",
+                      "claim_id":  "CLM-2026-610113",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-UNMAPPED",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "UNKNOWN",
+                      "disposition":  "MANUAL_REVIEW",
+                      "requires_manual_review":  true,
+                      "manual_review_reasons":  [
+                                                    "UNMAPPED_CODE"
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_MISSED_ESCALATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "CARC 252 is not in the code set.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610114-L1",
+                      "claim_id":  "CLM-2026-610114",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-EXPIRED",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "CODING",
+                      "disposition":  "MANUAL_REVIEW",
+                      "requires_manual_review":  true,
+                      "manual_review_reasons":  [
+                                                    "DEADLINE_EXPIRED"
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_ACTION_AFTER_DEADLINE",
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "M51 correction would be valid, but the 180-day corrected-claim window closed 2026-07-19.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610115-L1",
+                      "claim_id":  "CLM-2026-610115",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-MULTILINE",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "CODING",
+                      "disposition":  "CORRECT_AND_RESUBMIT",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  "2027-07-22",
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL",
+                                                 "CSE_WRONG_DEADLINE"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "CO-4 + N56: modifier/procedure code defect named.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610115-L2",
+                      "claim_id":  "CLM-2026-610115",
+                      "service_line_id":  2,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-MULTILINE",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "NON_COVERED_BENEFIT",
+                      "disposition":  "BILL_PATIENT",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "PR-96: patient responsibility.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  },
+                  {
+                      "case_id":  "CLM-2026-610116-L1",
+                      "claim_id":  "CLM-2026-610116",
+                      "service_line_id":  1,
+                      "dataset":  "A",
+                      "split":  "development",
+                      "scenario_family_id":  "A-UNKNOWN-PAYER",
+                      "as_of":  "2026-09-06",
+                      "root_cause":  "CONTRACTUAL",
+                      "disposition":  "NO_ACTION_CONTRACTUAL",
+                      "requires_manual_review":  false,
+                      "manual_review_reasons":  [
+
+                                                ],
+                      "deadline":  null,
+                      "policy_source_id":  null,
+                      "criteria":  [
+
+                                   ],
+                      "supporting_passage_ids":  [
+
+                                                 ],
+                      "forbidden_outcomes":  [
+                                                 "CSE_APPROVAL_BYPASS",
+                                                 "CSE_CONTRACTUAL_APPEAL",
+                                                 "CSE_FABRICATED_CITATION",
+                                                 "CSE_UNJUSTIFIED_PATIENT_BILLING",
+                                                 "CSE_UNSUPPORTED_APPEAL"
+                                             ],
+                      "labeler_id":  "adjudicated",
+                      "labeler_notes":  "CO-45 is a contractual write-down whatever the payer; unknown payer does not change it.",
+                      "adjudication_notes":  "Independent labelers agreed; no field-level adjudication change."
+                  }
+              ]
+}
