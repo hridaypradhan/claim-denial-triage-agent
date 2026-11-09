@@ -45,13 +45,16 @@ These targets are for the final evaluation. The pilot shows where the current sy
 
 **Where it failed: routing.** The router (`src/claim_agent/agent/router.py`) sends a case to the agent only when the baseline proposes an appeal for an evidence-dependent root cause. A bundling correction is passed through as deterministic, even though making it depends on a clinical fact. 610107 fails the same way for coordination of benefits: the baseline routes to the "correct payer" without a primary payer identified on the claim.
 
-**Facts and suspected cause.** The route outcome, the baseline disposition and rationale, and the label come from preserved artifacts. That the routing rule is the cause is our diagnosis: the same miss occurs in all three systems, and S0 and S2 share S1's answer only on deterministically routed cases.
+**The system had the signal.** Each baseline finding lists the evidence its action depends on (`required_evidence`). For 610101 it is `ncci_edit_lookup`, and for 610107 it is `primary_eob` and `cob_confirmation`. None of these is on the claim, but the router never checks `required_evidence` before treating a finding as resolved. (This diagnosis comes from Sachin's analysis on #12.)
 
-**Proposed fix.**
-- **Change:** route a correction to manual review (or to the agent) when it needs a fact the claim doesn't contain, such as a separately identifiable visit or a named primary payer.
+**Facts and suspected cause.** The route outcome, the baseline disposition, rationale, and `required_evidence`, and the label all come from preserved artifacts. That the routing rule is the cause is our diagnosis: the same miss occurs in all three systems, and the router passes these findings through unchecked.
+
+**Proposed fix (not applied).**
+- **Change:** before accepting a recoverable deterministic finding, check its `required_evidence`. Send it to manual review when evidence the action *depends on* is missing from the claim.
+- **Catch:** `required_evidence` mixes two kinds of item, so a plain "anything missing" rule over-escalates. Among Dataset A's deterministic recoverable cases, it also lists the field to be corrected (005311 `rendering_provider_npi`, 610115 `procedure_code`) and a document that is useful but not decisive (610104 `updated_insurance_card`, whose label is still route to the correct payer). The check needs to separate evidence that justifies the action from items the action itself supplies.
 - **Owner:** Hriday (router), with Neha reviewing the safety behavior.
-- **Verification:** rerun `python -m evaluation.compare_pilot`. 610101 and 610107 should become manual review, with no other Dataset A case changing.
-- **Caution:** this fix is driven by development cases, so its benefit must be confirmed on the held-out set.
+- **Verification:** rerun `python -m evaluation.compare_pilot`. 610101 and 610107 should become manual review, and no other Dataset A case should change.
+- **Caution:** the fix comes from development cases, so its benefit must be confirmed on the held-out set.
 
 ## Limitations
 
