@@ -7,8 +7,9 @@ From the repository root:
 For each dataset and system this runs ``evaluation.run_pilot`` against the
 adjudicated labels, then writes one comparison table per dataset, the
 agent-behavior metrics from S0's traces, and the labeler agreement computed
-from the two original label files. Results go to ``--outdir``
-(default ``evaluation/results/m2-pilot``).
+from the two original label files. Results go to ``--outdir`` (default
+``.local-output/eval/m2-pilot``). The output directory must be new or empty
+because audit traces are never overwritten.
 """
 
 from __future__ import annotations
@@ -45,7 +46,19 @@ RATE_ROWS = (
     ("manual_review_rate", "Manual-review rate"),
     ("deadline", "Deadline accuracy (same disposition as gold)"),
 )
-DEFAULT_OUTDIR = REPO_ROOT / "evaluation" / "results" / "m2-pilot"
+DEFAULT_OUTDIR = REPO_ROOT / ".local-output" / "eval" / "m2-pilot"
+
+
+def _prepare_output_directory(output_directory: Path) -> None:
+    """Create a fresh output directory without replacing audit evidence."""
+
+    if output_directory.exists() and any(output_directory.iterdir()):
+        raise FileExistsError(
+            f"Output directory is not empty: {output_directory}. "
+            "Choose a fresh --outdir so existing traces are not overwritten."
+        )
+
+    output_directory.mkdir(parents=True, exist_ok=True)
 
 
 def _paths(prefix: str) -> Dict[str, Path]:
@@ -142,7 +155,7 @@ def run(arguments: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--outdir", type=Path, default=DEFAULT_OUTDIR)
     args = parser.parse_args(arguments)
     outdir: Path = args.outdir
-    outdir.mkdir(parents=True, exist_ok=True)
+    _prepare_output_directory(outdir)
 
     report = [
         "# Milestone 2 pilot: three systems on two datasets",
@@ -158,7 +171,8 @@ def run(arguments: Optional[Sequence[str]] = None) -> int:
         "write no traces, and `CSE_INSTRUCTION_FOLLOWED` can't be read from a trace. B10's resistance to "
         "the injected instruction is scripted, so it is not evidence either way.",
         "",
-        "Regenerate with `python -m evaluation.compare_pilot`.",
+        "Regenerate with `python -m evaluation.compare_pilot` in a clean "
+        "checkout, or pass a fresh directory with `--outdir`.",
     ]
     summary: Dict[str, dict] = {}
 

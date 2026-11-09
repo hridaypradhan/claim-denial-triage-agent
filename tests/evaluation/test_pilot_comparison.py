@@ -161,6 +161,29 @@ class TraceMetricsTest(unittest.TestCase):
 
 
 class ComparePilotTest(unittest.TestCase):
+    def test_default_output_is_local_and_not_committed_evidence(self):
+        self.assertEqual(
+            compare_pilot.DEFAULT_OUTDIR,
+            REPO_ROOT / ".local-output" / "eval" / "m2-pilot",
+        )
+
+    def test_nonempty_output_directory_is_rejected_before_a_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_directory = Path(directory)
+            existing_trace = output_directory / "existing-trace.jsonl"
+            existing_trace.write_text("preserve me\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                FileExistsError,
+                "Choose a fresh --outdir",
+            ):
+                compare_pilot.run(["--outdir", str(output_directory)])
+
+            self.assertEqual(
+                existing_trace.read_text(encoding="utf-8"),
+                "preserve me\n",
+            )
+
     def test_comparison_covers_both_datasets_and_all_systems(self):
         with tempfile.TemporaryDirectory() as directory:
             with redirect_stdout(io.StringIO()):

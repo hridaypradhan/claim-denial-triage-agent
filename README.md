@@ -394,6 +394,12 @@ python -m evaluation.compare_pilot
 python -m unittest discover -s tests/evaluation -p "test*.py" -q
 ```
 
+The comparison command writes new artifacts under
+`.local-output/eval/m2-pilot/`, which Git ignores. Audit traces are immutable,
+so a rerun must use a fresh output directory, for example
+`python -m evaluation.compare_pilot --outdir .local-output/eval/m2-pilot-rerun`.
+It never overwrites the committed Milestone 2 evidence.
+
 The committed results are in
 [`evaluation/results/m2-pilot/`](evaluation/results/m2-pilot/):
 [`comparison.md`](evaluation/results/m2-pilot/comparison.md) has one
