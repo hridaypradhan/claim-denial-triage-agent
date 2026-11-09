@@ -1,9 +1,11 @@
 """Tests for the pilot evaluation harness (issue #12)."""
 
+import io
 import json
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from datetime import date
 from pathlib import Path
 
@@ -181,7 +183,9 @@ class SetADatasetTest(unittest.TestCase):
         self.assertEqual(len(case_facts(dataset)), 23)
 
     def test_end_to_end_run_writes_outputs(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        # The report is intentionally printed by the real CLI. Capture it in
+        # this artifact-focused test so quiet test runs remain easy to scan.
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()):
             code = run(["--manifest", str(SET_A_MANIFEST), "--labels", str(SET_A_LABELS),
                         "--experiment", "unit-test", "--outdir", tmp])
             self.assertEqual(code, 0)
@@ -190,10 +194,100 @@ class SetADatasetTest(unittest.TestCase):
                 self.assertTrue((out / name).is_file(), name)
             self.assertEqual(len((out / "predictions.jsonl").read_text(encoding="utf-8").splitlines()), 23)
 
+    def test_scripted_agent_run_preserves_packages_and_traces(self):
+        """S0 should preserve every result and each executed runtime trace."""
+
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            redirect_stdout(io.StringIO()),
+        ):
+            code = run(
+                [
+                    "--manifest",
+                    str(SET_A_MANIFEST),
+                    "--labels",
+                    str(SET_A_LABELS),
+                    "--experiment",
+                    "set-a-scripted-agent",
+                    "--system",
+                    "scripted-agent",
+                    "--outdir",
+                    tmp,
+                ]
+            )
+
+            self.assertEqual(code, 0)
+
+            output_directory = Path(tmp) / "set-a-scripted-agent"
+            output_packages = list(
+                (output_directory / "output_packages").glob("*.json")
+            )
+            traces = list(
+                (output_directory / "traces").glob("*.jsonl")
+            )
+
+            self.assertEqual(len(output_packages), 23)
+            self.assertEqual(len(traces), 2)
+
+            predictions = [
+                json.loads(line)
+                for line in (
+                    output_directory / "predictions.jsonl"
+                ).read_text(encoding="utf-8").splitlines()
+            ]
+            self.assertEqual(len(predictions), 23)
+            self.assertEqual(
+                {prediction["system"] for prediction in predictions},
+                {"scripted-agent"},
+            )
+
+            run_manifest = json.loads(
+                (output_directory / "run_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                run_manifest["output_package_count"],
+                23,
+            )
+            self.assertEqual(
+                run_manifest["canonical_trace_count"],
+                2,
+            )
+
+            scores = json.loads(
+                (output_directory / "scores.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                scores["rates"]["joint"],
+                {"hits": 22, "total": 23},
+            )
+            unknown_payer_result = next(
+                result
+                for result in scores["per_case"]
+                if result["case_id"] == "CLM-2026-610116-L1"
+            )
+            self.assertEqual(
+                unknown_payer_result["predicted_disposition"],
+                "MANUAL_REVIEW",
+            )
+            self.assertEqual(
+                unknown_payer_result["safety_errors"],
+                [],
+            )
+            self.assertEqual(
+                scores["safety_counts"].get(
+                    "CSE_UNSUPPORTED_APPEAL",
+                    0,
+                ),
+                0,
+            )
+
     def test_run_prints_on_a_windows_console(self):
         """A cp1252 console (default Windows) must not crash the run."""
 
-        import io
         from unittest import mock
 
         raw = io.BytesIO()
