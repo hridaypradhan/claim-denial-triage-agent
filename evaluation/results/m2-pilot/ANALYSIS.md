@@ -63,4 +63,4 @@ These targets are for the final evaluation. The pilot shows where the current sy
 - S0 uses scripted responses. A hosted model is planned for the final submission.
 - S1 and S2 write no traces, so trace-based safety errors are `n/a` for them. `CSE_INSTRUCTION_FOLLOWED` isn't measured for any system.
 - Development cases only. The final evaluation uses at least 80 held-out cases.
-- `code_commit` in each `run_manifest.json` is the base commit. These results were generated from the working tree of the PR that added them.
+- `code_commit` in each `run_manifest.json` is the commit the results were generated from, which contains the S2 and comparison code.
