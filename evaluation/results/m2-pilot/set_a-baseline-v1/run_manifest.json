@@ -8,7 +8,7 @@
   "label_status": "ADJUDICATED",
   "manifest_sha256": "ce670e043ab98ed816b3044c61805e8f9784e65dc8006416feca2d54224a7f0d",
   "labels_sha256": "c09aabcae6ce2ba34478f54913bb370a270842668eac1005a7256b69f0848e46",
-  "code_commit": "9d6c8302e90dfa13a401a6d251508c7785503db0",
+  "code_commit": "7378b2580f2585878aa2aa285f254e5474759919",
   "output_package_count": 0,
   "canonical_trace_count": 0
 }
