@@ -160,7 +160,32 @@ def predict_scripted_agent(case: Case, as_of: date) -> Prediction:
     )
 
 
+ESCALATE_ALL = "escalate-all"
+
+
+def predict_escalate_all(case: Case, as_of: date) -> Prediction:
+    """S2: send every case to manual review, as a biller with no automation would.
+
+    The root cause is the frozen baseline's code mapping, so S2 differs from S1
+    only in the disposition. It never recommends an action, so it can't make
+    an unsupported appeal or miss an escalation, but it resolves nothing. That
+    makes it the floor for coverage and the ceiling for caution.
+    """
+
+    finding = predict_baseline_v1(case, as_of)
+    return Prediction(
+        case_id=case.case_id,
+        system=ESCALATE_ALL,
+        disposition=Disposition.MANUAL_REVIEW.value,
+        root_cause=finding.root_cause,
+        deadline=None,
+        approval_state=None,  # no approval step; reported as n/a like baseline-v1
+        details={"baseline_disposition": finding.disposition},
+    )
+
+
 SYSTEMS = {
     BASELINE_V1: predict_baseline_v1,
     SCRIPTED_AGENT: predict_scripted_agent,
+    ESCALATE_ALL: predict_escalate_all,
 }

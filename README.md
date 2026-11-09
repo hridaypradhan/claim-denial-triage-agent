@@ -380,10 +380,20 @@ S0 executes the real router, bounded runtime, retrieval tools, validator,
 output-package builder, and canonical trace adapter. Its model responses are
 case-specific deterministic scripts, so its results verify the integrated
 system behavior but do not measure LLM generalization. Hosted-model execution
-is deferred beyond Milestone 2. The escalate-all comparison baseline remains
-tracked through #12.
+is deferred beyond Milestone 2. The second baseline, `S2` (`escalate-all`),
+sends every case to manual review with the frozen baseline's root cause: it
+never makes an unsafe recommendation, but it resolves nothing.
 
-From the repository root:
+To run all three systems on both datasets and write one comparison report,
+including inter-labeler agreement (percent and Cohen's kappa), from the
+repository root:
+
+```bash
+python -m evaluation.compare_systems --experiment m2-pilot
+```
+
+The report is `.local-output/eval/m2-pilot/comparison.md`, next to the six
+individual runs. To run one system on one dataset:
 
 ```bash
 python -m evaluation.run_pilot \
