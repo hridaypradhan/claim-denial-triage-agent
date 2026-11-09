@@ -1,0 +1,28 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "ROUTE_TO_CORRECT_PAYER",
+    "claim_id": "CLM-2026-610104",
+    "contract_version": "0.1",
+    "deadline_status": "ACTIVE",
+    "denial_codes": [
+      "PR-27"
+    ],
+    "filing_deadline": "2027-06-18",
+    "rationale": "Another active plan is recorded on the encounter.",
+    "required_evidence": [
+      "updated_insurance_card"
+    ],
+    "root_cause": "REGISTRATION_ELIGIBILITY",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-610104",
+  "contract_version": "0.1",
+  "final_disposition": "ROUTE_TO_CORRECT_PAYER",
+  "final_root_cause": "REGISTRATION_ELIGIBILITY",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "DETERMINISTIC_ONLY",
+  "run_id": "CLM-2026-610104-L1-scripted-agent",
+  "service_line_id": 1
+}

@@ -1,0 +1,30 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "ROUTE_TO_CORRECT_PAYER",
+    "claim_id": "CLM-2026-610107",
+    "contract_version": "0.1",
+    "deadline_status": "ACTIVE",
+    "denial_codes": [
+      "CO-22",
+      "MA04"
+    ],
+    "filing_deadline": "2027-07-09",
+    "rationale": "This payer is not primary for the date of service.",
+    "required_evidence": [
+      "primary_eob",
+      "cob_confirmation"
+    ],
+    "root_cause": "COORDINATION_OF_BENEFITS",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-610107",
+  "contract_version": "0.1",
+  "final_disposition": "ROUTE_TO_CORRECT_PAYER",
+  "final_root_cause": "COORDINATION_OF_BENEFITS",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "DETERMINISTIC_ONLY",
+  "run_id": "CLM-2026-610107-L1-escalate-all",
+  "service_line_id": 1
+}

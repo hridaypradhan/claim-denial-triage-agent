@@ -1,0 +1,14 @@
+{
+  "experiment": "set_a-scripted-agent",
+  "system": "scripted-agent",
+  "dataset": "A",
+  "split": "development",
+  "as_of": "2026-09-06",
+  "rubric_version": "0.1",
+  "label_status": "ADJUDICATED",
+  "manifest_sha256": "ce670e043ab98ed816b3044c61805e8f9784e65dc8006416feca2d54224a7f0d",
+  "labels_sha256": "c09aabcae6ce2ba34478f54913bb370a270842668eac1005a7256b69f0848e46",
+  "code_commit": "7378b2580f2585878aa2aa285f254e5474759919",
+  "output_package_count": 23,
+  "canonical_trace_count": 2
+}

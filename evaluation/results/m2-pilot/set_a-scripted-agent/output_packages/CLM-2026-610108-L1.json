@@ -1,0 +1,26 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "BILL_PATIENT",
+    "claim_id": "CLM-2026-610108",
+    "contract_version": "0.1",
+    "deadline_status": "NONE",
+    "denial_codes": [
+      "CO-96",
+      "N130"
+    ],
+    "rationale": "The service is excluded from the plan and the patient was placed on notice.",
+    "required_evidence": [],
+    "root_cause": "NON_COVERED_BENEFIT",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-610108",
+  "contract_version": "0.1",
+  "final_disposition": "BILL_PATIENT",
+  "final_root_cause": "NON_COVERED_BENEFIT",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "DETERMINISTIC_ONLY",
+  "run_id": "CLM-2026-610108-L1-scripted-agent",
+  "service_line_id": 1
+}

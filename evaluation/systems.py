@@ -2,7 +2,8 @@
 
 Each system turns one denied service-line case into a ``Prediction``. S1 runs
 the frozen baseline. S0 runs the current deterministic router and invokes the
-bounded scripted agent only for agent-authorized cases.
+bounded scripted agent only for agent-authorized cases. S2 runs the same router
+but sends every agent-authorized case to manual review instead of the agent.
 """
 
 from __future__ import annotations
@@ -15,7 +16,8 @@ from baseline.triage.claim import load_claim
 from baseline.triage.rules import triage_claim
 
 from claim_agent.agent.canonical_trace import TraceEvent
-from claim_agent.contracts import Disposition, OutputPackage
+from claim_agent.contracts import Disposition, OutputPackage, RouteOutcome
+from claim_agent.output.package import create_output_package
 from claim_agent.tools.knowledge_store import KnowledgeStore
 from evaluation.dataset_a_scripts import DATASET_A_SCRIPTED_PLANS
 from evaluation.dataset_b_scripts import DATASET_B_SCRIPTED_PLANS
@@ -49,6 +51,8 @@ class Prediction:
 BASELINE_V1 = "baseline-v1"
 
 SCRIPTED_AGENT = "scripted-agent"
+ESCALATE_ALL = "escalate-all"
+ESCALATE_ALL_REASON = "ESCALATE_ALL_BASELINE"
 KNOWLEDGE_ROOT = REPO_ROOT / "knowledge"
 PACKAGE_VERSION = "v1"
 
@@ -134,6 +138,58 @@ def predict_scripted_agent(case: Case, as_of: date) -> Prediction:
         )
         trace_events = ()
 
+    return _prediction_from_package(
+        case=case,
+        system=SCRIPTED_AGENT,
+        output_package=output_package,
+        trace_events=trace_events,
+    )
+
+
+def predict_escalate_all(case: Case, as_of: date) -> Prediction:
+    """Run the router, then escalate every agent-authorized case to a person.
+
+    Rule-decidable and router manual-review cases are packaged exactly as in
+    S0, so S0 and S2 differ only on the cases the agent would have handled.
+    """
+
+    prepared_case = prepare_evaluation_case(case, as_of)
+    knowledge_store = KnowledgeStore(KNOWLEDGE_ROOT)
+    run_id = f"{case.case_id}-{ESCALATE_ALL}"
+
+    if prepared_case.requires_agent:
+        output_package = create_output_package(
+            run_id=run_id,
+            package_version=PACKAGE_VERSION,
+            knowledge_snapshot_id=knowledge_store.snapshot_id,
+            finding=prepared_case.baseline_finding,
+            route_outcome=RouteOutcome.AGENT_REQUIRED,
+            agent_terminal_reason=ESCALATE_ALL_REASON,
+        )
+    else:
+        output_package = build_non_agent_output_package(
+            prepared_case=prepared_case,
+            run_id=run_id,
+            package_version=PACKAGE_VERSION,
+            knowledge_snapshot_id=knowledge_store.snapshot_id,
+        )
+
+    return _prediction_from_package(
+        case=case,
+        system=ESCALATE_ALL,
+        output_package=output_package,
+        trace_events=(),
+    )
+
+
+def _prediction_from_package(
+    case: Case,
+    system: str,
+    output_package: OutputPackage,
+    trace_events: Tuple[TraceEvent, ...],
+) -> Prediction:
+    """Convert one output package into the scored prediction fields."""
+
     # Only dispositions that authorize a time-bounded follow-up action expose
     # the baseline filing deadline in evaluation results.
     filing_deadline = (
@@ -145,7 +201,7 @@ def predict_scripted_agent(case: Case, as_of: date) -> Prediction:
 
     return Prediction(
         case_id=case.case_id,
-        system=SCRIPTED_AGENT,
+        system=system,
         disposition=output_package.final_disposition.value,
         root_cause=output_package.final_root_cause.value,
         deadline=(filing_deadline.isoformat() if filing_deadline is not None else None),
@@ -163,4 +219,5 @@ def predict_scripted_agent(case: Case, as_of: date) -> Prediction:
 SYSTEMS = {
     BASELINE_V1: predict_baseline_v1,
     SCRIPTED_AGENT: predict_scripted_agent,
+    ESCALATE_ALL: predict_escalate_all,
 }

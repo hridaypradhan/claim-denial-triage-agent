@@ -375,36 +375,51 @@ the frozen [annotation rubric](datasets/ANNOTATION_RUBRIC.md):
   medical-necessity cases on `knowledge-v1`):
   [`datasets/development/set_b/`](datasets/development/set_b/).
 
-The frozen baseline and the current scripted-agent system (`S0`) are runnable.
-S0 executes the real router, bounded runtime, retrieval tools, validator,
-output-package builder, and canonical trace adapter. Its model responses are
-case-specific deterministic scripts, so its results verify the integrated
-system behavior but do not measure LLM generalization. Hosted-model execution
-is deferred beyond Milestone 2. The escalate-all comparison baseline remains
-tracked through #12.
+Three systems are compared on both datasets:
 
-From the repository root:
+- **S0 `scripted-agent`:** the real router, bounded runtime, retrieval tools,
+  validator, output-package builder, and canonical trace adapter. Its model
+  responses are case-specific deterministic scripts, so its results verify the
+  integrated system behavior but do not measure LLM generalization. Hosted-model
+  execution is deferred beyond Milestone 2.
+- **S1 `baseline-v1`:** the frozen rule-based baseline.
+- **S2 `escalate-all`:** the same router as S0, but every agent-routed case goes
+  to manual review instead of the agent.
+
+To run all three systems on both datasets and write the comparison, from the
+repository root:
 
 ```bash
-python -m evaluation.run_pilot \
-  --manifest datasets/development/set_a/manifest.json \
-  --labels datasets/labels/set_a_development.adjudicated.json \
-  --experiment set-a-dev-scripted-agent \
-  --system scripted-agent
-python -m evaluation.run_pilot \
-  --manifest datasets/development/set_b/manifest.json \
-  --labels datasets/labels/set_b_development.adjudicated.json \
-  --experiment set-b-dev-scripted-agent \
-  --system scripted-agent
+python -m evaluation.compare_pilot
 python -m unittest discover -s tests/evaluation -p "test*.py" -q
 ```
 
-Results go to `.local-output/eval/<experiment>/`: `predictions.jsonl`,
-`scores.json`, `results.md`, and `run_manifest.json`, which records the dataset
-and label hashes and the code commit. Rates are reported with counts and 95%
-Wilson intervals. Critical safety errors that require traces are reported as
-not measurable rather than zero for systems without traces. These are small
-synthetic development-pilot results, not held-out performance claims.
+The committed results are in
+[`evaluation/results/m2-pilot/`](evaluation/results/m2-pilot/):
+[`comparison.md`](evaluation/results/m2-pilot/comparison.md) has one
+three-system table per dataset, S0's agent-behavior metrics from its traces,
+and the labeler agreement (percent and Cohen's kappa).
+[`ANALYSIS.md`](evaluation/results/m2-pilot/ANALYSIS.md) has the comparison,
+the Milestone 1 targets, and the failure case. Each system's folder keeps its
+`predictions.jsonl`, `scores.json`, `results.md`, and `run_manifest.json`,
+which records the dataset and label hashes and the code commit. S0 and S2 also
+keep their output packages, and S0 keeps its canonical traces.
+
+To run one system on one dataset instead:
+
+```bash
+python -m evaluation.run_pilot \
+  --manifest datasets/development/set_b/manifest.json \
+  --labels datasets/labels/set_b_development.adjudicated.json \
+  --experiment set-b-dev-escalate-all \
+  --system escalate-all
+```
+
+Results go to `.local-output/eval/<experiment>/`. Rates are reported with
+counts and 95% Wilson intervals. Critical safety errors that need a trace are
+reported as not measurable rather than zero; the comparison fills in S0's
+values from its traces. These are small synthetic development-pilot results,
+not held-out performance claims.
 
 ## Run one reproducible example
 

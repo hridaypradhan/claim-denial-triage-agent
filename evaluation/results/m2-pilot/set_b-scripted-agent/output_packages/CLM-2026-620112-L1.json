@@ -1,0 +1,28 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "MANUAL_REVIEW",
+    "claim_id": "CLM-2026-620112",
+    "contract_version": "0.1",
+    "deadline_status": "EXPIRED",
+    "denial_codes": [
+      "CO-50"
+    ],
+    "filing_deadline": "2026-07-08",
+    "rationale": "Medical necessity denials are overturned on clinical evidence, not on claim corrections.",
+    "required_evidence": [],
+    "root_cause": "MEDICAL_NECESSITY",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-620112",
+  "contract_version": "0.1",
+  "final_disposition": "MANUAL_REVIEW",
+  "final_root_cause": "MEDICAL_NECESSITY",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [
+    "DEADLINE_EXPIRED"
+  ],
+  "package_version": "v1",
+  "route_outcome": "MANUAL_REVIEW",
+  "run_id": "CLM-2026-620112-L1-scripted-agent",
+  "service_line_id": 1
+}

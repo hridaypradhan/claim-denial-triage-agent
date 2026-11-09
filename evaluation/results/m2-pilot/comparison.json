@@ -1,0 +1,366 @@
+{
+  "A": {
+    "cases": 23,
+    "systems": {
+      "scripted-agent": {
+        "rates": {
+          "joint": {
+            "hits": 20,
+            "total": 23
+          },
+          "disposition": {
+            "hits": 20,
+            "total": 23
+          },
+          "root_cause": {
+            "hits": 23,
+            "total": 23
+          },
+          "coverage": {
+            "hits": 13,
+            "total": 14
+          },
+          "selective": {
+            "hits": 13,
+            "total": 15
+          },
+          "unnecessary_manual_review": {
+            "hits": 1,
+            "total": 14
+          },
+          "manual_review_rate": {
+            "hits": 8,
+            "total": 23
+          },
+          "deadline": {
+            "hits": 6,
+            "total": 6
+          }
+        },
+        "safety_counts": {
+          "CSE_MISSED_ESCALATION": 2
+        },
+        "safety_unmeasured": [
+          "CSE_FABRICATED_CITATION",
+          "CSE_INSTRUCTION_FOLLOWED",
+          "CSE_WRONG_POLICY",
+          "CSE_DEADLINE_LOST_TO_FAILURE"
+        ]
+      },
+      "baseline-v1": {
+        "rates": {
+          "joint": {
+            "hits": 19,
+            "total": 23
+          },
+          "disposition": {
+            "hits": 19,
+            "total": 23
+          },
+          "root_cause": {
+            "hits": 23,
+            "total": 23
+          },
+          "coverage": {
+            "hits": 14,
+            "total": 14
+          },
+          "selective": {
+            "hits": 14,
+            "total": 18
+          },
+          "unnecessary_manual_review": {
+            "hits": 0,
+            "total": 14
+          },
+          "manual_review_rate": {
+            "hits": 5,
+            "total": 23
+          },
+          "deadline": {
+            "hits": 6,
+            "total": 6
+          }
+        },
+        "safety_counts": {
+          "CSE_MISSED_ESCALATION": 3,
+          "CSE_UNSUPPORTED_APPEAL": 2
+        },
+        "safety_unmeasured": [
+          "CSE_FABRICATED_CITATION",
+          "CSE_INSTRUCTION_FOLLOWED",
+          "CSE_WRONG_POLICY",
+          "CSE_DEADLINE_LOST_TO_FAILURE",
+          "CSE_APPROVAL_BYPASS"
+        ]
+      },
+      "escalate-all": {
+        "rates": {
+          "joint": {
+            "hits": 20,
+            "total": 23
+          },
+          "disposition": {
+            "hits": 20,
+            "total": 23
+          },
+          "root_cause": {
+            "hits": 23,
+            "total": 23
+          },
+          "coverage": {
+            "hits": 13,
+            "total": 14
+          },
+          "selective": {
+            "hits": 13,
+            "total": 15
+          },
+          "unnecessary_manual_review": {
+            "hits": 1,
+            "total": 14
+          },
+          "manual_review_rate": {
+            "hits": 8,
+            "total": 23
+          },
+          "deadline": {
+            "hits": 6,
+            "total": 6
+          }
+        },
+        "safety_counts": {
+          "CSE_MISSED_ESCALATION": 2
+        },
+        "safety_unmeasured": [
+          "CSE_FABRICATED_CITATION",
+          "CSE_INSTRUCTION_FOLLOWED",
+          "CSE_WRONG_POLICY",
+          "CSE_DEADLINE_LOST_TO_FAILURE"
+        ]
+      }
+    },
+    "agent_behaviour": {
+      "Agent runs": "2",
+      "Runs ending in a proposed decision": "0 (validator accepted 0)",
+      "Runs ending in a model-requested manual review": "2",
+      "Other run terminations (failure, budget, rejection)": "0",
+      "Valid tool calls": "2/2 (100%, CI 34-100%)",
+      "Tool calls returning evidence": "0/2 (0%, CI 0-66%)",
+      "Tool calls returning an explicit error (e.g. NO_MATCH)": "2",
+      "Policy requests matching the claim's payer, procedure, and date": "2/2 (100%, CI 34-100%)",
+      "Citation precision (cited passages that were retrieved in the run)": "n/a (no cases)",
+      "Runs over any budget": "0",
+      "Repair attempts": "0",
+      "Steps per run (median, max)": "3, 3"
+    },
+    "trace_safety_counts": {
+      "CSE_FABRICATED_CITATION": 0,
+      "CSE_WRONG_POLICY": 0,
+      "CSE_DEADLINE_LOST_TO_FAILURE": 0
+    },
+    "unretrieved_citations": [],
+    "labeler_agreement": {
+      "disposition": {
+        "agreed": 19,
+        "total": 23,
+        "kappa": 0.787528868360277
+      },
+      "root_cause": {
+        "agreed": 23,
+        "total": 23,
+        "kappa": 1.0
+      },
+      "manual_review_reasons": {
+        "agreed": 19,
+        "total": 23,
+        "kappa": 0.6554307116104869
+      },
+      "criterion_status": {
+        "agreed": 0,
+        "total": 0,
+        "kappa": null
+      }
+    }
+  },
+  "B": {
+    "cases": 12,
+    "systems": {
+      "scripted-agent": {
+        "rates": {
+          "joint": {
+            "hits": 12,
+            "total": 12
+          },
+          "disposition": {
+            "hits": 12,
+            "total": 12
+          },
+          "root_cause": {
+            "hits": 12,
+            "total": 12
+          },
+          "coverage": {
+            "hits": 6,
+            "total": 6
+          },
+          "selective": {
+            "hits": 6,
+            "total": 6
+          },
+          "unnecessary_manual_review": {
+            "hits": 0,
+            "total": 6
+          },
+          "manual_review_rate": {
+            "hits": 6,
+            "total": 12
+          },
+          "deadline": {
+            "hits": 4,
+            "total": 4
+          }
+        },
+        "safety_counts": {},
+        "safety_unmeasured": [
+          "CSE_FABRICATED_CITATION",
+          "CSE_INSTRUCTION_FOLLOWED",
+          "CSE_WRONG_POLICY",
+          "CSE_DEADLINE_LOST_TO_FAILURE"
+        ]
+      },
+      "baseline-v1": {
+        "rates": {
+          "joint": {
+            "hits": 5,
+            "total": 12
+          },
+          "disposition": {
+            "hits": 5,
+            "total": 12
+          },
+          "root_cause": {
+            "hits": 12,
+            "total": 12
+          },
+          "coverage": {
+            "hits": 4,
+            "total": 6
+          },
+          "selective": {
+            "hits": 4,
+            "total": 11
+          },
+          "unnecessary_manual_review": {
+            "hits": 0,
+            "total": 6
+          },
+          "manual_review_rate": {
+            "hits": 1,
+            "total": 12
+          },
+          "deadline": {
+            "hits": 4,
+            "total": 4
+          }
+        },
+        "safety_counts": {
+          "CSE_UNSUPPORTED_APPEAL": 7,
+          "CSE_MISSED_ESCALATION": 4
+        },
+        "safety_unmeasured": [
+          "CSE_FABRICATED_CITATION",
+          "CSE_INSTRUCTION_FOLLOWED",
+          "CSE_WRONG_POLICY",
+          "CSE_DEADLINE_LOST_TO_FAILURE",
+          "CSE_APPROVAL_BYPASS"
+        ]
+      },
+      "escalate-all": {
+        "rates": {
+          "joint": {
+            "hits": 6,
+            "total": 12
+          },
+          "disposition": {
+            "hits": 6,
+            "total": 12
+          },
+          "root_cause": {
+            "hits": 12,
+            "total": 12
+          },
+          "coverage": {
+            "hits": 0,
+            "total": 6
+          },
+          "selective": {
+            "hits": 0,
+            "total": 0
+          },
+          "unnecessary_manual_review": {
+            "hits": 6,
+            "total": 6
+          },
+          "manual_review_rate": {
+            "hits": 12,
+            "total": 12
+          },
+          "deadline": {
+            "hits": 0,
+            "total": 0
+          }
+        },
+        "safety_counts": {},
+        "safety_unmeasured": [
+          "CSE_FABRICATED_CITATION",
+          "CSE_INSTRUCTION_FOLLOWED",
+          "CSE_WRONG_POLICY",
+          "CSE_DEADLINE_LOST_TO_FAILURE"
+        ]
+      }
+    },
+    "agent_behaviour": {
+      "Agent runs": "11",
+      "Runs ending in a proposed decision": "6 (validator accepted 6)",
+      "Runs ending in a model-requested manual review": "5",
+      "Other run terminations (failure, budget, rejection)": "0",
+      "Valid tool calls": "24/24 (100%, CI 86-100%)",
+      "Tool calls returning evidence": "23/24 (96%, CI 80-99%)",
+      "Tool calls returning an explicit error (e.g. NO_MATCH)": "1",
+      "Policy requests matching the claim's payer, procedure, and date": "11/11 (100%, CI 74-100%)",
+      "Citation precision (cited passages that were retrieved in the run)": "43/43 (100%, CI 92-100%)",
+      "Runs over any budget": "0",
+      "Repair attempts": "0",
+      "Steps per run (median, max)": "5, 7"
+    },
+    "trace_safety_counts": {
+      "CSE_FABRICATED_CITATION": 0,
+      "CSE_WRONG_POLICY": 0,
+      "CSE_DEADLINE_LOST_TO_FAILURE": 0
+    },
+    "unretrieved_citations": [],
+    "labeler_agreement": {
+      "disposition": {
+        "agreed": 12,
+        "total": 12,
+        "kappa": 1.0
+      },
+      "root_cause": {
+        "agreed": 12,
+        "total": 12,
+        "kappa": null
+      },
+      "manual_review_reasons": {
+        "agreed": 11,
+        "total": 12,
+        "kappa": 0.8749999999999998
+      },
+      "criterion_status": {
+        "agreed": 33,
+        "total": 33,
+        "kappa": 1.0
+      }
+    }
+  }
+}

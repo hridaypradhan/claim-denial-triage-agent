@@ -1,0 +1,25 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "NO_ACTION_CONTRACTUAL",
+    "claim_id": "CLM-2026-005644",
+    "contract_version": "0.1",
+    "deadline_status": "NONE",
+    "denial_codes": [
+      "CO-45"
+    ],
+    "rationale": "Not a denial. This is the negotiated write-down between the billed and allowed amounts.",
+    "required_evidence": [],
+    "root_cause": "CONTRACTUAL",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-005644",
+  "contract_version": "0.1",
+  "final_disposition": "NO_ACTION_CONTRACTUAL",
+  "final_root_cause": "CONTRACTUAL",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "DETERMINISTIC_ONLY",
+  "run_id": "CLM-2026-005644-L1-escalate-all",
+  "service_line_id": 1
+}

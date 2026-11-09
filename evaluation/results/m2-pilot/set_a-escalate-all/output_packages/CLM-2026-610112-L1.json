@@ -1,0 +1,28 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "APPEAL_WITH_DOCUMENTATION",
+    "claim_id": "CLM-2026-610112",
+    "contract_version": "0.1",
+    "deadline_status": "ACTIVE",
+    "denial_codes": [
+      "CO-29"
+    ],
+    "filing_deadline": "2026-12-13",
+    "rationale": "Timely filing denials are reversible only with proof of the original submission.",
+    "required_evidence": [
+      "clearinghouse_acceptance_report"
+    ],
+    "root_cause": "TIMELY_FILING",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-610112",
+  "contract_version": "0.1",
+  "final_disposition": "APPEAL_WITH_DOCUMENTATION",
+  "final_root_cause": "TIMELY_FILING",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "DETERMINISTIC_ONLY",
+  "run_id": "CLM-2026-610112-L1-escalate-all",
+  "service_line_id": 1
+}

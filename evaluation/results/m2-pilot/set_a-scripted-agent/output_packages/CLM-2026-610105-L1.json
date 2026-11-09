@@ -1,0 +1,27 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "BILL_PATIENT",
+    "claim_id": "CLM-2026-610105",
+    "contract_version": "0.1",
+    "deadline_status": "NONE",
+    "denial_codes": [
+      "PR-27"
+    ],
+    "rationale": "Coverage had lapsed, so the balance becomes patient responsibility.",
+    "required_evidence": [
+      "eligibility_response"
+    ],
+    "root_cause": "REGISTRATION_ELIGIBILITY",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-610105",
+  "contract_version": "0.1",
+  "final_disposition": "BILL_PATIENT",
+  "final_root_cause": "REGISTRATION_ELIGIBILITY",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "DETERMINISTIC_ONLY",
+  "run_id": "CLM-2026-610105-L1-scripted-agent",
+  "service_line_id": 1
+}

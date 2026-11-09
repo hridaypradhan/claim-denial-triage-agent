@@ -1,0 +1,27 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "MANUAL_REVIEW",
+    "claim_id": "CLM-2026-610113",
+    "contract_version": "0.1",
+    "deadline_status": "NONE",
+    "denial_codes": [
+      "CO-252"
+    ],
+    "rationale": "Unmapped denial code; the baseline will not guess.",
+    "required_evidence": [
+      "carc_lookup"
+    ],
+    "root_cause": "UNKNOWN",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-610113",
+  "contract_version": "0.1",
+  "final_disposition": "MANUAL_REVIEW",
+  "final_root_cause": "UNKNOWN",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "MANUAL_REVIEW",
+  "run_id": "CLM-2026-610113-L1-escalate-all",
+  "service_line_id": 1
+}
