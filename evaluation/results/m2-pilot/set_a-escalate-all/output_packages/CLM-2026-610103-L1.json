@@ -1,0 +1,27 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "MANUAL_REVIEW",
+    "claim_id": "CLM-2026-610103",
+    "contract_version": "0.1",
+    "deadline_status": "NONE",
+    "denial_codes": [
+      "CO-18"
+    ],
+    "rationale": "Duplicate logic needs claim history that the record does not carry.",
+    "required_evidence": [
+      "prior_claim_history"
+    ],
+    "root_cause": "DUPLICATE",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-610103",
+  "contract_version": "0.1",
+  "final_disposition": "MANUAL_REVIEW",
+  "final_root_cause": "DUPLICATE",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "MANUAL_REVIEW",
+  "run_id": "CLM-2026-610103-L1-escalate-all",
+  "service_line_id": 1
+}

@@ -1,0 +1,27 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "MANUAL_REVIEW",
+    "claim_id": "CLM-2026-005882",
+    "contract_version": "0.1",
+    "deadline_status": "NONE",
+    "denial_codes": [
+      "CO-16"
+    ],
+    "rationale": "The denial is real but unactionable as received; the code pair does not name a field.",
+    "required_evidence": [
+      "835_remittance"
+    ],
+    "root_cause": "CODING",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-005882",
+  "contract_version": "0.1",
+  "final_disposition": "MANUAL_REVIEW",
+  "final_root_cause": "CODING",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "MANUAL_REVIEW",
+  "run_id": "CLM-2026-005882-L1-scripted-agent",
+  "service_line_id": 1
+}

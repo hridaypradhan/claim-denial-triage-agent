@@ -34,7 +34,7 @@ from evaluation.systems import (
     Prediction,
 )
 
-HAS_TRACES = {"baseline-v1": False}
+HAS_TRACES = {"baseline-v1": False, "escalate-all": False}
 
 
 def _sha256(path: Path) -> str:

@@ -1,0 +1,27 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "CORRECT_AND_RESUBMIT",
+    "claim_id": "CLM-2026-610106",
+    "contract_version": "0.1",
+    "deadline_status": "ACTIVE",
+    "denial_codes": [
+      "CO-22",
+      "MA04"
+    ],
+    "filing_deadline": "2027-07-09",
+    "rationale": "The primary remittance exists and only needs to accompany the claim.",
+    "required_evidence": [],
+    "root_cause": "COORDINATION_OF_BENEFITS",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-610106",
+  "contract_version": "0.1",
+  "final_disposition": "CORRECT_AND_RESUBMIT",
+  "final_root_cause": "COORDINATION_OF_BENEFITS",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "DETERMINISTIC_ONLY",
+  "run_id": "CLM-2026-610106-L1-scripted-agent",
+  "service_line_id": 1
+}

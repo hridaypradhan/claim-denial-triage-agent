@@ -1,0 +1,31 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "MANUAL_REVIEW",
+    "claim_id": "CLM-2026-610114",
+    "contract_version": "0.1",
+    "deadline_status": "EXPIRED",
+    "denial_codes": [
+      "CO-16",
+      "M51"
+    ],
+    "filing_deadline": "2026-07-19",
+    "rationale": "The payer named a specific defect on the claim, so this is fixable without an appeal.",
+    "required_evidence": [
+      "procedure_code"
+    ],
+    "root_cause": "CODING",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-610114",
+  "contract_version": "0.1",
+  "final_disposition": "MANUAL_REVIEW",
+  "final_root_cause": "CODING",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [
+    "DEADLINE_EXPIRED"
+  ],
+  "package_version": "v1",
+  "route_outcome": "MANUAL_REVIEW",
+  "run_id": "CLM-2026-610114-L1-scripted-agent",
+  "service_line_id": 1
+}

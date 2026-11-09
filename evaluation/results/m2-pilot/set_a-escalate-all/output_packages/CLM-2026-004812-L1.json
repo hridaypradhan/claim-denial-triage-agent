@@ -1,0 +1,26 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "CORRECT_AND_RESUBMIT",
+    "claim_id": "CLM-2026-004812",
+    "contract_version": "0.1",
+    "deadline_status": "ACTIVE",
+    "denial_codes": [
+      "CO-197"
+    ],
+    "filing_deadline": "2027-05-14",
+    "rationale": "Auth exists in the encounter record, so this is a transmission gap rather than a true auth failure.",
+    "required_evidence": [],
+    "root_cause": "AUTHORIZATION",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-004812",
+  "contract_version": "0.1",
+  "final_disposition": "CORRECT_AND_RESUBMIT",
+  "final_root_cause": "AUTHORIZATION",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "DETERMINISTIC_ONLY",
+  "run_id": "CLM-2026-004812-L1-escalate-all",
+  "service_line_id": 1
+}

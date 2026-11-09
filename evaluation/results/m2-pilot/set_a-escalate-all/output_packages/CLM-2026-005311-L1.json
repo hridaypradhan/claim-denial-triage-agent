@@ -1,0 +1,29 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "CORRECT_AND_RESUBMIT",
+    "claim_id": "CLM-2026-005311",
+    "contract_version": "0.1",
+    "deadline_status": "ACTIVE",
+    "denial_codes": [
+      "CO-16",
+      "N290"
+    ],
+    "filing_deadline": "2027-07-08",
+    "rationale": "The payer named a specific defect on the claim, so this is fixable without an appeal.",
+    "required_evidence": [
+      "rendering_provider_npi"
+    ],
+    "root_cause": "CODING",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-005311",
+  "contract_version": "0.1",
+  "final_disposition": "CORRECT_AND_RESUBMIT",
+  "final_root_cause": "CODING",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "DETERMINISTIC_ONLY",
+  "run_id": "CLM-2026-005311-L1-escalate-all",
+  "service_line_id": 1
+}

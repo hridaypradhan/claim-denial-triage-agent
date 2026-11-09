@@ -1,0 +1,28 @@
+{
+  "baseline_finding": {
+    "baseline_disposition": "MANUAL_REVIEW",
+    "claim_id": "CLM-2026-610111",
+    "contract_version": "0.1",
+    "deadline_status": "NONE",
+    "denial_codes": [
+      "CO-197"
+    ],
+    "rationale": "The outcome depends on facts the claim record does not carry, so a human should decide.",
+    "required_evidence": [
+      "clinical_note",
+      "auth_requirement_grid"
+    ],
+    "root_cause": "AUTHORIZATION",
+    "service_line_id": 1
+  },
+  "claim_id": "CLM-2026-610111",
+  "contract_version": "0.1",
+  "final_disposition": "MANUAL_REVIEW",
+  "final_root_cause": "AUTHORIZATION",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "manual_review_reasons": [],
+  "package_version": "v1",
+  "route_outcome": "MANUAL_REVIEW",
+  "run_id": "CLM-2026-610111-L1-scripted-agent",
+  "service_line_id": 1
+}

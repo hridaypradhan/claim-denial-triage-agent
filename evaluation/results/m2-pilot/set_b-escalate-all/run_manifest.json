@@ -1,0 +1,14 @@
+{
+  "experiment": "set_b-escalate-all",
+  "system": "escalate-all",
+  "dataset": "B",
+  "split": "development",
+  "as_of": "2026-09-06",
+  "rubric_version": "0.1",
+  "label_status": "ADJUDICATED",
+  "manifest_sha256": "139f206ca172c2f0e33435750d0c825204a78cf0cca6c2581696ef23d9068032",
+  "labels_sha256": "54c1c1e98a085df2a2f9736bdcc53174e8ccc77677a4647bac52e223747acf14",
+  "code_commit": "9d6c8302e90dfa13a401a6d251508c7785503db0",
+  "output_package_count": 12,
+  "canonical_trace_count": 0
+}
