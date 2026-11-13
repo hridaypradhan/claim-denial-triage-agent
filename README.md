@@ -173,6 +173,18 @@ configuration is committed yet. Hosted-call timeouts consume the attempted
 model-call budget, emit `MODEL_FAILED`, and produce an audited `MANUAL_REVIEW`
 package with terminal reason `model_timeout`.
 
+Issue #48 will connect that boundary to ASU Research Computing's Voyager
+gateway through one reusable OpenAI Chat Completions-compatible transport.
+Voyager is provider configuration rather than a model-specific transport.
+Normal tests will remain offline, each developer will use an individual local
+credential, gateway-added capabilities and automatic model selection will be
+disabled, and no hosted failure will fall back to the scripted model or another
+hosted model. A timeout, provider failure, or unusable response must instead
+produce an audited `MANUAL_REVIEW` outcome. The provisional integration model
+is `mimo-v2-6-pro`; the final model will be frozen only after a documented
+development-only comparison described in
+[`decision 0003`](docs/decisions/0003-hosted-model-provider-and-selection.md).
+
 ### Implemented packages and remaining boundaries
 
 The repository is organized around the following implemented packages and
@@ -502,8 +514,9 @@ These limitations define the work assigned to the agentic extension; they are no
 - [x] Connect typed routing, tool, validation, output, and canonical-trace adapters.
 - [x] Add criterion-level evidence assessment and resolvable citations.
 - [x] Add deterministic safety, citation, formula, and filing-deadline validation.
-- [ ] Add provider-specific hosted transport, tool-less evidence verification,
-  and grounded drafting through #34.
+- [ ] Add the hosted transport and freeze the selected model through #48.
+- [ ] Add tool-less evidence verification through #60 and grounded drafting
+  through #61.
 - [ ] Build development and held-out synthetic datasets.
 - [ ] Compare the agentic system against the unchanged baseline.
 - [ ] Conduct stakeholder review of representative system reports.
