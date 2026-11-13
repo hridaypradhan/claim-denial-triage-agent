@@ -1,0 +1,395 @@
+{
+  "bundle_version": "0.1",
+  "run_id": "FIXTURE-APPEAL-005097",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "scope": {
+    "claim_id": "CLM-2026-005097",
+    "service_line_id": 1,
+    "payer": "BCBS_AZ",
+    "procedure_code": "70553",
+    "service_date": "2026-06-02"
+  },
+  "policy_formula": "A AND B AND (C OR D)",
+  "passages": [
+    {
+      "passage": {
+        "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P2",
+        "source_id": "POL-BCBSAZ-MRI-BRAIN",
+        "source_type": "medical_policy",
+        "version": "1",
+        "effective_from": "2026-01-01",
+        "effective_to": null,
+        "text": "MRI of the brain is considered medically necessary when criteria 3.1 and 3.2 are met. For CPT 70553 (without contrast, followed by with contrast), criterion 3.3 or criterion 3.4 must also be met."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "retrieve_medical_policy",
+      "request_id": "REQ-1",
+      "call_index": 1
+    },
+    {
+      "passage": {
+        "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P1",
+        "source_id": "POL-BCBSAZ-MRI-BRAIN",
+        "source_type": "medical_policy",
+        "version": "1",
+        "effective_from": "2026-01-01",
+        "effective_to": null,
+        "text": "This policy applies to outpatient professional claims for magnetic resonance imaging of the brain, CPT 70551, 70552, and 70553, with dates of service on or after January 1, 2026."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "retrieve_medical_policy",
+      "request_id": "REQ-1",
+      "call_index": 1
+    },
+    {
+      "passage": {
+        "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P7",
+        "source_id": "POL-BCBSAZ-MRI-BRAIN",
+        "source_type": "medical_policy",
+        "version": "1",
+        "effective_from": "2026-01-01",
+        "effective_to": null,
+        "text": "Documentation supporting each applicable criterion must be available in the medical record on request. Absence of documentation for a required criterion does not establish that the criterion was not met."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "retrieve_medical_policy",
+      "request_id": "REQ-1",
+      "call_index": 1
+    },
+    {
+      "passage": {
+        "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P3",
+        "source_id": "POL-BCBSAZ-MRI-BRAIN",
+        "source_type": "medical_policy",
+        "version": "1",
+        "effective_from": "2026-01-01",
+        "effective_to": null,
+        "text": "The member has headache accompanied by at least one neurologic red-flag sign documented in the medical record, such as new diplopia, papilledema, focal motor or sensory deficit, or new-onset seizure."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "retrieve_medical_policy",
+      "request_id": "REQ-1",
+      "call_index": 1
+    },
+    {
+      "passage": {
+        "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P6",
+        "source_id": "POL-BCBSAZ-MRI-BRAIN",
+        "source_type": "medical_policy",
+        "version": "1",
+        "effective_from": "2026-01-01",
+        "effective_to": null,
+        "text": "Prior non-contrast CT or MRI of the head was performed and was non-diagnostic for the clinical question that prompted the current order."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "retrieve_medical_policy",
+      "request_id": "REQ-1",
+      "call_index": 1
+    },
+    {
+      "passage": {
+        "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P4",
+        "source_id": "POL-BCBSAZ-MRI-BRAIN",
+        "source_type": "medical_policy",
+        "version": "1",
+        "effective_from": "2026-01-01",
+        "effective_to": null,
+        "text": "A focused neurologic examination, including cranial nerve assessment, is documented by the ordering clinician on or before the date the imaging is ordered."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "retrieve_medical_policy",
+      "request_id": "REQ-1",
+      "call_index": 1
+    },
+    {
+      "passage": {
+        "passage_id": "POL-BCBSAZ-MRI-BRAIN@v1#P5",
+        "source_id": "POL-BCBSAZ-MRI-BRAIN",
+        "source_type": "medical_policy",
+        "version": "1",
+        "effective_from": "2026-01-01",
+        "effective_to": null,
+        "text": "The record documents a clinical suspicion that requires contrast enhancement, such as a suspected intracranial mass, infection, inflammatory process, or demyelinating disease."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "retrieve_medical_policy",
+      "request_id": "REQ-1",
+      "call_index": 1
+    },
+    {
+      "passage": {
+        "passage_id": "ENC-CLM-2026-005097-CN@v1#L1",
+        "source_id": "ENC-CLM-2026-005097-CN",
+        "source_type": "encounter_note",
+        "version": "1",
+        "effective_from": null,
+        "effective_to": null,
+        "text": "Chief complaint: headache for three weeks, worse in the morning."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "get_encounter_note",
+      "request_id": "REQ-2",
+      "call_index": 2
+    },
+    {
+      "passage": {
+        "passage_id": "ENC-CLM-2026-005097-CN@v1#L2",
+        "source_id": "ENC-CLM-2026-005097-CN",
+        "source_type": "encounter_note",
+        "version": "1",
+        "effective_from": null,
+        "effective_to": null,
+        "text": "History: patient reports intermittent double vision beginning about ten days ago. No prior history of migraine. No recent head trauma."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "get_encounter_note",
+      "request_id": "REQ-2",
+      "call_index": 2
+    },
+    {
+      "passage": {
+        "passage_id": "ENC-CLM-2026-005097-CN@v1#L3",
+        "source_id": "ENC-CLM-2026-005097-CN",
+        "source_type": "encounter_note",
+        "version": "1",
+        "effective_from": null,
+        "effective_to": null,
+        "text": "Neurologic exam: alert and oriented. Cranial nerves II through XII assessed; mild limitation of left lateral gaze with horizontal diplopia on left gaze. Strength 5/5 in all extremities. Sensation intact. Gait normal."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "get_encounter_note",
+      "request_id": "REQ-2",
+      "call_index": 2
+    },
+    {
+      "passage": {
+        "passage_id": "ENC-CLM-2026-005097-CN@v1#L4",
+        "source_id": "ENC-CLM-2026-005097-CN",
+        "source_type": "encounter_note",
+        "version": "1",
+        "effective_from": null,
+        "effective_to": null,
+        "text": "Fundoscopic exam limited; unable to fully assess optic discs in clinic."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "get_encounter_note",
+      "request_id": "REQ-2",
+      "call_index": 2
+    },
+    {
+      "passage": {
+        "passage_id": "ENC-CLM-2026-005097-CN@v1#L5",
+        "source_id": "ENC-CLM-2026-005097-CN",
+        "source_type": "encounter_note",
+        "version": "1",
+        "effective_from": null,
+        "effective_to": null,
+        "text": "Assessment: headache with new diplopia (R51.9, H53.2). Neurologic red-flag present."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "get_encounter_note",
+      "request_id": "REQ-2",
+      "call_index": 2
+    },
+    {
+      "passage": {
+        "passage_id": "ENC-CLM-2026-005097-CN@v1#L6",
+        "source_id": "ENC-CLM-2026-005097-CN",
+        "source_type": "encounter_note",
+        "version": "1",
+        "effective_from": null,
+        "effective_to": null,
+        "text": "Plan: order MRI brain. Referral to neurology placed. Return precautions reviewed."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "get_encounter_note",
+      "request_id": "REQ-2",
+      "call_index": 2
+    },
+    {
+      "passage": {
+        "passage_id": "ENC-CLM-2026-005097-PN@v1#L1",
+        "source_id": "ENC-CLM-2026-005097-PN",
+        "source_type": "encounter_note",
+        "version": "1",
+        "effective_from": null,
+        "effective_to": null,
+        "text": "Reason for consult: three weeks of progressive headache with new horizontal diplopia, referred by primary care."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "get_encounter_note",
+      "request_id": "REQ-3",
+      "call_index": 3
+    },
+    {
+      "passage": {
+        "passage_id": "ENC-CLM-2026-005097-PN@v1#L2",
+        "source_id": "ENC-CLM-2026-005097-PN",
+        "source_type": "encounter_note",
+        "version": "1",
+        "effective_from": null,
+        "effective_to": null,
+        "text": "Exam: partial left sixth cranial nerve palsy confirmed. Mild bilateral optic disc blurring on dilated fundoscopy, concerning for early papilledema."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "get_encounter_note",
+      "request_id": "REQ-3",
+      "call_index": 3
+    },
+    {
+      "passage": {
+        "passage_id": "ENC-CLM-2026-005097-PN@v1#L3",
+        "source_id": "ENC-CLM-2026-005097-PN",
+        "source_type": "encounter_note",
+        "version": "1",
+        "effective_from": null,
+        "effective_to": null,
+        "text": "No prior head CT or MRI on record."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "get_encounter_note",
+      "request_id": "REQ-3",
+      "call_index": 3
+    },
+    {
+      "passage": {
+        "passage_id": "ENC-CLM-2026-005097-PN@v1#L4",
+        "source_id": "ENC-CLM-2026-005097-PN",
+        "source_type": "encounter_note",
+        "version": "1",
+        "effective_from": null,
+        "effective_to": null,
+        "text": "Impression: findings raise concern for a space-occupying intracranial lesion with raised intracranial pressure. Contrast-enhanced imaging is needed to characterize a possible mass."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "get_encounter_note",
+      "request_id": "REQ-3",
+      "call_index": 3
+    },
+    {
+      "passage": {
+        "passage_id": "ENC-CLM-2026-005097-PN@v1#L5",
+        "source_id": "ENC-CLM-2026-005097-PN",
+        "source_type": "encounter_note",
+        "version": "1",
+        "effective_from": null,
+        "effective_to": null,
+        "text": "Plan: MRI brain without and with contrast (CPT 70553), to be performed on an expedited basis."
+      },
+      "claim_id": "CLM-2026-005097",
+      "payer": "BCBS_AZ",
+      "procedure_code": "70553",
+      "service_date": "2026-06-02",
+      "tool_name": "get_encounter_note",
+      "request_id": "REQ-3",
+      "call_index": 3
+    }
+  ],
+  "retrievals": [
+    {
+      "call_index": 1,
+      "request_id": "REQ-1",
+      "tool_name": "retrieve_medical_policy",
+      "status": "OK",
+      "error_code": null,
+      "source_ids": [
+        "POL-BCBSAZ-MRI-BRAIN@v1"
+      ],
+      "passage_ids": [
+        "POL-BCBSAZ-MRI-BRAIN@v1#P2",
+        "POL-BCBSAZ-MRI-BRAIN@v1#P1",
+        "POL-BCBSAZ-MRI-BRAIN@v1#P7",
+        "POL-BCBSAZ-MRI-BRAIN@v1#P3",
+        "POL-BCBSAZ-MRI-BRAIN@v1#P6",
+        "POL-BCBSAZ-MRI-BRAIN@v1#P4",
+        "POL-BCBSAZ-MRI-BRAIN@v1#P5"
+      ]
+    },
+    {
+      "call_index": 2,
+      "request_id": "REQ-2",
+      "tool_name": "get_encounter_note",
+      "status": "OK",
+      "error_code": null,
+      "source_ids": [
+        "ENC-CLM-2026-005097-CN@v1"
+      ],
+      "passage_ids": [
+        "ENC-CLM-2026-005097-CN@v1#L1",
+        "ENC-CLM-2026-005097-CN@v1#L2",
+        "ENC-CLM-2026-005097-CN@v1#L3",
+        "ENC-CLM-2026-005097-CN@v1#L4",
+        "ENC-CLM-2026-005097-CN@v1#L5",
+        "ENC-CLM-2026-005097-CN@v1#L6"
+      ]
+    },
+    {
+      "call_index": 3,
+      "request_id": "REQ-3",
+      "tool_name": "get_encounter_note",
+      "status": "OK",
+      "error_code": null,
+      "source_ids": [
+        "ENC-CLM-2026-005097-PN@v1"
+      ],
+      "passage_ids": [
+        "ENC-CLM-2026-005097-PN@v1#L1",
+        "ENC-CLM-2026-005097-PN@v1#L2",
+        "ENC-CLM-2026-005097-PN@v1#L3",
+        "ENC-CLM-2026-005097-PN@v1#L4",
+        "ENC-CLM-2026-005097-PN@v1#L5"
+      ]
+    }
+  ]
+}

@@ -357,7 +357,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 77 tests
+Ran 95 tests
 OK
 ```
 
