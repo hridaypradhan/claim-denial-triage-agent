@@ -1,0 +1,25 @@
+{
+  "bundle_version": "0.1",
+  "run_id": "FIXTURE-NO-POLICY-620111",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "scope": {
+    "claim_id": "CLM-2026-620111",
+    "service_line_id": 1,
+    "payer": "UHC",
+    "procedure_code": "70553",
+    "service_date": "2026-06-30"
+  },
+  "policy_formula": null,
+  "passages": [],
+  "retrievals": [
+    {
+      "call_index": 1,
+      "request_id": "REQ-1",
+      "tool_name": "retrieve_medical_policy",
+      "status": "ERROR",
+      "error_code": "NO_MATCH",
+      "source_ids": [],
+      "passage_ids": []
+    }
+  ]
+}
