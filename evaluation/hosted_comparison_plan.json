@@ -1,0 +1,80 @@
+{
+  "plan_version": "hosted-comparison-v1",
+  "dataset_manifest": "datasets/development/set_b/manifest.json",
+  "labels": "datasets/labels/set_b_development.adjudicated.json",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "prompt_version": "planning-v1",
+  "repetitions": 3,
+  "case_ids": [
+    "CLM-2026-005097-L1",
+    "CLM-2026-620102-L1",
+    "CLM-2026-620104-L1",
+    "CLM-2026-620107-L1",
+    "CLM-2026-620108-L1",
+    "CLM-2026-620109-L1",
+    "CLM-2026-620110-L1",
+    "CLM-2026-620111-L1"
+  ],
+  "budgets": {
+    "max_model_calls": 4,
+    "max_tool_calls": 3,
+    "max_repair_attempts": 1,
+    "max_total_steps": 7,
+    "max_runtime_seconds": 30.0,
+    "max_tool_retries": 1,
+    "tool_request_timeout_seconds": 30.0
+  },
+  "ranking_order": [
+    "critical_safety_failures",
+    "valid_action_schema_rate",
+    "correct_route_or_tool_selection",
+    "evidence_grounded_decision_quality",
+    "correct_resolvable_citations",
+    "correct_manual_review",
+    "repeated_run_stability",
+    "provider_reliability_and_latency",
+    "token_usage"
+  ],
+  "tie_breakers": [
+    "safety",
+    "grounded_accuracy",
+    "schema_reliability",
+    "stability",
+    "latency"
+  ],
+  "candidates": [
+    {
+      "provider_name": "asu-rc-voyager",
+      "base_url": "https://openai.rc.asu.edu/v1",
+      "model_id": "mimo-v2-6-pro",
+      "max_completion_tokens": 4096,
+      "reasoning_effort": "low",
+      "temperature": 0.0,
+      "response_format_mode": "json_schema",
+      "request_timeout_seconds": 30.0,
+      "disable_gateway_addons": true
+    },
+    {
+      "provider_name": "asu-rc-voyager",
+      "base_url": "https://openai.rc.asu.edu/v1",
+      "model_id": "glm-5-3",
+      "max_completion_tokens": 4096,
+      "reasoning_effort": "low",
+      "temperature": 0.0,
+      "response_format_mode": "json_object",
+      "request_timeout_seconds": 30.0,
+      "disable_gateway_addons": true
+    },
+    {
+      "provider_name": "asu-rc-voyager",
+      "base_url": "https://openai.rc.asu.edu/v1",
+      "model_id": "deepseek-v4-1-flash",
+      "max_completion_tokens": 4096,
+      "reasoning_effort": "low",
+      "temperature": 0.0,
+      "response_format_mode": "json_object",
+      "request_timeout_seconds": 30.0,
+      "disable_gateway_addons": true
+    }
+  ]
+}

@@ -434,6 +434,45 @@ prints a concise JSON error. A timeout, provider failure, invalid response, or
 insufficient evidence fails closed to a traced `MANUAL_REVIEW` result; the
 runner never substitutes the scripted model or another hosted model.
 
+## Compare hosted models on development data
+
+The frozen development-only plan compares `mimo-v2-6-pro`, `glm-5-3`, and
+`deepseek-v4-1-flash` on eight representative Dataset B cases with three
+repetitions. Validate the plan without credentials or network access:
+
+```powershell
+$env:PYTHONPATH = '.\src'
+python -m evaluation.hosted_comparison
+```
+
+The plan contains 72 candidate/case repetitions. A repetition can require as
+many as four bounded model calls, so 72 is not an API-request estimate. Live
+execution requires `--confirm-live`, an exact commit, and may be narrowed to a
+single model, case, and repeat for the initial smoke test:
+
+```powershell
+$commit = git rev-parse HEAD
+python -m evaluation.run_hosted_comparison `
+    --model-id 'mimo-v2-6-pro' `
+    --case-id 'CLM-2026-005097-L1' `
+    --repeat-index 1 `
+    --code-commit $commit `
+    --confirm-live
+```
+
+Completed runs are skipped on a resumed command. A partial directory is never
+overwritten automatically and must be inspected before retrying. Artifacts are
+written under `.local-output/hosted-comparison/` and remain uncommitted. Score
+available progress without making provider calls:
+
+```powershell
+python -m evaluation.score_hosted_comparison --allow-partial
+```
+
+Partial reports never name a winner. Omitting `--allow-partial` requires all
+72 planned runs before applying the documented safety-first ranking and tie
+breakers. Only a complete report can be used to accept the final model.
+
 ## Run the knowledge and retrieval tests
 
 These check that the manifest, source files, passage IDs, criteria, and per-procedure formulas in [`knowledge/`](knowledge/) are consistent, that policy matching and ranking behave as decision 0001 requires, and that the dispatcher validates requests and returns `ToolResult` records. The dispatcher tests need the agent dependencies in [`requirements.txt`](requirements.txt):
