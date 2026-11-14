@@ -1,5 +1,5 @@
 {
-  "plan_version": "hosted-comparison-v1",
+  "plan_version": "hosted-comparison-v2",
   "dataset_manifest": "datasets/development/set_b/manifest.json",
   "labels": "datasets/labels/set_b_development.adjudicated.json",
   "knowledge_snapshot_id": "knowledge-v1",
@@ -20,7 +20,7 @@
     "max_tool_calls": 3,
     "max_repair_attempts": 1,
     "max_total_steps": 7,
-    "max_runtime_seconds": 30.0,
+    "max_runtime_seconds": 180.0,
     "max_tool_retries": 1,
     "tool_request_timeout_seconds": 30.0
   },

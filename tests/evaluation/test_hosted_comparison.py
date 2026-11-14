@@ -17,13 +17,28 @@ from evaluation.hosted_comparison import (
 class HostedComparisonPlanTests(unittest.TestCase):
     """Verify the plan is frozen, development-only, and reproducible."""
 
+    def test_runtime_budget_allows_bounded_provider_calls(
+        self,
+    ) -> None:
+        """Total runtime must exceed the sum of request timeouts."""
+
+        plan = load_hosted_comparison_plan()
+        slowest_candidate_timeout = max(
+            candidate.request_timeout_seconds for candidate in plan.candidates
+        )
+
+        self.assertGreaterEqual(
+            plan.budgets.max_runtime_seconds,
+            (plan.budgets.max_model_calls * slowest_candidate_timeout),
+        )
+
     def test_default_plan_loads_without_network_access(self) -> None:
         """Plan validation must not construct a provider client."""
 
         plan = load_hosted_comparison_plan()
 
         self.assertEqual(
-            "hosted-comparison-v1",
+            "hosted-comparison-v2",
             plan.plan_version,
         )
         self.assertEqual(3, plan.repetitions)

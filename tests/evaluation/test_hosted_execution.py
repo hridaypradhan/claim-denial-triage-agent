@@ -17,7 +17,10 @@ from claim_agent.tools.knowledge_store import KnowledgeStore
 from evaluation.hosted_comparison import (
     load_hosted_comparison_plan,
 )
-from evaluation.hosted_execution import execute_hosted_case
+from evaluation.hosted_execution import (
+    build_hosted_tool_context,
+    execute_hosted_case,
+)
 from evaluation.pilot_data import load_dataset
 from evaluation.scripted_agent import prepare_evaluation_case
 
@@ -53,6 +56,38 @@ class ManualReviewTransport:
 class HostedCaseExecutionTests(unittest.TestCase):
     """Verify one comparison run through production boundaries."""
 
+    def test_tool_context_lists_only_active_claim_documents(
+        self,
+    ) -> None:
+        """The model should receive valid claim-bound document IDs."""
+
+        plan = load_hosted_comparison_plan()
+        dataset = load_dataset(plan.manifest_path())
+        selected_case = next(
+            case for case in dataset.cases if case.case_id == "CLM-2026-005097-L1"
+        )
+        prepared_case = prepare_evaluation_case(
+            selected_case,
+            date.fromisoformat(dataset.as_of),
+        )
+
+        tool_context = build_hosted_tool_context(
+            prepared_case=prepared_case,
+            knowledge_store=KnowledgeStore(KNOWLEDGE_ROOT),
+        )
+
+        self.assertEqual(
+            "CLM-2026-005097",
+            tool_context["get_encounter_note"]["claim_id"],
+        )
+        self.assertEqual(
+            [
+                "ENC-CLM-2026-005097-CN",
+                "ENC-CLM-2026-005097-PN",
+            ],
+            tool_context["get_encounter_note"]["available_document_ids"],
+        )
+
     def test_case_produces_package_and_complete_hosted_trace(
         self,
     ) -> None:
@@ -61,9 +96,7 @@ class HostedCaseExecutionTests(unittest.TestCase):
         plan = load_hosted_comparison_plan()
         dataset = load_dataset(plan.manifest_path())
         selected_case = next(
-            case
-            for case in dataset.cases
-            if case.case_id == plan.case_ids[0]
+            case for case in dataset.cases if case.case_id == plan.case_ids[0]
         )
         prepared_case = prepare_evaluation_case(
             selected_case,
@@ -113,11 +146,9 @@ class HostedCaseExecutionTests(unittest.TestCase):
             run_config["prompt_version"],
         )
 
-        evaluation_context = (
-            execution.canonical_trace_events[0].payload[
-                "evaluation_context"
-            ]
-        )
+        evaluation_context = execution.canonical_trace_events[0].payload[
+            "evaluation_context"
+        ]
         self.assertEqual(
             1,
             evaluation_context["repeat_index"],

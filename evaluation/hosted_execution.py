@@ -19,6 +19,7 @@ from claim_agent.agent.run_configuration import AllowedTool
 from claim_agent.agent.trace_adapter import CanonicalTraceAdapter
 from claim_agent.contracts import OutputPackage
 from claim_agent.tools.dispatcher import ToolDispatcher
+from claim_agent.tools.encounter_notes import claim_document_inventory
 from claim_agent.tools.knowledge_store import KnowledgeStore
 from evaluation.hosted_comparison import HostedComparisonBudgets
 from evaluation.scripted_agent import (
@@ -33,6 +34,47 @@ class HostedCaseExecution:
 
     output_package: OutputPackage
     canonical_trace_events: tuple[TraceEvent, ...]
+
+
+def build_hosted_tool_context(
+    *,
+    prepared_case: PreparedEvaluationCase,
+    knowledge_store: KnowledgeStore,
+) -> dict[str, object]:
+    """Describe authorized tools using only claim-bound manifest data."""
+
+    claim_context = prepared_case.claim_context
+    if claim_context is None:
+        raise EvaluationCasePreparationError(
+            f"Case {prepared_case.case.case_id!r} has no trusted "
+            "claim context."
+        )
+
+    encounter_documents = claim_document_inventory(
+        knowledge_store,
+        claim_context.claim_id,
+    )
+
+    return {
+        "retrieve_medical_policy": {
+            "purpose": "Retrieve the applicable policy and its criteria.",
+            "payer": claim_context.payer,
+            "procedure_code": claim_context.procedure_code,
+            "service_date": claim_context.service_date.isoformat(),
+            "query_guidance": (
+                "Use a short clinical query relevant to the denial."
+            ),
+        },
+        "get_encounter_note": {
+            "purpose": (
+                "Retrieve one encounter document belonging to the active claim."
+            ),
+            "claim_id": claim_context.claim_id,
+            "available_document_ids": [
+                document.document_id for document in encounter_documents
+            ],
+        },
+    }
 
 
 def execute_hosted_case(
@@ -68,9 +110,7 @@ def execute_hosted_case(
             tool_name=tool_name,
             tool_version="0.1",
         )
-        for tool_name in sorted(
-            prepared_case.route_decision.authorized_tools
-        )
+        for tool_name in sorted(prepared_case.route_decision.authorized_tools)
     )
     run_configuration = build_hosted_run_configuration(
         code_commit=code_commit,
@@ -79,9 +119,7 @@ def execute_hosted_case(
         budget_limits=budgets.runtime_limits(),
         profile=profile,
         max_tool_retries=budgets.max_tool_retries,
-        tool_request_timeout_seconds=(
-            budgets.tool_request_timeout_seconds
-        ),
+        tool_request_timeout_seconds=budgets.tool_request_timeout_seconds,
     )
 
     integrated_result = run_integrated_case(
@@ -96,6 +134,10 @@ def execute_hosted_case(
         as_of=as_of,
         package_version=package_version,
         knowledge_snapshot_id=knowledge_store.snapshot_id,
+        tool_context=build_hosted_tool_context(
+            prepared_case=prepared_case,
+            knowledge_store=knowledge_store,
+        ),
     )
 
     canonical_trace_events = CanonicalTraceAdapter(
@@ -104,9 +146,7 @@ def execute_hosted_case(
         evaluation_context={
             "experiment_id": plan_version,
             "repeat_index": repeat_index,
-            "scenario_family_id": (
-                prepared_case.case.scenario_family_id
-            ),
+            "scenario_family_id": prepared_case.case.scenario_family_id,
             "system": "hosted-comparison",
         },
     ).adapt(integrated_result.runtime_result.trace_entries)

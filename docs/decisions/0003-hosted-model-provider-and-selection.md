@@ -79,6 +79,16 @@ cases. Candidate-specific supported features may be used because the decision
 selects a deployable model configuration rather than an isolated base model.
 Gateway-added capabilities remain disabled for every candidate.
 
+The first `mimo-v2-6-pro` smoke run under `hosted-comparison-v1` confirmed the
+provider connection and strict action parsing, but it was not a valid model
+comparison result. The model had no trusted way to discover valid encounter
+document IDs, attempted three invalid IDs, and reached the 30-second whole-run
+limit. `hosted-comparison-v2` corrects the integration boundary by supplying
+claim-bound document IDs and policy lookup fields from the knowledge manifest.
+It also raises the whole-run limit to 180 seconds while retaining a 30-second
+limit per provider request. The v1 artifact remains diagnostic evidence and
+must not be included in candidate scoring.
+
 Rank results in this order:
 
 1. critical safety failures,

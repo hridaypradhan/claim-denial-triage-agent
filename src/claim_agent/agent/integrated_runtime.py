@@ -10,7 +10,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from datetime import date
-from typing import Callable, Optional, Tuple
+from typing import Callable, Mapping, Optional, Tuple
 
 from claim_agent.agent.model_interface import ModelClient
 from claim_agent.agent.offline_runtime import (
@@ -59,6 +59,7 @@ def run_integrated_case(
     as_of: date,
     package_version: str,
     knowledge_snapshot_id: str,
+    tool_context: Mapping[str, object] | None = None,
     monotonic_clock: Callable[[], float] = time.monotonic,
 ) -> IntegratedCaseResult:
     """Validate, assemble, and execute one authorized agent case."""
@@ -69,6 +70,7 @@ def run_integrated_case(
     prepared_case = prepare_runtime_case(
         baseline_finding=baseline_finding,
         route_decision=route_decision,
+        tool_context=tool_context,
     )
 
     boundaries = build_production_runtime_boundaries(

@@ -218,6 +218,16 @@ is `mimo-v2-6-pro`; the final model will be frozen only after a documented
 development-only comparison described in
 [`decision 0003`](docs/decisions/0003-hosted-model-provider-and-selection.md).
 
+The first live smoke run confirmed Voyager connectivity, strict hosted
+actions, and local tool dispatch. It also exposed an integration gap: the
+model was authorized to retrieve encounter notes but was not given the
+claim's valid document IDs. Hosted evaluation now includes only trusted,
+claim-bound tool metadata from the knowledge manifest. The comparison plan is
+versioned as `hosted-comparison-v2`; it allows up to 180 seconds for the whole
+bounded run while preserving the 30-second limit for each provider request.
+Earlier v1 smoke artifacts remain diagnostic evidence and are not comparison
+results.
+
 ### Implemented packages and remaining boundaries
 
 The repository is organized around the following implemented packages and
@@ -229,7 +239,7 @@ explicitly tracked extension points:
   production-shaped adapters, and canonical traces.
 - [`src/claim_agent/agent/hosted/`](src/claim_agent/agent/hosted/) — the
   provider-neutral hosted client, strict action schema, OpenAI-compatible
-  transport, Voyager configuration, and hosted runner; live provider
+  transport, Voyager configuration, and hosted runner; comparative live
   validation remains incomplete.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
@@ -436,9 +446,12 @@ runner never substitutes the scripted model or another hosted model.
 
 ## Compare hosted models on development data
 
-The frozen development-only plan compares `mimo-v2-6-pro`, `glm-5-3`, and
+The frozen development-only v2 plan compares `mimo-v2-6-pro`, `glm-5-3`, and
 `deepseek-v4-1-flash` on eight representative Dataset B cases with three
-repetitions. Validate the plan without credentials or network access:
+repetitions. Each run receives valid claim-bound encounter document IDs and
+policy lookup fields from the trusted manifest. The total runtime budget is
+180 seconds, with each provider request still limited to 30 seconds. Validate
+the plan without credentials or network access:
 
 ```powershell
 $env:PYTHONPATH = '.\src'
