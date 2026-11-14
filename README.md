@@ -59,10 +59,10 @@ flowchart TD
     L --> H[Human review: edit, approve, or reject]
     H --> Z[Save outputs]
 
-    M[Hosted execution entry point] -. planned .-> P
+    M[Hosted execution entry point] --> P
 
     classDef planned stroke-dasharray: 5 5,fill:#fff;
-    class I,M,V,W,X planned;
+    class I,V,W,X planned;
 ```
 
 The model will be used only where evidence interpretation is necessary. Exact and safety-critical behavior—including input validation, deadline arithmetic, permitted dispositions, citation checks, and final approval state—remains under deterministic control.
@@ -191,9 +191,13 @@ transport now maps those requests to a configurable endpoint while disabling
 automatic SDK retries and provider-hosted tools. A frozen, non-secret model
 profile constructs the provisional Voyager client and reads each developer's
 credential only from the local `CLAIM_AGENT_LLM_API_KEY` environment variable.
-The hosted CLI remains unfinished. Hosted-call timeouts consume the attempted
-model-call budget, emit `MODEL_FAILED`, and produce an audited `MANUAL_REVIEW`
-package with terminal reason `model_timeout`.
+The hosted CLI runs the same production-shaped case through this boundary,
+writes a uniquely named canonical trace by default, and prints a non-secret
+JSON summary. Its offline end-to-end tests inject a fake transport and require
+no credential or network access. Live Voyager validation remains pending.
+Hosted-call timeouts consume the attempted model-call budget, emit
+`MODEL_FAILED`, and produce an audited `MANUAL_REVIEW` package with terminal
+reason `model_timeout`.
 
 Schema-capable hosted models receive a strict runtime-action schema generated
 from the exact per-run tool allowlist and the shared `AgentDecision` contract.
@@ -225,8 +229,8 @@ explicitly tracked extension points:
   production-shaped adapters, and canonical traces.
 - [`src/claim_agent/agent/hosted/`](src/claim_agent/agent/hosted/) — the
   provider-neutral hosted client, strict action schema, OpenAI-compatible
-  transport, and Voyager configuration; live hosted execution remains
-  incomplete.
+  transport, Voyager configuration, and hosted runner; live provider
+  validation remains incomplete.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
 - [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v1 above; eligibility records not yet added).
@@ -407,6 +411,28 @@ The generated `artifacts/traces/<run-id>.jsonl` file contains the reproducible
 run configuration, redacted model and tool events, validation results, timing,
 budget counters, and exactly one final outcome. Generated traces are local
 artifacts and should not be committed.
+
+## Run the hosted Voyager demonstration
+
+This command makes live model calls through the configured Voyager profile.
+Set the individual key as described in Setup, confirm the virtual environment
+is active, and record the exact commit in the trace:
+
+```powershell
+$env:PYTHONPATH = '.\src'
+$commit = git rev-parse HEAD
+python -m claim_agent.agent.hosted_runner `
+    --pretty `
+    --code-commit $commit
+```
+
+The command writes an immutable trace under
+`.local-output/hosted-traces/` unless `--trace-directory` selects another
+local directory. Each invocation uses a timestamp-and-UUID run ID, so it does
+not overwrite an earlier trace. A missing key fails before the run starts and
+prints a concise JSON error. A timeout, provider failure, invalid response, or
+insufficient evidence fails closed to a traced `MANUAL_REVIEW` result; the
+runner never substitutes the scripted model or another hosted model.
 
 ## Run the knowledge and retrieval tests
 
