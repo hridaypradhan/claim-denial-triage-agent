@@ -14,6 +14,10 @@ from claim_agent.agent.openai_chat_transport import (
     OpenAICompatibleChatTransport,
     OpenAICompatibleProviderError,
 )
+from claim_agent.tools.dispatcher import (
+    ENCOUNTER_NOTE_TOOL,
+    MEDICAL_POLICY_TOOL,
+)
 
 REQUEST_ID = "run-openai-compatible:model:1"
 MODEL_NAME = "mimo-v2-6-pro"
@@ -98,9 +102,7 @@ class FakeOpenAIClient:
         self.chat = FakeChat(completions)
 
 
-def make_settings(
-    response_format: dict[str, object] | None = None,
-) -> OpenAIChatTransportSettings:
+def make_settings() -> OpenAIChatTransportSettings:
     """Return validated non-secret transport settings."""
 
     return OpenAIChatTransportSettings(
@@ -108,22 +110,27 @@ def make_settings(
         max_completion_tokens=4096,
         reasoning_effort="low",
         temperature=0.0,
-        response_format=response_format,
     )
 
 
-def make_transport_request() -> HostedModelTransportRequest:
+def make_transport_request(
+    *,
+    allowed_tool_names: tuple[str, ...] = (
+        ENCOUNTER_NOTE_TOOL,
+        MEDICAL_POLICY_TOOL,
+    ),
+    request_id: str = REQUEST_ID,
+) -> HostedModelTransportRequest:
     """Return one provider-neutral hosted request."""
 
     return HostedModelTransportRequest(
-        request_id=REQUEST_ID,
+        request_id=request_id,
         model_name=MODEL_NAME,
-        system_instructions=("Use only retrieved evidence and return one JSON action."),
-        task_context=("Review the synthetic medical-necessity denial."),
-        allowed_tool_names=(
-            "retrieve_encounter_note",
-            "retrieve_medical_policy",
+        system_instructions=(
+            "Use only retrieved evidence and return one JSON action."
         ),
+        task_context=("Review the synthetic medical-necessity denial."),
+        allowed_tool_names=allowed_tool_names,
         timeout_seconds=30.0,
     )
 
@@ -205,32 +212,20 @@ class OpenAICompatibleChatTransportTests(unittest.TestCase):
         self.assertEqual(125, result.input_token_count)
         self.assertEqual(19, result.output_token_count)
 
-    def test_response_format_is_copied_into_request(self) -> None:
-        """Structured-output configuration should cross the boundary."""
+    def test_response_format_is_built_from_request_allowlist(
+        self,
+    ) -> None:
+        """Each request should receive only its authorized tool schema."""
 
-        response_format = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "runtime_action",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "action": {
-                            "type": "string",
-                        }
-                    },
-                    "required": ["action"],
-                    "additionalProperties": False,
-                },
-            },
-        }
         completions = RecordingCompletions(
             response=FakeChatCompletion(
                 choices=[
                     FakeChoice(
                         message=FakeMessage(
-                            content='{"action":"request_manual_review"}'
+                            content=(
+                                '{"action":"request_manual_review",'
+                                '"reason":"Evidence is unavailable."}'
+                            )
                         )
                     )
                 ]
@@ -238,18 +233,166 @@ class OpenAICompatibleChatTransportTests(unittest.TestCase):
         )
         transport = OpenAICompatibleChatTransport(
             client=FakeOpenAIClient(completions),
-            settings=make_settings(response_format=response_format),
+            settings=make_settings(),
         )
 
-        transport.generate(make_transport_request())
+        transport.generate(
+            make_transport_request(allowed_tool_names=(MEDICAL_POLICY_TOOL,))
+        )
+
+        response_format = completions.received_arguments[0]["response_format"]
+        schema = response_format["json_schema"]["schema"]
+        tool_names = {
+            action_schema["properties"]["tool_name"]["const"]
+            for action_schema in schema["anyOf"]
+            if "tool_name" in action_schema["properties"]
+        }
 
         self.assertEqual(
-            response_format,
-            completions.received_arguments[0]["response_format"],
+            {MEDICAL_POLICY_TOOL},
+            tool_names,
         )
-        self.assertIsNot(
-            response_format,
-            completions.received_arguments[0]["response_format"],
+        self.assertIs(
+            True,
+            response_format["json_schema"]["strict"],
+        )
+
+    def test_empty_allowlist_exposes_no_tool_action(self) -> None:
+        """A tool-less request should allow only decision or review."""
+
+        completions = RecordingCompletions(
+            response=FakeChatCompletion(
+                choices=[
+                    FakeChoice(
+                        message=FakeMessage(
+                            content=(
+                                '{"action":"request_manual_review",'
+                                '"reason":"No tool is authorized."}'
+                            )
+                        )
+                    )
+                ]
+            )
+        )
+        transport = OpenAICompatibleChatTransport(
+            client=FakeOpenAIClient(completions),
+            settings=make_settings(),
+        )
+
+        transport.generate(
+            make_transport_request(allowed_tool_names=())
+        )
+
+        schema = completions.received_arguments[0][
+            "response_format"
+        ]["json_schema"]["schema"]
+        tool_actions = [
+            action_schema
+            for action_schema in schema["anyOf"]
+            if "tool_name" in action_schema["properties"]
+        ]
+
+        self.assertEqual([], tool_actions)
+        self.assertEqual(2, len(schema["anyOf"]))
+
+    def test_sequential_requests_do_not_reuse_tool_schema(
+        self,
+    ) -> None:
+        """A later route must not inherit an earlier route's tools."""
+
+        completions = RecordingCompletions(
+            response=FakeChatCompletion(
+                choices=[
+                    FakeChoice(
+                        message=FakeMessage(
+                            content=(
+                                '{"action":"request_manual_review",'
+                                '"reason":"Evidence is unavailable."}'
+                            )
+                        )
+                    )
+                ]
+            )
+        )
+        transport = OpenAICompatibleChatTransport(
+            client=FakeOpenAIClient(completions),
+            settings=make_settings(),
+        )
+
+        transport.generate(
+            make_transport_request(
+                allowed_tool_names=(MEDICAL_POLICY_TOOL,),
+                request_id="route-one:model:1",
+            )
+        )
+        transport.generate(
+            make_transport_request(
+                allowed_tool_names=(ENCOUNTER_NOTE_TOOL,),
+                request_id="route-two:model:1",
+            )
+        )
+
+        observed_tool_sets = []
+        for arguments in completions.received_arguments:
+            schema = arguments["response_format"][
+                "json_schema"
+            ]["schema"]
+            observed_tool_sets.append(
+                {
+                    action_schema["properties"][
+                        "tool_name"
+                    ]["const"]
+                    for action_schema in schema["anyOf"]
+                    if "tool_name"
+                    in action_schema["properties"]
+                }
+            )
+
+        self.assertEqual(
+            [
+                {MEDICAL_POLICY_TOOL},
+                {ENCOUNTER_NOTE_TOOL},
+            ],
+            observed_tool_sets,
+        )
+
+    def test_unknown_tool_fails_before_provider_call(
+        self,
+    ) -> None:
+        """A tool without a schema must not reach the provider."""
+
+        completions = RecordingCompletions(
+            response=FakeChatCompletion(
+                choices=[
+                    FakeChoice(
+                        message=FakeMessage(
+                            content=(
+                                '{"action":"request_manual_review",'
+                                '"reason":"Evidence is unavailable."}'
+                            )
+                        )
+                    )
+                ]
+            )
+        )
+        transport = OpenAICompatibleChatTransport(
+            client=FakeOpenAIClient(completions),
+            settings=make_settings(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "unknown_tool",
+        ):
+            transport.generate(
+                make_transport_request(
+                    allowed_tool_names=("unknown_tool",)
+                )
+            )
+
+        self.assertEqual(
+            [],
+            completions.received_arguments,
         )
 
     def test_missing_usage_remains_unknown(self) -> None:

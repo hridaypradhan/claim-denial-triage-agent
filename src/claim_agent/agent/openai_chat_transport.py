@@ -8,15 +8,17 @@ code.
 
 from __future__ import annotations
 
-from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Mapping, Protocol
+from typing import Any, Protocol
 
 from openai import APITimeoutError, OpenAI
 
 from claim_agent.agent.hosted_model import (
     HostedModelTransportRequest,
     HostedModelTransportResponse,
+)
+from claim_agent.agent.runtime_action_schema import (
+    build_runtime_action_response_format,
 )
 
 
@@ -38,7 +40,6 @@ class OpenAIChatTransportSettings:
     max_completion_tokens: int
     reasoning_effort: str
     temperature: float
-    response_format: Mapping[str, object] | None = None
     disable_gateway_addons: bool = True
 
     def __post_init__(self) -> None:
@@ -118,14 +119,12 @@ class OpenAICompatibleChatTransport:
             ),
             "reasoning_effort": self._settings.reasoning_effort,
             "temperature": self._settings.temperature,
+            "response_format": build_runtime_action_response_format(
+                request.allowed_tool_names
+            ),
             "timeout": request.timeout_seconds,
             "extra_headers": self._build_headers(request),
         }
-
-        if self._settings.response_format is not None:
-            request_arguments["response_format"] = deepcopy(
-                dict(self._settings.response_format)
-            )
 
         try:
             response = self._client.chat.completions.create(
