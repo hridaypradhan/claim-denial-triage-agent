@@ -231,6 +231,15 @@ it applies the same 60-second request limit to every candidate and allows up
 to 300 seconds for the whole bounded run. Earlier v1 and v2 smoke artifacts
 remain diagnostic evidence and are not comparison results.
 
+The first v3 smoke gate ran one identical case through all three provisional
+candidates. `mimo-v2-6-pro` produced valid actions and claim-bound tool calls
+but timed out before a decision. `glm-5-3` and `deepseek-v4-1-flash` each
+returned an invalid action and an invalid repair without reaching a tool call.
+All three failures closed safely to `MANUAL_REVIEW`, with no critical safety
+failure. The remaining comparison runs are paused until the candidate set
+contains models that can complete the required structured-action interface;
+these smoke artifacts are operational diagnostics, not selection results.
+
 ### Implemented packages and remaining boundaries
 
 The repository is organized around the following implemented packages and
@@ -566,7 +575,10 @@ python -m evaluation.score_hosted_comparison --allow-partial
 
 Partial reports never name a winner. Omitting `--allow-partial` requires all
 72 planned runs before applying the documented safety-first ranking and tie
-breakers. Only a complete report can be used to accept the final model.
+breakers. Only a complete report can be used to accept the final model. Do not
+expand the current v3 smoke artifacts into the full run: no provisional
+candidate completed the end-to-end gate, so candidate compatibility must be
+reviewed first.
 
 ## Run the knowledge and retrieval tests
 

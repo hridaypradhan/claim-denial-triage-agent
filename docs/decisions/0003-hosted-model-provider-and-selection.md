@@ -98,6 +98,17 @@ to every candidate and a 300-second whole-run limit. This is an operational
 budget correction made before candidate comparison; the v2 artifact is also
 diagnostic evidence and must not be scored.
 
+The v3 smoke gate ran the same case and repeat once for every provisional
+candidate. `mimo-v2-6-pro` continued to produce valid structured actions and
+valid claim-bound tool calls, but a later request exceeded the uniform
+60-second limit. Both `glm-5-3` and `deepseek-v4-1-flash` returned an invalid
+initial action and an invalid bounded repair without calling a tool. Every run
+failed closed to `MANUAL_REVIEW`, and no critical safety failure occurred.
+Because no candidate completed one validated end-to-end decision, the
+remaining v3 runs are paused. These three runs are compatibility diagnostics,
+not model-selection evidence. The candidate set must be reviewed for explicit
+structured-schema support before a new comparison plan is frozen.
+
 Rank results in this order:
 
 1. critical safety failures,
