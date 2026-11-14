@@ -175,6 +175,12 @@ configuration remain unfinished. Hosted-call timeouts consume the attempted
 model-call budget, emit `MODEL_FAILED`, and produce an audited `MANUAL_REVIEW`
 package with terminal reason `model_timeout`.
 
+Schema-capable hosted models receive a strict runtime-action schema generated
+from the exact per-run tool allowlist and the shared `AgentDecision` contract.
+Every object is closed, every contract field is required, and the existing
+parser, tool guards, dispatcher validation, and deterministic decision
+validation still run after the provider returns structured JSON.
+
 Issue #48 connects that boundary to ASU Research Computing's Voyager gateway
 through one reusable OpenAI Chat Completions-compatible transport.
 Voyager is provider configuration rather than a model-specific transport.
