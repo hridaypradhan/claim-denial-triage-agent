@@ -4,10 +4,10 @@ A hybrid agentic AI system for evidence-grounded triage of denied outpatient med
 
 > **Project status:** Active academic capstone. The deterministic baseline,
 > shared contracts, local retrieval tools, safety validator, bounded runtime,
-> a provider-neutral hosted-model boundary, and a production-shaped local
-> integration and durable canonical traces are runnable and tested. A
-> provider-specific hosted transport, evaluation, and the final report remain
-> in progress.
+> an OpenAI-compatible hosted-model transport, and a production-shaped local
+> integration with durable canonical traces are runnable and tested. Live
+> hosted execution, model selection, final evaluation, and the final report
+> remain in progress.
 
 ## Problem
 
@@ -59,7 +59,7 @@ flowchart TD
     L --> H[Human review: edit, approve, or reject]
     H --> Z[Save outputs]
 
-    M[Provider-specific hosted transport] -. planned .-> P
+    M[Hosted execution entry point] -. planned .-> P
 
     classDef planned stroke-dasharray: 5 5,fill:#fff;
     class I,M,V,W,X planned;
@@ -101,7 +101,11 @@ It contains:
 - A synthetic medical policy for brain MRI (CPT 70551–70553) under the `BCBS_AZ` payer profile, with a criteria formula for each procedure code (`A AND B` for 70551 and 70552; `A AND B AND (C OR D)` for 70553). It is not the payer's actual policy.
 - A synthetic physical therapy policy (CPT 97110) under the `AETNA` payer profile in two dated versions, so the service date selects the criteria: v1 (`A AND B`) through 2026-03-31 and v2 (`A AND B AND C`) from 2026-04-01. It is not the payer's actual policy.
 - Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
-- Thirteen synthetic encounter documents for the Dataset B pilot claims `CLM-2026-620102` to `CLM-2026-620112` (case list in issue #12). They cover missing, explicitly negative, and conflicting evidence, a prior imaging report, physical therapy evaluations on either side of the policy version date, and a note containing instruction-like text.
+- Thirteen synthetic encounter documents for the Dataset B pilot claims
+  `CLM-2026-620102` to `CLM-2026-620112`. They cover missing, explicitly
+  negative, and conflicting evidence, a prior imaging report, physical therapy
+  evaluations on either side of the policy version date, and a note containing
+  instruction-like text.
 
 Every passage has a stable citation ID such as
 `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in
@@ -170,8 +174,10 @@ the stable runtime request into a timeout-bounded transport request and maps
 provider text, request IDs, and token counts back into the runtime response.
 Its fake-transport tests run offline. An OpenAI Chat Completions-compatible
 transport now maps those requests to a configurable endpoint while disabling
-automatic SDK retries and provider-hosted tools. Hosted CLI and credential
-configuration remain unfinished. Hosted-call timeouts consume the attempted
+automatic SDK retries and provider-hosted tools. A frozen, non-secret model
+profile constructs the provisional Voyager client and reads each developer's
+credential only from the local `CLAIM_AGENT_LLM_API_KEY` environment variable.
+The hosted CLI remains unfinished. Hosted-call timeouts consume the attempted
 model-call budget, emit `MODEL_FAILED`, and produce an audited `MANUAL_REVIEW`
 package with terminal reason `model_timeout`.
 
@@ -181,8 +187,9 @@ Every object is closed, every contract field is required, and the existing
 parser, tool guards, dispatcher validation, and deterministic decision
 validation still run after the provider returns structured JSON.
 
-Issue #48 connects that boundary to ASU Research Computing's Voyager gateway
-through one reusable OpenAI Chat Completions-compatible transport.
+The hosted integration connects that boundary to ASU Research Computing's
+Voyager gateway through one reusable OpenAI Chat Completions-compatible
+transport.
 Voyager is provider configuration rather than a model-specific transport.
 Normal tests will remain offline, each developer will use an individual local
 credential, gateway-added capabilities and automatic model selection will be
@@ -202,19 +209,20 @@ explicitly tracked extension points:
 - [`src/claim_agent/tools/`](src/claim_agent/tools/) — typed, read-only evidence tools.
 - [`src/claim_agent/agent/`](src/claim_agent/agent/) — bounded runtime,
   production-shaped adapters, canonical traces, and the provider-neutral hosted
-  boundary; provider-specific transport and grounded drafting remain in #34.
+  boundary; live hosted execution, verification, and grounded drafting remain
+  incomplete.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
 - [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v1 above; eligibility records not yet added).
-- [`datasets/`](datasets/) — development, held-out, and labeling artifacts being
-  completed through #12 (Datasets A and B, development). Labels follow the frozen
+- [`datasets/`](datasets/) — development, held-out, and labeling artifacts for
+  Datasets A and B. Labels follow the frozen
   [annotation rubric](datasets/ANNOTATION_RUBRIC.md) (v0.1).
 - [`evaluation/`](evaluation/) — accepted trace examples plus the comparison
-  harness being completed through #12 and PR #32.
+  harness.
 
-Eligibility retrieval, an agent-callable deadline wrapper, hosted-model
-transport, evidence verification, grounded drafting, and the full comparative
-evaluation remain explicitly tracked rather than implied by directory names.
+Eligibility retrieval, an agent-callable deadline wrapper, live hosted-model
+execution, evidence verification, grounded drafting, and the full comparative
+evaluation remain incomplete rather than implied by directory names.
 
 ## Safety boundaries
 
@@ -275,6 +283,19 @@ python -m pip install -r requirements.txt
 
 The `.venv` directory is ignored by Git. Normal agent tests remain offline and
 do not require a hosted-model credential.
+
+Hosted execution uses an individual ASU Research Computing Voyager key. Keep
+the key out of files and shell history by reading it into the current
+PowerShell process:
+
+```powershell
+$secureKey = Read-Host 'Voyager API key' -AsSecureString
+$env:CLAIM_AGENT_LLM_API_KEY = [System.Net.NetworkCredential]::new('', $secureKey).Password
+```
+
+The variable disappears when that terminal closes. Never commit a key, share
+one team member's key, or place it in a trace, screenshot, issue, or pull
+request. Normal tests and the scripted demonstration do not read this variable.
 
 ## Run the baseline tests
 
@@ -397,7 +418,7 @@ OK
 
 ## Run the pilot evaluation
 
-The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot (#12)
+The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot
 scores each compared system against one case per denied service line. Two
 synthetic development datasets have independent labeler artifacts and separate
 adjudicated answer keys in [`datasets/labels/`](datasets/labels/), following
@@ -531,14 +552,14 @@ These limitations define the work assigned to the agentic extension; they are no
 - [x] Wrap deterministic baseline findings and routing behind typed interfaces.
 - [x] Implement a validated common tool dispatcher.
 - [x] Add versioned payer-policy and encounter-note retrieval.
-- [ ] Add eligibility retrieval if retained after the scope decision in #30.
+- [ ] Add eligibility retrieval if retained after the scope decision.
 - [x] Implement a bounded planning loop with structured model outputs behind scripted offline boundaries.
 - [x] Connect typed routing, tool, validation, output, and canonical-trace adapters.
 - [x] Add criterion-level evidence assessment and resolvable citations.
 - [x] Add deterministic safety, citation, formula, and filing-deadline validation.
-- [ ] Add the hosted transport and freeze the selected model through #48.
-- [ ] Add tool-less evidence verification through #60 and grounded drafting
-  through #61.
+- [x] Add the OpenAI-compatible hosted transport and strict action schemas.
+- [ ] Complete live hosted execution and freeze the selected model.
+- [ ] Add tool-less evidence verification and grounded drafting.
 - [ ] Build development and held-out synthetic datasets.
 - [ ] Compare the agentic system against the unchanged baseline.
 - [ ] Conduct stakeholder review of representative system reports.

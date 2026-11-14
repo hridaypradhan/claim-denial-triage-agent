@@ -40,6 +40,7 @@ class OpenAIChatTransportSettings:
     max_completion_tokens: int
     reasoning_effort: str
     temperature: float
+    response_format_mode: str = "json_schema"
     disable_gateway_addons: bool = True
 
     def __post_init__(self) -> None:
@@ -63,6 +64,19 @@ class OpenAIChatTransportSettings:
             raise ValueError(
                 "reasoning_effort must be one of: "
                 "none, low, medium, high"
+            )
+
+        allowed_response_format_modes = {
+            "json_schema",
+            "json_object",
+        }
+        if (
+            self.response_format_mode
+            not in allowed_response_format_modes
+        ):
+            raise ValueError(
+                "response_format_mode must be one of: "
+                "json_schema, json_object"
             )
 
         if self.temperature < 0:
@@ -119,8 +133,8 @@ class OpenAICompatibleChatTransport:
             ),
             "reasoning_effort": self._settings.reasoning_effort,
             "temperature": self._settings.temperature,
-            "response_format": build_runtime_action_response_format(
-                request.allowed_tool_names
+            "response_format": self._build_response_format(
+                request
             ),
             "timeout": request.timeout_seconds,
             "extra_headers": self._build_headers(request),
@@ -154,6 +168,21 @@ class OpenAICompatibleChatTransport:
             input_token_count=input_token_count,
             output_token_count=output_token_count,
         )
+
+    def _build_response_format(
+        self,
+        request: HostedModelTransportRequest,
+    ) -> dict[str, object]:
+        """Select the frozen structured-output mode."""
+
+        if self._settings.response_format_mode == "json_schema":
+            return build_runtime_action_response_format(
+                request.allowed_tool_names
+            )
+
+        return {
+            "type": "json_object",
+        }
 
     def _build_messages(
         self,

@@ -16,9 +16,6 @@ from claim_agent.agent.model_interface import (
     ModelResponse,
 )
 
-# TODO(#34, owner=Hriday): Implement the selected provider-specific transport
-# after the team freezes the hosted model, prompt, and credential convention.
-
 
 class HostedModelTimeoutError(TimeoutError):
     """Raised when a hosted model call exceeds its configured timeout."""

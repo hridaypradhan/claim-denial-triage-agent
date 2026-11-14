@@ -102,7 +102,10 @@ class FakeOpenAIClient:
         self.chat = FakeChat(completions)
 
 
-def make_settings() -> OpenAIChatTransportSettings:
+def make_settings(
+    *,
+    response_format_mode: str = "json_schema",
+) -> OpenAIChatTransportSettings:
     """Return validated non-secret transport settings."""
 
     return OpenAIChatTransportSettings(
@@ -110,6 +113,7 @@ def make_settings() -> OpenAIChatTransportSettings:
         max_completion_tokens=4096,
         reasoning_effort="low",
         temperature=0.0,
+        response_format_mode=response_format_mode,
     )
 
 
@@ -255,6 +259,43 @@ class OpenAICompatibleChatTransportTests(unittest.TestCase):
         self.assertIs(
             True,
             response_format["json_schema"]["strict"],
+        )
+
+    def test_json_object_mode_omits_strict_schema(
+        self,
+    ) -> None:
+        """A model without Schema support should receive JSON mode."""
+
+        completions = RecordingCompletions(
+            response=FakeChatCompletion(
+                choices=[
+                    FakeChoice(
+                        message=FakeMessage(
+                            content=(
+                                '{"action":"request_manual_review",'
+                                '"reason":"Evidence is unavailable."}'
+                            )
+                        )
+                    )
+                ]
+            )
+        )
+        transport = OpenAICompatibleChatTransport(
+            client=FakeOpenAIClient(completions),
+            settings=make_settings(
+                response_format_mode="json_object"
+            ),
+        )
+
+        transport.generate(make_transport_request())
+
+        self.assertEqual(
+            {
+                "type": "json_object",
+            },
+            completions.received_arguments[0][
+                "response_format"
+            ],
         )
 
     def test_empty_allowlist_exposes_no_tool_action(self) -> None:
@@ -482,6 +523,23 @@ class OpenAICompatibleChatTransportTests(unittest.TestCase):
             "assistant text",
         ):
             transport.generate(make_transport_request())
+
+    def test_invalid_response_format_mode_is_rejected(
+        self,
+    ) -> None:
+        """Unknown provider output modes must fail at setup."""
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "response_format_mode",
+        ):
+            OpenAIChatTransportSettings(
+                base_url=BASE_URL,
+                max_completion_tokens=4096,
+                reasoning_effort="low",
+                temperature=0.0,
+                response_format_mode="automatic",
+            )
 
     def test_invalid_settings_are_rejected(self) -> None:
         """Invalid bounded-request settings should fail immediately."""
