@@ -214,8 +214,8 @@ Normal tests will remain offline, each developer will use an individual local
 credential, gateway-added capabilities and automatic model selection will be
 disabled, and no hosted failure will fall back to the scripted model or another
 hosted model. A timeout, provider failure, or unusable response must instead
-produce an audited `MANUAL_REVIEW` outcome. The provisional integration model
-is `mimo-v2-6-pro`; the final model will be frozen only after a documented
+produce an audited `MANUAL_REVIEW` outcome. The initial integration model was
+`mimo-v2-6-pro`; the final model will be frozen only after a documented
 development-only comparison described in
 [`decision 0003`](docs/decisions/0003-hosted-model-provider-and-selection.md).
 
@@ -239,6 +239,14 @@ All three failures closed safely to `MANUAL_REVIEW`, with no critical safety
 failure. The remaining comparison runs are paused until the candidate set
 contains models that can complete the required structured-action interface;
 these smoke artifacts are operational diagnostics, not selection results.
+
+The v4 compatibility set replaces the unsuccessful provisional candidates
+with `qwen35-397b-a17b`, `qwen36-27b`, and `beam-1-0`. Voyager lists Tools and
+Schema for all three, so every candidate now receives the same strict runtime
+action schema. The two Qwen models emphasize instruction following and tool
+use at different model sizes; Beam adds a high-scoring, always-reasoning
+alternative. V4 must pass the same one-case smoke gate before any full
+comparison begins.
 
 ### Implemented packages and remaining boundaries
 
@@ -506,8 +514,8 @@ runner never substitutes the scripted model or another hosted model.
 
 ## Compare hosted models on development data
 
-The frozen development-only v3 plan compares `mimo-v2-6-pro`, `glm-5-3`, and
-`deepseek-v4-1-flash` on eight representative Dataset B cases with three
+The frozen development-only v4 plan compares `qwen35-397b-a17b`, `qwen36-27b`,
+and `beam-1-0` on eight representative Dataset B cases with three
 repetitions. Each run receives valid claim-bound encounter document IDs and
 policy lookup fields from the trusted manifest. The total runtime budget is
 300 seconds, with each provider request limited to 60 seconds. Validate the
@@ -537,7 +545,7 @@ macOS or Linux (Bash/Zsh):
 ```bash
 commit=$(git rev-parse HEAD)
 python -m evaluation.run_hosted_comparison \
-    --model-id 'mimo-v2-6-pro' \
+    --model-id 'qwen35-397b-a17b' \
     --case-id 'CLM-2026-005097-L1' \
     --repeat-index 1 \
     --code-commit "$commit" \
@@ -549,7 +557,7 @@ Windows (PowerShell):
 ```powershell
 $commit = git rev-parse HEAD
 python -m evaluation.run_hosted_comparison `
-    --model-id 'mimo-v2-6-pro' `
+    --model-id 'qwen35-397b-a17b' `
     --case-id 'CLM-2026-005097-L1' `
     --repeat-index 1 `
     --code-commit $commit `
@@ -576,9 +584,8 @@ python -m evaluation.score_hosted_comparison --allow-partial
 Partial reports never name a winner. Omitting `--allow-partial` requires all
 72 planned runs before applying the documented safety-first ranking and tie
 breakers. Only a complete report can be used to accept the final model. Do not
-expand the current v3 smoke artifacts into the full run: no provisional
-candidate completed the end-to-end gate, so candidate compatibility must be
-reviewed first.
+expand v4 into the full run until its three candidates pass the documented
+one-case compatibility gate.
 
 ## Run the knowledge and retrieval tests
 

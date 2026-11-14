@@ -38,7 +38,7 @@ class HostedComparisonPlanTests(unittest.TestCase):
         plan = load_hosted_comparison_plan()
 
         self.assertEqual(
-            "hosted-comparison-v3",
+            "hosted-comparison-v4",
             plan.plan_version,
         )
         self.assertEqual(300.0, plan.budgets.max_runtime_seconds)
@@ -59,9 +59,9 @@ class HostedComparisonPlanTests(unittest.TestCase):
 
         self.assertEqual(
             (
-                "mimo-v2-6-pro",
-                "glm-5-3",
-                "deepseek-v4-1-flash",
+                "qwen35-397b-a17b",
+                "qwen36-27b",
+                "beam-1-0",
             ),
             tuple(candidate.model_id for candidate in plan.candidates),
         )
@@ -73,6 +73,18 @@ class HostedComparisonPlanTests(unittest.TestCase):
 
         self.assertTrue(
             all(candidate.disable_gateway_addons for candidate in plan.candidates)
+        )
+
+    def test_every_candidate_uses_strict_schema_mode(self) -> None:
+        """Compatibility-screened candidates should use one action schema."""
+
+        plan = load_hosted_comparison_plan()
+
+        self.assertTrue(
+            all(
+                candidate.response_format_mode == "json_schema"
+                for candidate in plan.candidates
+            )
         )
 
     def test_plan_freezes_seventy_two_case_runs(self) -> None:

@@ -61,16 +61,16 @@ configuration rather than automatic routing among models.
 
 ### Model-selection procedure
 
-`mimo-v2-6-pro` is the provisional integration model because Voyager currently
+`mimo-v2-6-pro` was the initial integration model because Voyager currently
 lists both Tools and Schema capabilities, a 262.1K context window, and a strong
 general chat result. It is not the accepted final model until the development
 comparison is complete.
 
-Compare these fixed candidates on development data only:
+The v4 comparison freezes these candidates on development data only:
 
-1. `mimo-v2-6-pro`
-2. `glm-5-3`
-3. `deepseek-v4-1-flash`
+1. `qwen35-397b-a17b`
+2. `qwen36-27b`
+3. `beam-1-0`
 
 Before running the comparison, freeze the cases, prompt version, action schema,
 tool allowlists, budgets, repetitions, scoring rules, and tie breakers. Run each
@@ -108,6 +108,18 @@ Because no candidate completed one validated end-to-end decision, the
 remaining v3 runs are paused. These three runs are compatibility diagnostics,
 not model-selection evidence. The candidate set must be reviewed for explicit
 structured-schema support before a new comparison plan is frozen.
+
+Voyager's Schema-filtered catalog was then reviewed directly rather than
+inferring compatibility from the badges visible in an unfiltered list. V4
+selects three candidates that explicitly expose Tools and Schema and score
+above 92% on Voyager's chat certification. The two Qwen candidates add strong
+instruction-following evidence at different model sizes; Beam adds model-family
+diversity and the highest chat score of the three. Every v4 candidate uses the
+same strict `json_schema` response mode. `mimo-v2-6-pro` remains diagnostic
+evidence for schema compliance but is excluded after repeated timeouts;
+Ornith remains a reserve with no completed agent-with-tools result; Granite is
+excluded because its measured agent-with-tools result is materially weaker.
+V4 must pass the one-case smoke gate before its remaining runs are authorized.
 
 Rank results in this order:
 
