@@ -156,7 +156,13 @@ class HostedComparisonScoringTests(unittest.TestCase):
                     status=CriterionStatus.SUPPORTED,
                     explanation="The wrong passage was cited.",
                     citation_ids=["ENC-WRONG@v1#L1"],
-                )
+                ),
+                CriterionAssessment(
+                    criterion_id="B",
+                    status=CriterionStatus.UNKNOWN,
+                    explanation="No evidence resolves this criterion.",
+                    citation_ids=[],
+                ),
             ],
             agent_status=AgentStatus.COMPLETED,
             rationale="Test decision.",
@@ -206,12 +212,27 @@ class HostedComparisonScoringTests(unittest.TestCase):
                     status="SUPPORTED",
                     passage_ids=("ENC-RIGHT@v1#L1",),
                 ),
+                CriterionLabel(
+                    criterion_id="B",
+                    status="UNKNOWN",
+                    passage_ids=(),
+                ),
             ),
         )
 
         self.assertEqual(
-            (0, 1),
+            (1, 2),
             _criterion_evidence_support(package, label),
+        )
+        manual_review_package = package.model_copy(
+            update={"proposed_decision": None}
+        )
+        self.assertEqual(
+            (0, 0),
+            _criterion_evidence_support(
+                manual_review_package,
+                label,
+            ),
         )
 
     def test_incomplete_comparison_is_rejected_by_default(

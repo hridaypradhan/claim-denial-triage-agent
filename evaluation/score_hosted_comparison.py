@@ -147,22 +147,24 @@ def _criterion_evidence_support(
     citation as semantically interchangeable evidence.
     """
 
-    if not label.criteria:
+    decision = output_package.proposed_decision
+    if not label.criteria or decision is None:
         return 0, 0
 
-    decision = output_package.proposed_decision
     predicted_by_id = {
         assessment.criterion_id: assessment
-        for assessment in (
-            decision.criterion_assessments if decision is not None else []
-        )
+        for assessment in decision.criterion_assessments
     }
     hits = 0
     for expected in label.criteria:
         predicted = predicted_by_id.get(expected.criterion_id)
         if predicted is None or predicted.status.value != expected.status:
             continue
-        if set(predicted.citation_ids).intersection(expected.passage_ids):
+        if expected.passage_ids and set(
+            predicted.citation_ids
+        ).intersection(expected.passage_ids):
+            hits += 1
+        elif not expected.passage_ids and not predicted.citation_ids:
             hits += 1
     return hits, len(label.criteria)
 

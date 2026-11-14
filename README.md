@@ -284,6 +284,16 @@ Beam as the only candidate that passed the gate and validates it over all eight
 development cases with three repetitions each. The 24 v8 runs are validation
 evidence; v7 remains the comparative smoke-gate record.
 
+The first v8 missing-evidence case revealed an evaluation denominator defect:
+a correct direct manual-review request contains no proposed criterion
+assessments, but the scorer counted all absent assessments as grounding
+failures. V9 corrects the metric without changing the model configuration.
+Criterion grounding is scored only for runs that propose a decision; direct
+manual-review runs use the dedicated manual-review metric. An adjudicated
+`UNKNOWN` criterion with no supporting passage counts only when the proposed
+assessment is also `UNKNOWN` and has no citation. V8 artifacts remain
+diagnostic and are not mixed with the corrected v9 validation.
+
 ### Implemented packages and remaining boundaries
 
 The repository is organized around the following implemented packages and

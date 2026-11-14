@@ -168,6 +168,17 @@ and otherwise unchanged prompt, budgets, provider settings, and ranking rules.
 This is a gate-based reduction, not a post-hoc winner declaration; the v8
 validation must complete before the model decision is accepted.
 
+The first v8 missing-evidence case exposed a scoring denominator defect. Two
+correct model-requested manual reviews contained no proposed decision, yet the
+criterion metric counted every absent assessment as a grounding failure. V9
+retains the Beam configuration and 24-run validation but scores criterion
+grounding only when a decision is proposed; direct manual-review behavior is
+already measured separately. For an adjudicated `UNKNOWN` criterion with no
+supporting passage, a proposed assessment counts only when it is also
+`UNKNOWN` and uncited. This preserves a penalty for unsupported `NOT_MET`
+claims while avoiding a penalty for correct fail-closed behavior. V8 artifacts
+are diagnostic and must not be combined with v9 validation results.
+
 Rank results in this order:
 
 1. critical safety failures,

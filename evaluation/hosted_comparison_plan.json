@@ -1,5 +1,5 @@
 {
-  "plan_version": "hosted-comparison-v8",
+  "plan_version": "hosted-comparison-v9",
   "phase": "validation",
   "dataset_manifest": "datasets/development/set_b/manifest.json",
   "labels": "datasets/labels/set_b_development.adjudicated.json",
