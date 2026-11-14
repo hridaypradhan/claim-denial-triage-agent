@@ -194,7 +194,8 @@ credential only from the local `CLAIM_AGENT_LLM_API_KEY` environment variable.
 The hosted CLI runs the same production-shaped case through this boundary,
 writes a uniquely named canonical trace by default, and prints a non-secret
 JSON summary. Its offline end-to-end tests inject a fake transport and require
-no credential or network access. Live Voyager validation remains pending.
+no credential or network access. Comparative live Voyager validation remains
+pending.
 Hosted-call timeouts consume the attempted model-call budget, emit
 `MODEL_FAILED`, and produce an audited `MANUAL_REVIEW` package with terminal
 reason `model_timeout`.
@@ -303,7 +304,17 @@ py -3 --version
 No installation step is required to run the baseline.
 
 For agent development, create an isolated environment and install the agent
-dependencies. On Windows PowerShell:
+dependencies.
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+Windows (PowerShell):
 
 ```powershell
 py -3.13 -m venv .venv
@@ -315,17 +326,31 @@ The `.venv` directory is ignored by Git. Normal agent tests remain offline and
 do not require a hosted-model credential.
 
 Hosted execution uses an individual ASU Research Computing Voyager key. Keep
-the key out of files and shell history by reading it into the current
-PowerShell process:
+the key out of files and shell history by reading it into the current shell
+process.
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+printf 'Voyager API key: '
+stty -echo
+IFS= read -r CLAIM_AGENT_LLM_API_KEY
+stty echo
+printf '\n'
+export CLAIM_AGENT_LLM_API_KEY
+```
+
+Windows (PowerShell):
 
 ```powershell
 $secureKey = Read-Host 'Voyager API key' -AsSecureString
 $env:CLAIM_AGENT_LLM_API_KEY = [System.Net.NetworkCredential]::new('', $secureKey).Password
 ```
 
-The variable disappears when that terminal closes. Never commit a key, share
-one team member's key, or place it in a trace, screenshot, issue, or pull
-request. Normal tests and the scripted demonstration do not read this variable.
+The variable disappears when that terminal closes. Never pass the key directly
+on a command line, commit it, share one team member's key, or place it in a
+trace, screenshot, issue, or pull request. Normal tests and the scripted
+demonstration do not read this variable.
 
 ## Run the baseline tests
 
@@ -409,6 +434,18 @@ trace events, budget usage, and an `OutputPackage` whose approval state remains
 `PENDING_REVIEW`. To also create the immutable canonical JSON Lines trace used
 by evaluation, provide a local output directory and the exact commit being run:
 
+macOS or Linux (Bash/Zsh):
+
+```bash
+commit=$(git rev-parse HEAD)
+python -m claim_agent.agent.integrated_runner \
+    --pretty \
+    --trace-directory './artifacts/traces' \
+    --code-commit "$commit"
+```
+
+Windows (PowerShell):
+
 ```powershell
 $commit = git rev-parse HEAD
 python -m claim_agent.agent.integrated_runner `
@@ -427,6 +464,18 @@ artifacts and should not be committed.
 This command makes live model calls through the configured Voyager profile.
 Set the individual key as described in Setup, confirm the virtual environment
 is active, and record the exact commit in the trace:
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+export PYTHONPATH=./src
+commit=$(git rev-parse HEAD)
+python -m claim_agent.agent.hosted_runner \
+    --pretty \
+    --code-commit "$commit"
+```
+
+Windows (PowerShell):
 
 ```powershell
 $env:PYTHONPATH = '.\src'
@@ -453,6 +502,15 @@ policy lookup fields from the trusted manifest. The total runtime budget is
 180 seconds, with each provider request still limited to 30 seconds. Validate
 the plan without credentials or network access:
 
+macOS or Linux (Bash/Zsh):
+
+```bash
+export PYTHONPATH=./src
+python -m evaluation.hosted_comparison
+```
+
+Windows (PowerShell):
+
 ```powershell
 $env:PYTHONPATH = '.\src'
 python -m evaluation.hosted_comparison
@@ -462,6 +520,20 @@ The plan contains 72 candidate/case repetitions. A repetition can require as
 many as four bounded model calls, so 72 is not an API-request estimate. Live
 execution requires `--confirm-live`, an exact commit, and may be narrowed to a
 single model, case, and repeat for the initial smoke test:
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+commit=$(git rev-parse HEAD)
+python -m evaluation.run_hosted_comparison \
+    --model-id 'mimo-v2-6-pro' \
+    --case-id 'CLM-2026-005097-L1' \
+    --repeat-index 1 \
+    --code-commit "$commit" \
+    --confirm-live
+```
+
+Windows (PowerShell):
 
 ```powershell
 $commit = git rev-parse HEAD
@@ -477,6 +549,14 @@ Completed runs are skipped on a resumed command. A partial directory is never
 overwritten automatically and must be inspected before retrying. Artifacts are
 written under `.local-output/hosted-comparison/` and remain uncommitted. Score
 available progress without making provider calls:
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+python -m evaluation.score_hosted_comparison --allow-partial
+```
+
+Windows (PowerShell):
 
 ```powershell
 python -m evaluation.score_hosted_comparison --allow-partial
