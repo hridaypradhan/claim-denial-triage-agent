@@ -13,11 +13,11 @@ from typing import Any, Protocol
 
 from openai import APITimeoutError, OpenAI
 
-from claim_agent.agent.hosted_model import (
+from claim_agent.agent.hosted.client import (
     HostedModelTransportRequest,
     HostedModelTransportResponse,
 )
-from claim_agent.agent.runtime_action_schema import (
+from claim_agent.agent.hosted.action_schema import (
     build_runtime_action_response_format,
 )
 

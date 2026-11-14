@@ -6,7 +6,7 @@ import json
 import unittest
 
 from claim_agent.agent.action_parser import RuntimeActionType, parse_model_action
-from claim_agent.agent.runtime_action_schema import (
+from claim_agent.agent.hosted.action_schema import (
     build_runtime_action_json_schema,
     build_runtime_action_response_format,
 )

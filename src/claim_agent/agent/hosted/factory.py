@@ -6,8 +6,8 @@ import os
 from dataclasses import dataclass
 from typing import Mapping
 
-from claim_agent.agent.hosted_model import HostedModelClient
-from claim_agent.agent.openai_chat_transport import (
+from claim_agent.agent.hosted.client import HostedModelClient
+from claim_agent.agent.hosted.openai_chat import (
     OpenAIChatTransportSettings,
     OpenAICompatibleChatTransport,
 )

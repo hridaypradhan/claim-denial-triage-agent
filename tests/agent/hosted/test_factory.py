@@ -5,8 +5,8 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from claim_agent.agent.hosted_model import HostedModelClient
-from claim_agent.agent.hosted_model_factory import (
+from claim_agent.agent.hosted.client import HostedModelClient
+from claim_agent.agent.hosted.factory import (
     HOSTED_API_KEY_ENVIRONMENT_VARIABLE,
     PROVISIONAL_VOYAGER_PROFILE,
     VOYAGER_BASE_URL,
@@ -15,7 +15,7 @@ from claim_agent.agent.hosted_model_factory import (
     HostedModelProfile,
     build_hosted_model_client,
 )
-from claim_agent.agent.openai_chat_transport import (
+from claim_agent.agent.hosted.openai_chat import (
     OpenAICompatibleChatTransport,
 )
 

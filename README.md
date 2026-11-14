@@ -208,8 +208,10 @@ explicitly tracked extension points:
 - [`src/claim_agent/contracts/`](src/claim_agent/contracts/) — shared data contracts.
 - [`src/claim_agent/tools/`](src/claim_agent/tools/) — typed, read-only evidence tools.
 - [`src/claim_agent/agent/`](src/claim_agent/agent/) — bounded runtime,
-  production-shaped adapters, canonical traces, and the provider-neutral hosted
-  boundary; live hosted execution, verification, and grounded drafting remain
+  production-shaped adapters, and canonical traces.
+- [`src/claim_agent/agent/hosted/`](src/claim_agent/agent/hosted/) — the
+  provider-neutral hosted client, strict action schema, OpenAI-compatible
+  transport, and Voyager configuration; live hosted execution remains
   incomplete.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
@@ -576,6 +578,7 @@ docs/decisions/           Architecture decision records
 evaluation/               Evaluation and fault-injection harnesses
 knowledge/                Versioned policy and synthetic evidence corpus
 src/claim_agent/agent/    Bounded LLM orchestration
+  hosted/                 Hosted client, schemas, transport, and configuration
 src/claim_agent/contracts Shared schemas and enums
 src/claim_agent/output/   Reports and appeal preparation
 src/claim_agent/safety/   Deterministic validation and human-review gates
