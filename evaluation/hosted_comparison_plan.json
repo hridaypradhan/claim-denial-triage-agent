@@ -1,5 +1,6 @@
 {
-  "plan_version": "hosted-comparison-v7",
+  "plan_version": "hosted-comparison-v8",
+  "phase": "validation",
   "dataset_manifest": "datasets/development/set_b/manifest.json",
   "labels": "datasets/labels/set_b_development.adjudicated.json",
   "knowledge_snapshot_id": "knowledge-v1",
@@ -43,28 +44,6 @@
     "latency"
   ],
   "candidates": [
-    {
-      "provider_name": "asu-rc-voyager",
-      "base_url": "https://openai.rc.asu.edu/v1",
-      "model_id": "qwen35-397b-a17b",
-      "max_completion_tokens": 2048,
-      "reasoning_effort": "none",
-      "temperature": 0.0,
-      "response_format_mode": "json_schema",
-      "request_timeout_seconds": 60.0,
-      "disable_gateway_addons": true
-    },
-    {
-      "provider_name": "asu-rc-voyager",
-      "base_url": "https://openai.rc.asu.edu/v1",
-      "model_id": "qwen36-27b",
-      "max_completion_tokens": 2048,
-      "reasoning_effort": "none",
-      "temperature": 0.0,
-      "response_format_mode": "json_schema",
-      "request_timeout_seconds": 60.0,
-      "disable_gateway_addons": true
-    },
     {
       "provider_name": "asu-rc-voyager",
       "base_url": "https://openai.rc.asu.edu/v1",

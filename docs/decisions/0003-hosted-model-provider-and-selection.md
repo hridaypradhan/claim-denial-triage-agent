@@ -155,6 +155,19 @@ This permits legitimate alternative labeled passages and prevents unrelated
 retrieved evidence from receiving full grounding credit. V6 artifacts are
 diagnostic and must not be combined with v7 comparison results.
 
+The v7 smoke gate then ran one identical development case through all three
+candidates. Beam was the only candidate to satisfy the complete gate: correct
+root cause and disposition, four of four criterion findings grounded in
+matching adjudicated passages, valid schema and tool calls, and zero provider
+or critical safety failures. Qwen 27B again grounded only two of four criteria
+because it did not retrieve the second encounter note. Qwen 397B retrieved the
+policy and both notes but timed out on the final decision request, repeating
+its earlier operational failure. V8 removes both failed candidates and freezes
+Beam for the 24-run development validation: eight cases, three repetitions,
+and otherwise unchanged prompt, budgets, provider settings, and ranking rules.
+This is a gate-based reduction, not a post-hoc winner declaration; the v8
+validation must complete before the model decision is accepted.
+
 Rank results in this order:
 
 1. critical safety failures,

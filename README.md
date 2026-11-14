@@ -273,6 +273,17 @@ retrieved. V7 corrects that evaluation gap by requiring a matching status and
 at least one adjudicated passage for each criterion. V6 artifacts remain
 diagnostic; live comparison resumes in a clean v7 output directory.
 
+The v7 smoke gate evaluated the same development case once with each frozen
+candidate. Beam completed an accepted, pending-review decision with the
+correct root cause and disposition, four of four criterion findings grounded
+in matching adjudicated passages, valid schema and tool calls, and no provider
+or safety failure. Qwen 27B repeated its two-of-four criterion grounding result
+because it did not retrieve the second encounter note. Qwen 397B retrieved all
+three sources but timed out on its final decision request. V8 therefore freezes
+Beam as the only candidate that passed the gate and validates it over all eight
+development cases with three repetitions each. The 24 v8 runs are validation
+evidence; v7 remains the comparative smoke-gate record.
+
 ### Implemented packages and remaining boundaries
 
 The repository is organized around the following implemented packages and

@@ -38,9 +38,10 @@ class HostedComparisonPlanTests(unittest.TestCase):
         plan = load_hosted_comparison_plan()
 
         self.assertEqual(
-            "hosted-comparison-v7",
+            "hosted-comparison-v8",
             plan.plan_version,
         )
+        self.assertEqual("validation", plan.phase)
         self.assertEqual(300.0, plan.budgets.max_runtime_seconds)
         self.assertTrue(
             all(
@@ -62,7 +63,7 @@ class HostedComparisonPlanTests(unittest.TestCase):
         )
         self.assertEqual(3, plan.repetitions)
         self.assertEqual(8, len(plan.case_ids))
-        self.assertEqual(3, len(plan.candidates))
+        self.assertEqual(1, len(plan.candidates))
 
     def test_expected_candidate_models_are_frozen(self) -> None:
         """The reviewed candidate set should not change implicitly."""
@@ -71,8 +72,6 @@ class HostedComparisonPlanTests(unittest.TestCase):
 
         self.assertEqual(
             (
-                "qwen35-397b-a17b",
-                "qwen36-27b",
                 "beam-1-0",
             ),
             tuple(candidate.model_id for candidate in plan.candidates),
@@ -99,15 +98,29 @@ class HostedComparisonPlanTests(unittest.TestCase):
             )
         )
 
-    def test_plan_freezes_seventy_two_case_runs(self) -> None:
-        """Three models, eight cases, and three repeats equal 72 runs."""
+    def test_plan_freezes_twenty_four_case_runs(self) -> None:
+        """One gated model, eight cases, and three repeats equal 24 runs."""
 
         plan = load_hosted_comparison_plan()
 
         self.assertEqual(
-            72,
+            24,
             len(plan.candidates) * len(plan.case_ids) * plan.repetitions,
         )
+
+    def test_comparison_phase_requires_multiple_candidates(self) -> None:
+        """A one-model plan is valid only after the comparison gate."""
+
+        raw_plan = json.loads(
+            DEFAULT_HOSTED_COMPARISON_PLAN.read_text(encoding="utf-8")
+        )
+        raw_plan["phase"] = "comparison"
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "at least two candidate models",
+        ):
+            HostedComparisonPlan.model_validate(raw_plan)
 
     def test_held_out_manifest_is_rejected(self) -> None:
         """Model selection must never inspect held-out evaluation data."""

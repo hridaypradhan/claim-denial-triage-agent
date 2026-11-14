@@ -105,7 +105,7 @@ class HostedComparisonScoringTests(unittest.TestCase):
         self.assertFalse(report["complete"])
         self.assertIsNone(report["winner"])
         self.assertEqual(3, report["completed_runs"])
-        self.assertEqual(72, report["planned_runs"])
+        self.assertEqual(24, report["planned_runs"])
         self.assertEqual(
             1.0,
             report["scores"][plan.candidates[0].model_id][

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -73,6 +74,7 @@ class HostedComparisonPlan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     plan_version: str
+    phase: Literal["comparison", "validation"]
     dataset_manifest: str
     labels: str
     knowledge_snapshot_id: str
@@ -123,16 +125,23 @@ class HostedComparisonPlan(BaseModel):
         if len(model_ids) != len(set(model_ids)):
             raise ValueError("candidate model IDs must be unique")
 
-        if len(model_ids) < 2:
-            raise ValueError("at least two candidate models are required")
-
         return candidates
 
     @model_validator(mode="after")
     def require_current_development_inputs(
         self,
     ) -> "HostedComparisonPlan":
-        """Reject held-out data or a prompt that differs across candidates."""
+        """Reject invalid phase, data, or prompt combinations."""
+
+        if self.phase == "comparison" and len(self.candidates) < 2:
+            raise ValueError(
+                "comparison plans require at least two candidate models"
+            )
+
+        if self.phase == "validation" and len(self.candidates) != 1:
+            raise ValueError(
+                "validation plans require exactly one gated model"
+            )
 
         if "development" not in self.dataset_manifest:
             raise ValueError("dataset_manifest must reference development data")
