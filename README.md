@@ -248,6 +248,13 @@ use at different model sizes; Beam adds a high-scoring, always-reasoning
 alternative. V4 must pass the same one-case smoke gate before any full
 comparison begins.
 
+The first v4 Qwen 27B smoke produced a valid policy-tool action but consumed
+1,687 output tokens and roughly 60.6 seconds before that simple action; its
+next request timed out. Because Voyager counts thinking toward completion
+tokens, v5 sets `reasoning_effort` to `none` and caps completions at 2,048
+tokens for every candidate. The 60-second request limit remains the operational
+gate. The v4 artifact is diagnostic and is not scored.
+
 ### Implemented packages and remaining boundaries
 
 The repository is organized around the following implemented packages and
@@ -514,7 +521,7 @@ runner never substitutes the scripted model or another hosted model.
 
 ## Compare hosted models on development data
 
-The frozen development-only v4 plan compares `qwen35-397b-a17b`, `qwen36-27b`,
+The frozen development-only v5 plan compares `qwen35-397b-a17b`, `qwen36-27b`,
 and `beam-1-0` on eight representative Dataset B cases with three
 repetitions. Each run receives valid claim-bound encounter document IDs and
 policy lookup fields from the trusted manifest. The total runtime budget is
@@ -584,7 +591,7 @@ python -m evaluation.score_hosted_comparison --allow-partial
 Partial reports never name a winner. Omitting `--allow-partial` requires all
 72 planned runs before applying the documented safety-first ranking and tie
 breakers. Only a complete report can be used to accept the final model. Do not
-expand v4 into the full run until its three candidates pass the documented
+expand v5 into the full run until its three candidates pass the documented
 one-case compatibility gate.
 
 ## Run the knowledge and retrieval tests

@@ -121,6 +121,15 @@ Ornith remains a reserve with no completed agent-with-tools result; Granite is
 excluded because its measured agent-with-tools result is materially weaker.
 V4 must pass the one-case smoke gate before its remaining runs are authorized.
 
+The first v4 `qwen36-27b` smoke returned a valid strict-schema policy-tool
+action, but the provider reported 1,687 output tokens and about 60.6 seconds
+for that action; the following request timed out. Voyager documents that model
+thinking counts toward the completion-token budget. V5 therefore sets
+`reasoning_effort` to `none` and `max_completion_tokens` to 2,048 uniformly
+for all candidates while retaining the 60-second request limit. This tests a
+deployable low-latency configuration before candidate comparison. The v4
+artifact remains compatibility evidence and must not be scored.
+
 Rank results in this order:
 
 1. critical safety failures,
