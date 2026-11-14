@@ -223,11 +223,13 @@ The first live smoke run confirmed Voyager connectivity, strict hosted
 actions, and local tool dispatch. It also exposed an integration gap: the
 model was authorized to retrieve encounter notes but was not given the
 claim's valid document IDs. Hosted evaluation now includes only trusted,
-claim-bound tool metadata from the knowledge manifest. The comparison plan is
-versioned as `hosted-comparison-v2`; it allows up to 180 seconds for the whole
-bounded run while preserving the 30-second limit for each provider request.
-Earlier v1 smoke artifacts remain diagnostic evidence and are not comparison
-results.
+claim-bound tool metadata from the knowledge manifest. A second smoke run
+confirmed correct policy retrieval and use of both valid encounter document
+IDs, but its final model request exceeded the original 30-second request
+limit. The comparison plan is therefore versioned as `hosted-comparison-v3`;
+it applies the same 60-second request limit to every candidate and allows up
+to 300 seconds for the whole bounded run. Earlier v1 and v2 smoke artifacts
+remain diagnostic evidence and are not comparison results.
 
 ### Implemented packages and remaining boundaries
 
@@ -495,12 +497,12 @@ runner never substitutes the scripted model or another hosted model.
 
 ## Compare hosted models on development data
 
-The frozen development-only v2 plan compares `mimo-v2-6-pro`, `glm-5-3`, and
+The frozen development-only v3 plan compares `mimo-v2-6-pro`, `glm-5-3`, and
 `deepseek-v4-1-flash` on eight representative Dataset B cases with three
 repetitions. Each run receives valid claim-bound encounter document IDs and
 policy lookup fields from the trusted manifest. The total runtime budget is
-180 seconds, with each provider request still limited to 30 seconds. Validate
-the plan without credentials or network access:
+300 seconds, with each provider request limited to 60 seconds. Validate the
+plan without credentials or network access:
 
 macOS or Linux (Bash/Zsh):
 

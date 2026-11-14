@@ -1,5 +1,5 @@
 {
-  "plan_version": "hosted-comparison-v2",
+  "plan_version": "hosted-comparison-v3",
   "dataset_manifest": "datasets/development/set_b/manifest.json",
   "labels": "datasets/labels/set_b_development.adjudicated.json",
   "knowledge_snapshot_id": "knowledge-v1",
@@ -20,7 +20,7 @@
     "max_tool_calls": 3,
     "max_repair_attempts": 1,
     "max_total_steps": 7,
-    "max_runtime_seconds": 180.0,
+    "max_runtime_seconds": 300.0,
     "max_tool_retries": 1,
     "tool_request_timeout_seconds": 30.0
   },
@@ -51,7 +51,7 @@
       "reasoning_effort": "low",
       "temperature": 0.0,
       "response_format_mode": "json_schema",
-      "request_timeout_seconds": 30.0,
+      "request_timeout_seconds": 60.0,
       "disable_gateway_addons": true
     },
     {
@@ -62,7 +62,7 @@
       "reasoning_effort": "low",
       "temperature": 0.0,
       "response_format_mode": "json_object",
-      "request_timeout_seconds": 30.0,
+      "request_timeout_seconds": 60.0,
       "disable_gateway_addons": true
     },
     {
@@ -73,7 +73,7 @@
       "reasoning_effort": "low",
       "temperature": 0.0,
       "response_format_mode": "json_object",
-      "request_timeout_seconds": 30.0,
+      "request_timeout_seconds": 60.0,
       "disable_gateway_addons": true
     }
   ]

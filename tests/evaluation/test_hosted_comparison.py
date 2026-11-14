@@ -38,8 +38,15 @@ class HostedComparisonPlanTests(unittest.TestCase):
         plan = load_hosted_comparison_plan()
 
         self.assertEqual(
-            "hosted-comparison-v2",
+            "hosted-comparison-v3",
             plan.plan_version,
+        )
+        self.assertEqual(300.0, plan.budgets.max_runtime_seconds)
+        self.assertTrue(
+            all(
+                candidate.request_timeout_seconds == 60.0
+                for candidate in plan.candidates
+            )
         )
         self.assertEqual(3, plan.repetitions)
         self.assertEqual(8, len(plan.case_ids))

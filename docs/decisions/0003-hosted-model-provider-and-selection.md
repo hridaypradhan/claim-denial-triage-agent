@@ -89,6 +89,15 @@ It also raises the whole-run limit to 180 seconds while retaining a 30-second
 limit per provider request. The v1 artifact remains diagnostic evidence and
 must not be included in candidate scoring.
 
+The v2 smoke run then retrieved the policy and both valid encounter documents
+successfully. Its first three model calls completed in about 10, 17, and 24
+seconds, while the fourth call exceeded the 30-second request limit by about
+68 milliseconds. The run remained well below its 180-second whole-run limit.
+`hosted-comparison-v3` therefore applies a 60-second request limit uniformly
+to every candidate and a 300-second whole-run limit. This is an operational
+budget correction made before candidate comparison; the v2 artifact is also
+diagnostic evidence and must not be scored.
+
 Rank results in this order:
 
 1. critical safety failures,
