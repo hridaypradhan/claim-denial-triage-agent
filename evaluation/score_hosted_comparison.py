@@ -135,6 +135,38 @@ def _ratio(hits: int, total: int) -> dict[str, object]:
     }
 
 
+def _criterion_evidence_support(
+    output_package: OutputPackage,
+    label: Label,
+) -> tuple[int, int]:
+    """Count criteria grounded in evidence adjudicated for that criterion.
+
+    A criterion is supported only when the predicted status matches and at
+    least one citation belongs to that criterion's accepted passage set. This
+    allows alternative adjudicated passages without treating any retrieved
+    citation as semantically interchangeable evidence.
+    """
+
+    if not label.criteria:
+        return 0, 0
+
+    decision = output_package.proposed_decision
+    predicted_by_id = {
+        assessment.criterion_id: assessment
+        for assessment in (
+            decision.criterion_assessments if decision is not None else []
+        )
+    }
+    hits = 0
+    for expected in label.criteria:
+        predicted = predicted_by_id.get(expected.criterion_id)
+        if predicted is None or predicted.status.value != expected.status:
+            continue
+        if set(predicted.citation_ids).intersection(expected.passage_ids):
+            hits += 1
+    return hits, len(label.criteria)
+
+
 def score_completed_runs(
     *,
     plan: HostedComparisonPlan,
@@ -166,6 +198,8 @@ def score_completed_runs(
         valid_actions = 0
         model_responses = 0
         provider_failures = 0
+        criterion_evidence_hits = 0
+        criterion_evidence_total = 0
         elapsed_values: list[int] = []
         input_tokens = 0
         output_tokens = 0
@@ -179,6 +213,15 @@ def score_completed_runs(
                 trace_events=run.trace_events,
             )
             label: Label = labels[run.case.case_id]
+
+            run_evidence_hits, run_evidence_total = (
+                _criterion_evidence_support(
+                    run.output_package,
+                    label,
+                )
+            )
+            criterion_evidence_hits += run_evidence_hits
+            criterion_evidence_total += run_evidence_total
 
             if (
                 prediction.root_cause == label.root_cause
@@ -295,6 +338,10 @@ def score_completed_runs(
                 joint_hits,
                 len(model_runs),
             ),
+            "criterion_evidence_support_rate": _ratio(
+                criterion_evidence_hits,
+                criterion_evidence_total,
+            ),
             "correct_manual_review_rate": _ratio(
                 manual_review_hits,
                 len(model_runs),
@@ -353,6 +400,10 @@ def rank_candidates(
                 "correct_policy_request_rate",
             ),
             -_rate_value(scores[model_id], "joint_accuracy"),
+            -_rate_value(
+                scores[model_id],
+                "criterion_evidence_support_rate",
+            ),
             -_rate_value(
                 scores[model_id],
                 "citation_precision",

@@ -1,5 +1,5 @@
 {
-  "plan_version": "hosted-comparison-v6",
+  "plan_version": "hosted-comparison-v7",
   "dataset_manifest": "datasets/development/set_b/manifest.json",
   "labels": "datasets/labels/set_b_development.adjudicated.json",
   "knowledge_snapshot_id": "knowledge-v1",

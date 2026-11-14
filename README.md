@@ -263,6 +263,16 @@ authorized, budgeted call for relevant available evidence before manual review
 based only on missing or insufficient evidence. V6 freezes that prompt change;
 it does not permit repeated or irrelevant retrieval.
 
+The v6 smoke gate then produced accepted decisions from Beam and Qwen 27B.
+Beam retrieved all relevant documents and grounded all four criterion findings
+in passages adjudicated for those criteria. Qwen 27B reached the correct root
+cause and disposition, but only two of four criterion findings cited evidence
+adjudicated for the matching criterion. The original scorer still gave both
+runs full citation credit because it checked only whether a citation had been
+retrieved. V7 corrects that evaluation gap by requiring a matching status and
+at least one adjudicated passage for each criterion. V6 artifacts remain
+diagnostic; live comparison resumes in a clean v7 output directory.
+
 ### Implemented packages and remaining boundaries
 
 The repository is organized around the following implemented packages and

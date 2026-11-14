@@ -38,7 +38,7 @@ class HostedComparisonPlanTests(unittest.TestCase):
         plan = load_hosted_comparison_plan()
 
         self.assertEqual(
-            "hosted-comparison-v6",
+            "hosted-comparison-v7",
             plan.plan_version,
         )
         self.assertEqual(300.0, plan.budgets.max_runtime_seconds)

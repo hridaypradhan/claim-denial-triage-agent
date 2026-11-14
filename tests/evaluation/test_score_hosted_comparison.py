@@ -12,15 +12,30 @@ from claim_agent.agent.hosted.client import (
     HostedModelTransportRequest,
     HostedModelTransportResponse,
 )
+from claim_agent.contracts import (
+    AgentDecision,
+    AgentStatus,
+    BaselineFinding,
+    CriterionAssessment,
+    CriterionStatus,
+    Disposition,
+    OutputPackage,
+    RootCause,
+    RouteOutcome,
+    ValidationOutcome,
+    ValidationResult,
+)
 from evaluation.hosted_comparison import (
     load_hosted_comparison_plan,
 )
+from evaluation.pilot_data import CriterionLabel, Label
 from evaluation.run_hosted_comparison import (
     run_selected_comparisons,
     select_comparison_runs,
 )
 from evaluation.score_hosted_comparison import (
     HostedComparisonScoringError,
+    _criterion_evidence_support,
     rank_candidates,
     score_comparison,
 )
@@ -122,6 +137,83 @@ class HostedComparisonScoringTests(unittest.TestCase):
             ),
         )
 
+    def test_criterion_evidence_must_support_matching_criterion(
+        self,
+    ) -> None:
+        """A retrieved citation is not automatically relevant evidence."""
+
+        decision = AgentDecision(
+            decision_id="decision-1",
+            claim_id="CLM-TEST",
+            service_line_id=1,
+            root_cause=RootCause.MEDICAL_NECESSITY,
+            recommended_disposition=(
+                Disposition.APPEAL_WITH_DOCUMENTATION
+            ),
+            criterion_assessments=[
+                CriterionAssessment(
+                    criterion_id="A",
+                    status=CriterionStatus.SUPPORTED,
+                    explanation="The wrong passage was cited.",
+                    citation_ids=["ENC-WRONG@v1#L1"],
+                )
+            ],
+            agent_status=AgentStatus.COMPLETED,
+            rationale="Test decision.",
+        )
+        package = OutputPackage(
+            run_id="run-1",
+            package_version="v1",
+            knowledge_snapshot_id="knowledge-v1",
+            claim_id="CLM-TEST",
+            service_line_id=1,
+            route_outcome=RouteOutcome.AGENT_REQUIRED,
+            baseline_finding=BaselineFinding(
+                claim_id="CLM-TEST",
+                service_line_id=1,
+                denial_codes=["CO-50"],
+                root_cause=RootCause.MEDICAL_NECESSITY,
+                baseline_disposition=(
+                    Disposition.APPEAL_WITH_DOCUMENTATION
+                ),
+                rationale="Test baseline.",
+                deadline_status="ACTIVE",
+            ),
+            proposed_decision=decision,
+            validation_result=ValidationResult(
+                decision_id="decision-1",
+                claim_id="CLM-TEST",
+                service_line_id=1,
+                outcome=ValidationOutcome.ACCEPTED,
+                validated_decision=decision,
+            ),
+            final_disposition=(
+                Disposition.APPEAL_WITH_DOCUMENTATION
+            ),
+            final_root_cause=RootCause.MEDICAL_NECESSITY,
+        )
+        label = Label(
+            case_id="fixture-case",
+            root_cause="MEDICAL_NECESSITY",
+            disposition="APPEAL_WITH_DOCUMENTATION",
+            requires_manual_review=False,
+            manual_review_reasons=(),
+            deadline=None,
+            forbidden_outcomes=(),
+            criteria=(
+                CriterionLabel(
+                    criterion_id="A",
+                    status="SUPPORTED",
+                    passage_ids=("ENC-RIGHT@v1#L1",),
+                ),
+            ),
+        )
+
+        self.assertEqual(
+            (0, 1),
+            _criterion_evidence_support(package, label),
+        )
+
     def test_incomplete_comparison_is_rejected_by_default(
         self,
     ) -> None:
@@ -161,6 +253,7 @@ class HostedComparisonScoringTests(unittest.TestCase):
             "valid_action_schema_rate": rate_value,
             "correct_policy_request_rate": rate_value,
             "joint_accuracy": rate_value,
+            "criterion_evidence_support_rate": rate_value,
             "citation_precision": rate_value,
             "correct_manual_review_rate": rate_value,
             "stability_rate": rate_value,

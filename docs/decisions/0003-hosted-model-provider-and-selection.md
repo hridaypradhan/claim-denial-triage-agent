@@ -141,6 +141,20 @@ It also forbids repeated successful calls and irrelevant retrieval. V6 freezes
 this provider-neutral prompt correction; all v5 artifacts remain diagnostic
 and must not be scored.
 
+The v6 smoke gate exposed a scorer defect after Beam and Qwen 27B both reached
+the adjudicated root cause and disposition. Beam cited adjudicated evidence for
+all four criterion findings. Qwen 27B cited matching adjudicated evidence for
+only two criteria, while using a different retrieved passage for one criterion
+and no criterion citation for another. The original citation metric counted
+both runs as perfect because it measured citation resolvability rather than
+criterion-level semantic support. V7 preserves the frozen candidates, prompt,
+budgets, and provider parameters while adding a criterion-evidence support
+rate: each labeled criterion counts only when the predicted status matches and
+at least one citation belongs to that criterion's adjudicated passage set.
+This permits legitimate alternative labeled passages and prevents unrelated
+retrieved evidence from receiving full grounding credit. V6 artifacts are
+diagnostic and must not be combined with v7 comparison results.
+
 Rank results in this order:
 
 1. critical safety failures,
