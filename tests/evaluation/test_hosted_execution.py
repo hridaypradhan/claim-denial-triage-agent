@@ -142,7 +142,7 @@ class HostedCaseExecutionTests(unittest.TestCase):
             run_config["model_id"],
         )
         self.assertEqual(
-            "planning-v1",
+            "planning-v2",
             run_config["prompt_version"],
         )
 

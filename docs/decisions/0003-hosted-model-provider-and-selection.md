@@ -130,6 +130,17 @@ for all candidates while retaining the 60-second request limit. This tests a
 deployable low-latency configuration before candidate comparison. The v4
 artifact remains compatibility evidence and must not be scored.
 
+All three v5 candidates produced valid strict-schema actions and valid tool
+calls, but none produced the adjudicated decision. Beam completed without a
+provider failure and requested manual review after retrieving the policy and
+one encounter note even though a second relevant document was listed and one
+tool call remained. `planning-v2` therefore requires the model to retrieve
+relevant, still-unqueried, claim-bound documents before requesting review only
+for missing or insufficient evidence, when authorization and budget remain.
+It also forbids repeated successful calls and irrelevant retrieval. V6 freezes
+this provider-neutral prompt correction; all v5 artifacts remain diagnostic
+and must not be scored.
+
 Rank results in this order:
 
 1. critical safety failures,

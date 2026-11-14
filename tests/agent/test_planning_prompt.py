@@ -89,6 +89,21 @@ class PlanningPromptTests(unittest.TestCase):
                     self.normalized_prompt,
                 )
 
+    def test_prompt_exhausts_relevant_available_evidence(self) -> None:
+        """Missing evidence should not stop a run before a useful tool call."""
+
+        required_phrases = (
+            "still-unqueried document ID",
+            "trusted tool context",
+            "when call budget remains",
+            "Do not repeat a successful tool call",
+            "relevant available evidence has been exhausted",
+        )
+
+        for phrase in required_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.normalized_prompt)
+
     def test_prompt_is_provider_and_model_neutral(self) -> None:
         """The runtime prompt should not depend on one hosted service."""
 

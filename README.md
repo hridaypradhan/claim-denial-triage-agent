@@ -255,6 +255,14 @@ tokens, v5 sets `reasoning_effort` to `none` and caps completions at 2,048
 tokens for every candidate. The 60-second request limit remains the operational
 gate. The v4 artifact is diagnostic and is not scored.
 
+The v5 smoke gate produced valid strict-schema actions and valid tool calls
+for all three candidates, but no correct final decision. Beam completed without
+a provider failure yet requested manual review while a relevant, listed
+encounter document remained unqueried. `planning-v2` now requires an
+authorized, budgeted call for relevant available evidence before manual review
+based only on missing or insufficient evidence. V6 freezes that prompt change;
+it does not permit repeated or irrelevant retrieval.
+
 ### Implemented packages and remaining boundaries
 
 The repository is organized around the following implemented packages and
@@ -521,7 +529,7 @@ runner never substitutes the scripted model or another hosted model.
 
 ## Compare hosted models on development data
 
-The frozen development-only v5 plan compares `qwen35-397b-a17b`, `qwen36-27b`,
+The frozen development-only v6 plan compares `qwen35-397b-a17b`, `qwen36-27b`,
 and `beam-1-0` on eight representative Dataset B cases with three
 repetitions. Each run receives valid claim-bound encounter document IDs and
 policy lookup fields from the trusted manifest. The total runtime budget is
@@ -591,7 +599,7 @@ python -m evaluation.score_hosted_comparison --allow-partial
 Partial reports never name a winner. Omitting `--allow-partial` requires all
 72 planned runs before applying the documented safety-first ranking and tie
 breakers. Only a complete report can be used to accept the final model. Do not
-expand v5 into the full run until its three candidates pass the documented
+expand v6 into the full run until its three candidates pass the documented
 one-case compatibility gate.
 
 ## Run the knowledge and retrieval tests

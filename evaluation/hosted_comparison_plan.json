@@ -1,9 +1,9 @@
 {
-  "plan_version": "hosted-comparison-v5",
+  "plan_version": "hosted-comparison-v6",
   "dataset_manifest": "datasets/development/set_b/manifest.json",
   "labels": "datasets/labels/set_b_development.adjudicated.json",
   "knowledge_snapshot_id": "knowledge-v1",
-  "prompt_version": "planning-v1",
+  "prompt_version": "planning-v2",
   "repetitions": 3,
   "case_ids": [
     "CLM-2026-005097-L1",
