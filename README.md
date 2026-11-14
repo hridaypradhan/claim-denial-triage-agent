@@ -176,6 +176,13 @@ current run, and requires manual review when support is incomplete or
 conflicting. The prompt version is recorded in each run configuration so a
 trace identifies the exact behavioral instructions used.
 
+Hosted runs use configuration version 0.3. Their canonical `RUN_STARTED`
+event records the provider and model IDs, sampling limits, reasoning effort,
+structured-response mode, disabled gateway addons, runtime budgets, tool
+allowlist, prompt version, and knowledge snapshot. Credentials are never part
+of this persisted configuration. Existing version-0.2 scripted configuration
+hashes remain unchanged.
+
 The runtime also provides a provider-neutral `HostedModelClient`. It translates
 the stable runtime request into a timeout-bounded transport request and maps
 provider text, request IDs, and token counts back into the runtime response.
