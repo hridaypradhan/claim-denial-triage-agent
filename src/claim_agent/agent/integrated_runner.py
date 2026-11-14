@@ -29,6 +29,9 @@ from claim_agent.agent.integrated_demo_setup import (
     build_demo_run_configuration,
 )
 from claim_agent.agent.integrated_runtime import run_integrated_case
+from claim_agent.agent.planning_prompt import (
+    PLANNING_SYSTEM_INSTRUCTIONS,
+)
 from claim_agent.agent.trace_adapter import CanonicalTraceAdapter
 from claim_agent.agent.trace_writer import JsonLinesTraceWriter
 from claim_agent.tools.knowledge_store import KnowledgeStore
@@ -49,10 +52,7 @@ def run_integrated_demo(
 
     integrated_result = run_integrated_case(
         run_id=DEMO_RUN_ID,
-        system_instructions=(
-            "Use only retrieved evidence. Return one structured runtime "
-            "action per turn. Never submit an appeal."
-        ),
+        system_instructions=PLANNING_SYSTEM_INSTRUCTIONS,
         model_client=build_demo_model(),
         dispatcher=build_demo_dispatcher(knowledge_store),
         baseline_finding=build_demo_baseline_finding(),

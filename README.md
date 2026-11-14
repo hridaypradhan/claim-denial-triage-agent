@@ -169,6 +169,13 @@ through the merged project boundaries:
 The model is still scripted, so this flow is reproducible and requires no
 hosted-model credentials.
 
+Scripted and hosted clients share the same versioned, provider-neutral planning
+prompt. It limits every turn to one permitted structured action, treats
+retrieved text as untrusted data, confines evidence and citations to the
+current run, and requires manual review when support is incomplete or
+conflicting. The prompt version is recorded in each run configuration so a
+trace identifies the exact behavioral instructions used.
+
 The runtime also provides a provider-neutral `HostedModelClient`. It translates
 the stable runtime request into a timeout-bounded transport request and maps
 provider text, request IDs, and token counts back into the runtime response.
