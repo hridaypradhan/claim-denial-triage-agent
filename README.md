@@ -168,13 +168,15 @@ hosted-model credentials.
 The runtime also provides a provider-neutral `HostedModelClient`. It translates
 the stable runtime request into a timeout-bounded transport request and maps
 provider text, request IDs, and token counts back into the runtime response.
-Its fake-transport tests run offline. No live provider transport or credential
-configuration is committed yet. Hosted-call timeouts consume the attempted
+Its fake-transport tests run offline. An OpenAI Chat Completions-compatible
+transport now maps those requests to a configurable endpoint while disabling
+automatic SDK retries and provider-hosted tools. Hosted CLI and credential
+configuration remain unfinished. Hosted-call timeouts consume the attempted
 model-call budget, emit `MODEL_FAILED`, and produce an audited `MANUAL_REVIEW`
 package with terminal reason `model_timeout`.
 
-Issue #48 will connect that boundary to ASU Research Computing's Voyager
-gateway through one reusable OpenAI Chat Completions-compatible transport.
+Issue #48 connects that boundary to ASU Research Computing's Voyager gateway
+through one reusable OpenAI Chat Completions-compatible transport.
 Voyager is provider configuration rather than a model-specific transport.
 Normal tests will remain offline, each developer will use an individual local
 credential, gateway-added capabilities and automatic model selection will be
@@ -221,7 +223,8 @@ evaluation remain explicitly tracked rather than implied by directory names.
 
 The baseline itself has no third-party dependencies. The agent, retrieval,
 validation, and output packages use the dependencies pinned in
-[`requirements.txt`](requirements.txt), including Pydantic.
+[`requirements.txt`](requirements.txt), including Pydantic and the official
+OpenAI Python client used by the OpenAI-compatible hosted transport.
 
 The local demonstrations require:
 
@@ -229,7 +232,8 @@ The local demonstrations require:
 - No model API key.
 - No network connection.
 
-Future production integrations may introduce separate dependencies. Those dependencies will not be added to the frozen baseline.
+The OpenAI client is not imported by the frozen baseline and does not change
+its dependency-free execution path.
 
 ## Setup
 
@@ -253,6 +257,18 @@ py -3 --version
 ```
 
 No installation step is required to run the baseline.
+
+For agent development, create an isolated environment and install the agent
+dependencies. On Windows PowerShell:
+
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+The `.venv` directory is ignored by Git. Normal agent tests remain offline and
+do not require a hosted-model credential.
 
 ## Run the baseline tests
 
