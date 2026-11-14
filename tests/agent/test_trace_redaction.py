@@ -100,6 +100,24 @@ class TraceRedactionTests(unittest.TestCase):
             REDACTED_VALUE,
         )
 
+    def test_reviewed_hosted_options_are_preserved(self) -> None:
+        """Non-secret hosted settings should remain reproducible in traces."""
+
+        provider_options = {
+            "reasoning_effort": "low",
+            "response_format_mode": "json_schema",
+            "gateway_addons_enabled": False,
+        }
+
+        redacted = redact_trace_payload(
+            {"provider_options": provider_options}
+        )
+
+        self.assertEqual(
+            provider_options,
+            redacted["provider_options"],
+        )
+
     def test_structure_keys_do_not_authorize_scalar_content(self) -> None:
         """Malformed scalar structures must remain default denied."""
 

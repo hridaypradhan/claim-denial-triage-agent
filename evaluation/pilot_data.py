@@ -28,6 +28,15 @@ class Case:
 
 
 @dataclass(frozen=True)
+class CriterionLabel:
+    """Adjudicated status and acceptable evidence for one criterion."""
+
+    criterion_id: str
+    status: str
+    passage_ids: Tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Label:
     case_id: str
     root_cause: str
@@ -36,6 +45,7 @@ class Label:
     manual_review_reasons: Tuple[str, ...]
     deadline: Optional[str]
     forbidden_outcomes: Tuple[str, ...]
+    criteria: Tuple[CriterionLabel, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -117,6 +127,14 @@ def load_labels(label_path: Path, dataset: Dataset) -> Dict[str, Label]:
             manual_review_reasons=tuple(entry["manual_review_reasons"]),
             deadline=entry["deadline"],
             forbidden_outcomes=tuple(entry["forbidden_outcomes"]),
+            criteria=tuple(
+                CriterionLabel(
+                    criterion_id=criterion["criterion_id"],
+                    status=criterion["status"],
+                    passage_ids=tuple(criterion["passage_ids"]),
+                )
+                for criterion in entry.get("criteria", [])
+            ),
         )
         if label.case_id in labels:
             raise DatasetError("duplicate label for %s" % label.case_id)

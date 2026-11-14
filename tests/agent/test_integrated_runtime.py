@@ -7,7 +7,7 @@ import unittest
 from datetime import date
 from unittest.mock import Mock
 
-from claim_agent.agent.hosted_model import (
+from claim_agent.agent.hosted.client import (
     HostedModelClient,
     HostedModelTransportRequest,
     HostedModelTransportResponse,

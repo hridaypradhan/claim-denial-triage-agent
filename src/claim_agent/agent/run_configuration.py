@@ -6,7 +6,17 @@ import hashlib
 import json
 from typing import Mapping, TypeAlias
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class ProviderModelOptions(BaseModel):
+    """Non-secret provider options that can alter model behavior."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    reasoning_effort: str
+    response_format_mode: str
+    gateway_addons_enabled: bool
 
 
 class ModelParameters(BaseModel):
@@ -17,6 +27,10 @@ class ModelParameters(BaseModel):
     max_output_tokens: int
     temperature: float
     top_p: float | None
+    provider_options: ProviderModelOptions | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
 
 
 class AllowedTool(BaseModel):

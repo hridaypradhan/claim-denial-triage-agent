@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import Sequence
 
 from claim_agent.agent.decision_validation_adapter import (
     DecisionValidationAdapter,
@@ -39,6 +40,7 @@ def build_production_runtime_boundaries(
     baseline_finding: BaselineFinding,
     claim_context: ClaimToolContext,
     as_of: date,
+    required_evidence_source_ids: Sequence[str] = (),
 ) -> ProductionRuntimeBoundaries:
     """Create guarded production adapters sharing one run's evidence store."""
 
@@ -65,6 +67,7 @@ def build_production_runtime_boundaries(
         evidence_provider=lambda: evidence_store.evidence_passages,
         policy_formula_provider=lambda: evidence_store.policy_formula,
         as_of=as_of,
+        required_evidence_source_ids=required_evidence_source_ids,
     )
 
     return ProductionRuntimeBoundaries(

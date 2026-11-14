@@ -4,10 +4,10 @@ A hybrid agentic AI system for evidence-grounded triage of denied outpatient med
 
 > **Project status:** Active academic capstone. The deterministic baseline,
 > shared contracts, local retrieval tools, safety validator, bounded runtime,
-> a provider-neutral hosted-model boundary, and a production-shaped local
-> integration and durable canonical traces are runnable and tested. A
-> provider-specific hosted transport, evaluation, and the final report remain
-> in progress.
+> an OpenAI-compatible hosted-model transport, and a production-shaped local
+> integration with durable canonical traces are runnable and tested. Live
+> hosted execution, model selection, final evaluation, and the final report
+> remain in progress.
 
 ## Problem
 
@@ -59,10 +59,10 @@ flowchart TD
     L --> H[Human review: edit, approve, or reject]
     H --> Z[Save outputs]
 
-    M[Provider-specific hosted transport] -. planned .-> P
+    M[Hosted execution entry point] --> P
 
     classDef planned stroke-dasharray: 5 5,fill:#fff;
-    class I,M,V,W,X planned;
+    class I,V,W,X planned;
 ```
 
 The model will be used only where evidence interpretation is necessary. Exact and safety-critical behavior—including input validation, deadline arithmetic, permitted dispositions, citation checks, and final approval state—remains under deterministic control.
@@ -101,7 +101,11 @@ It contains:
 - A synthetic medical policy for brain MRI (CPT 70551–70553) under the `BCBS_AZ` payer profile, with a criteria formula for each procedure code (`A AND B` for 70551 and 70552; `A AND B AND (C OR D)` for 70553). It is not the payer's actual policy.
 - A synthetic physical therapy policy (CPT 97110) under the `AETNA` payer profile in two dated versions, so the service date selects the criteria: v1 (`A AND B`) through 2026-03-31 and v2 (`A AND B AND C`) from 2026-04-01. It is not the payer's actual policy.
 - Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
-- Thirteen synthetic encounter documents for the Dataset B pilot claims `CLM-2026-620102` to `CLM-2026-620112` (case list in issue #12). They cover missing, explicitly negative, and conflicting evidence, a prior imaging report, physical therapy evaluations on either side of the policy version date, and a note containing instruction-like text.
+- Thirteen synthetic encounter documents for the Dataset B pilot claims
+  `CLM-2026-620102` to `CLM-2026-620112`. They cover missing, explicitly
+  negative, and conflicting evidence, a prior imaging report, physical therapy
+  evaluations on either side of the policy version date, and a note containing
+  instruction-like text.
 
 Every passage has a stable citation ID such as
 `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in
@@ -165,13 +169,153 @@ through the merged project boundaries:
 The model is still scripted, so this flow is reproducible and requires no
 hosted-model credentials.
 
+Scripted and hosted clients share the same versioned, provider-neutral planning
+prompt. It limits every turn to one permitted structured action, treats
+retrieved text as untrusted data, confines evidence and citations to the
+current run, and requires manual review when support is incomplete or
+conflicting. The prompt version is recorded in each run configuration so a
+trace identifies the exact behavioral instructions used.
+
+Hosted runs use configuration version 0.3. Their canonical `RUN_STARTED`
+event records the provider and model IDs, sampling limits, reasoning effort,
+structured-response mode, disabled gateway addons, runtime budgets, tool
+allowlist, prompt version, and knowledge snapshot. Credentials are never part
+of this persisted configuration. Existing version-0.2 scripted configuration
+hashes remain unchanged.
+
 The runtime also provides a provider-neutral `HostedModelClient`. It translates
 the stable runtime request into a timeout-bounded transport request and maps
 provider text, request IDs, and token counts back into the runtime response.
-Its fake-transport tests run offline. No live provider transport or credential
-configuration is committed yet. Hosted-call timeouts consume the attempted
-model-call budget, emit `MODEL_FAILED`, and produce an audited `MANUAL_REVIEW`
-package with terminal reason `model_timeout`.
+Its fake-transport tests run offline. An OpenAI Chat Completions-compatible
+transport now maps those requests to a configurable endpoint while disabling
+automatic SDK retries and provider-hosted tools. A frozen, non-secret model
+profile constructs the selected Voyager client and reads each developer's
+credential only from the local `CLAIM_AGENT_LLM_API_KEY` environment variable.
+The hosted CLI runs the same production-shaped case through this boundary,
+writes a uniquely named canonical trace by default, and prints a non-secret
+JSON summary. Its offline end-to-end tests inject a fake transport and require
+no credential or network access. The development-only Voyager comparison and
+validation selected `beam-1-0` for this bounded workflow; required ADR review
+remains pending.
+Hosted-call timeouts consume the attempted model-call budget, emit
+`MODEL_FAILED`, and produce an audited `MANUAL_REVIEW` package with terminal
+reason `model_timeout`.
+
+Schema-capable hosted models receive a strict runtime-action schema generated
+from the exact per-run tool allowlist and the shared `AgentDecision` contract.
+Every object is closed, every contract field is required, and the existing
+parser, tool guards, dispatcher validation, and deterministic decision
+validation still run after the provider returns structured JSON.
+
+The hosted integration connects that boundary to ASU Research Computing's
+Voyager gateway through one reusable OpenAI Chat Completions-compatible
+transport.
+Voyager is provider configuration rather than a model-specific transport.
+Normal tests will remain offline, each developer will use an individual local
+credential, gateway-added capabilities and automatic model selection will be
+disabled, and no hosted failure will fall back to the scripted model or another
+hosted model. A timeout, provider failure, or unusable response must instead
+produce an audited `MANUAL_REVIEW` outcome. The frozen runtime profile uses
+`beam-1-0`, selected by the development-only comparison described in
+[`decision 0003`](docs/decisions/0003-hosted-model-provider-and-selection.md).
+This selection means it was the safest compatible model in the tested
+shortlist under the deterministic, human-review boundary; it does not mean the
+model is approved for autonomous claim action.
+
+The first live smoke run confirmed Voyager connectivity, strict hosted
+actions, and local tool dispatch. It also exposed an integration gap: the
+model was authorized to retrieve encounter notes but was not given the
+claim's valid document IDs. Hosted evaluation now includes only trusted,
+claim-bound tool metadata from the knowledge manifest. A second smoke run
+confirmed correct policy retrieval and use of both valid encounter document
+IDs, but its final model request exceeded the original 30-second request
+limit. The comparison plan is therefore versioned as `hosted-comparison-v3`;
+it applies the same 60-second request limit to every candidate and allows up
+to 300 seconds for the whole bounded run. Earlier v1 and v2 smoke artifacts
+remain diagnostic evidence and are not comparison results.
+
+The first v3 smoke gate ran one identical case through all three provisional
+candidates. `mimo-v2-6-pro` produced valid actions and claim-bound tool calls
+but timed out before a decision. `glm-5-3` and `deepseek-v4-1-flash` each
+returned an invalid action and an invalid repair without reaching a tool call.
+All three failures closed safely to `MANUAL_REVIEW`, with no critical safety
+failure. The remaining comparison runs are paused until the candidate set
+contains models that can complete the required structured-action interface;
+these smoke artifacts are operational diagnostics, not selection results.
+
+The v4 compatibility set replaces the unsuccessful provisional candidates
+with `qwen35-397b-a17b`, `qwen36-27b`, and `beam-1-0`. Voyager lists Tools and
+Schema for all three, so every candidate now receives the same strict runtime
+action schema. The two Qwen models emphasize instruction following and tool
+use at different model sizes; Beam adds a high-scoring, always-reasoning
+alternative. V4 must pass the same one-case smoke gate before any full
+comparison begins.
+
+The first v4 Qwen 27B smoke produced a valid policy-tool action but consumed
+1,687 output tokens and roughly 60.6 seconds before that simple action; its
+next request timed out. Because Voyager counts thinking toward completion
+tokens, v5 sets `reasoning_effort` to `none` and caps completions at 2,048
+tokens for every candidate. The 60-second request limit remains the operational
+gate. The v4 artifact is diagnostic and is not scored.
+
+The v5 smoke gate produced valid strict-schema actions and valid tool calls
+for all three candidates, but no correct final decision. Beam completed without
+a provider failure yet requested manual review while a relevant, listed
+encounter document remained unqueried. `planning-v2` now requires an
+authorized, budgeted call for relevant available evidence before manual review
+based only on missing or insufficient evidence. V6 freezes that prompt change;
+it does not permit repeated or irrelevant retrieval.
+
+The v6 smoke gate then produced accepted decisions from Beam and Qwen 27B.
+Beam retrieved all relevant documents and grounded all four criterion findings
+in passages adjudicated for those criteria. Qwen 27B reached the correct root
+cause and disposition, but only two of four criterion findings cited evidence
+adjudicated for the matching criterion. The original scorer still gave both
+runs full citation credit because it checked only whether a citation had been
+retrieved. V7 corrects that evaluation gap by requiring a matching status and
+at least one adjudicated passage for each criterion. V6 artifacts remain
+diagnostic; live comparison resumes in a clean v7 output directory.
+
+The v7 smoke gate evaluated the same development case once with each frozen
+candidate. Beam completed an accepted, pending-review decision with the
+correct root cause and disposition, four of four criterion findings grounded
+in matching adjudicated passages, valid schema and tool calls, and no provider
+or safety failure. Qwen 27B repeated its two-of-four criterion grounding result
+because it did not retrieve the second encounter note. Qwen 397B retrieved all
+three sources but timed out on its final decision request. V8 therefore freezes
+Beam as the only candidate that passed the gate and validates it over all eight
+development cases with three repetitions each. The 24 v8 runs are validation
+evidence; v7 remains the comparative smoke-gate record.
+
+The first v8 missing-evidence case revealed an evaluation denominator defect:
+a correct direct manual-review request contains no proposed criterion
+assessments, but the scorer counted all absent assessments as grounding
+failures. V9 corrects the metric without changing the model configuration.
+Criterion grounding is scored only for runs that propose a decision; direct
+manual-review runs use the dedicated manual-review metric. An adjudicated
+`UNKNOWN` criterion with no supporting passage counts only when the proposed
+assessment is also `UNKNOWN` and has no citation. V8 artifacts remain
+diagnostic and are not mixed with the corrected v9 validation.
+
+The complete v9 validation did not accept Beam. Across 24 runs
+it achieved 62.5% joint accuracy, 78% criterion-evidence support, one provider
+failure, and six critical safety failures. All six safety failures came from
+three repetitions of one conflicting-evidence case: Beam retrieved only the
+physician note, omitted a listed same-day nursing note, and proposed an appeal
+that the validator accepted. V10 adds a deterministic completeness gate: a
+decision cannot be accepted until every encounter source listed for the active
+claim has been retrieved. The scorer also refuses to declare any winner with a
+nonzero critical-safety count. V9 remains the failed validation record.
+
+V10 reran all 24 Beam validation cases after adding the deterministic
+claim-source completeness gate. It completed with zero provider failures,
+zero critical safety failures, 100% schema validity, 100% tool validity, 100%
+citation precision, 75% joint accuracy, 75.93% criterion-evidence support, and
+75% repeated-run case stability. All six incorrect outcomes were conservative
+misses on two expected write-off cases; no unsafe decision was accepted. Under
+the frozen safety-first ranking, V10 selects `beam-1-0` for the bounded hosted
+runtime. The output remains `PENDING_REVIEW`, and named ADR reviewer approval
+is still required before the decision record becomes Accepted.
 
 ### Implemented packages and remaining boundaries
 
@@ -181,20 +325,23 @@ explicitly tracked extension points:
 - [`src/claim_agent/contracts/`](src/claim_agent/contracts/) — shared data contracts.
 - [`src/claim_agent/tools/`](src/claim_agent/tools/) — typed, read-only evidence tools.
 - [`src/claim_agent/agent/`](src/claim_agent/agent/) — bounded runtime,
-  production-shaped adapters, canonical traces, and the provider-neutral hosted
-  boundary; provider-specific transport and grounded drafting remain in #34.
+  production-shaped adapters, and canonical traces.
+- [`src/claim_agent/agent/hosted/`](src/claim_agent/agent/hosted/) — the
+  provider-neutral hosted client, strict action schema, OpenAI-compatible
+  transport, selected Voyager configuration, and hosted runner; the V10
+  development validation is complete and ADR review remains pending.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
 - [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v1 above; eligibility records not yet added).
-- [`datasets/`](datasets/) — development, held-out, and labeling artifacts being
-  completed through #12 (Datasets A and B, development). Labels follow the frozen
+- [`datasets/`](datasets/) — development, held-out, and labeling artifacts for
+  Datasets A and B. Labels follow the frozen
   [annotation rubric](datasets/ANNOTATION_RUBRIC.md) (v0.1).
 - [`evaluation/`](evaluation/) — accepted trace examples plus the comparison
-  harness being completed through #12 and PR #32.
+  harness.
 
-Eligibility retrieval, an agent-callable deadline wrapper, hosted-model
-transport, evidence verification, grounded drafting, and the full comparative
-evaluation remain explicitly tracked rather than implied by directory names.
+Eligibility retrieval, an agent-callable deadline wrapper, live hosted-model
+execution, evidence verification, grounded drafting, and the full comparative
+evaluation remain incomplete rather than implied by directory names.
 
 ## Safety boundaries
 
@@ -209,7 +356,8 @@ evaluation remain explicitly tracked rather than implied by directory names.
 
 The baseline itself has no third-party dependencies. The agent, retrieval,
 validation, and output packages use the dependencies pinned in
-[`requirements.txt`](requirements.txt), including Pydantic.
+[`requirements.txt`](requirements.txt), including Pydantic and the official
+OpenAI Python client used by the OpenAI-compatible hosted transport.
 
 The local demonstrations require:
 
@@ -217,7 +365,8 @@ The local demonstrations require:
 - No model API key.
 - No network connection.
 
-Future production integrations may introduce separate dependencies. Those dependencies will not be added to the frozen baseline.
+The OpenAI client is not imported by the frozen baseline and does not change
+its dependency-free execution path.
 
 ## Setup
 
@@ -241,6 +390,55 @@ py -3 --version
 ```
 
 No installation step is required to run the baseline.
+
+For agent development, create an isolated environment and install the agent
+dependencies.
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+Windows (PowerShell):
+
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+The `.venv` directory is ignored by Git. Normal agent tests remain offline and
+do not require a hosted-model credential.
+
+Hosted execution uses an individual ASU Research Computing Voyager key. Keep
+the key out of files and shell history by reading it into the current shell
+process.
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+printf 'Voyager API key: '
+stty -echo
+IFS= read -r CLAIM_AGENT_LLM_API_KEY
+stty echo
+printf '\n'
+export CLAIM_AGENT_LLM_API_KEY
+```
+
+Windows (PowerShell):
+
+```powershell
+$secureKey = Read-Host 'Voyager API key' -AsSecureString
+$env:CLAIM_AGENT_LLM_API_KEY = [System.Net.NetworkCredential]::new('', $secureKey).Password
+```
+
+The variable disappears when that terminal closes. Never pass the key directly
+on a command line, commit it, share one team member's key, or place it in a
+trace, screenshot, issue, or pull request. Normal tests and the scripted
+demonstration do not read this variable.
 
 ## Run the baseline tests
 
@@ -324,6 +522,18 @@ trace events, budget usage, and an `OutputPackage` whose approval state remains
 `PENDING_REVIEW`. To also create the immutable canonical JSON Lines trace used
 by evaluation, provide a local output directory and the exact commit being run:
 
+macOS or Linux (Bash/Zsh):
+
+```bash
+commit=$(git rev-parse HEAD)
+python -m claim_agent.agent.integrated_runner \
+    --pretty \
+    --trace-directory './artifacts/traces' \
+    --code-commit "$commit"
+```
+
+Windows (PowerShell):
+
 ```powershell
 $commit = git rev-parse HEAD
 python -m claim_agent.agent.integrated_runner `
@@ -336,6 +546,117 @@ The generated `artifacts/traces/<run-id>.jsonl` file contains the reproducible
 run configuration, redacted model and tool events, validation results, timing,
 budget counters, and exactly one final outcome. Generated traces are local
 artifacts and should not be committed.
+
+## Run the hosted Voyager demonstration
+
+This command makes live model calls through the configured Voyager profile.
+Set the individual key as described in Setup, confirm the virtual environment
+is active, and record the exact commit in the trace:
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+export PYTHONPATH=./src
+commit=$(git rev-parse HEAD)
+python -m claim_agent.agent.hosted_runner \
+    --pretty \
+    --code-commit "$commit"
+```
+
+Windows (PowerShell):
+
+```powershell
+$env:PYTHONPATH = '.\src'
+$commit = git rev-parse HEAD
+python -m claim_agent.agent.hosted_runner `
+    --pretty `
+    --code-commit $commit
+```
+
+The command writes an immutable trace under
+`.local-output/hosted-traces/` unless `--trace-directory` selects another
+local directory. Each invocation uses a timestamp-and-UUID run ID, so it does
+not overwrite an earlier trace. A missing key fails before the run starts and
+prints a concise JSON error. A timeout, provider failure, invalid response, or
+insufficient evidence fails closed to a traced `MANUAL_REVIEW` result; the
+runner never substitutes the scripted model or another hosted model.
+
+## Reproduce the hosted-model validation on development data
+
+The frozen development-only v10 plan validates the selected `beam-1-0`
+configuration on eight representative Dataset B cases with three repetitions.
+The earlier v7 smoke gate compared Beam with `qwen35-397b-a17b` and
+`qwen36-27b`; only Beam passed the compatibility and grounding gate. Each run
+receives valid claim-bound encounter document IDs and policy lookup fields
+from the trusted manifest. The total runtime budget is 300 seconds, with each
+provider request limited to 60 seconds. Validate the plan without credentials
+or network access:
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+export PYTHONPATH=./src
+python -m evaluation.hosted_comparison
+```
+
+Windows (PowerShell):
+
+```powershell
+$env:PYTHONPATH = '.\src'
+python -m evaluation.hosted_comparison
+```
+
+The plan contains 24 case repetitions. A repetition can require as many as
+four bounded model calls, so 24 is not an API-request estimate. Live execution
+requires `--confirm-live` and an exact commit. It may be narrowed to a single
+case and repeat for a smoke test:
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+commit=$(git rev-parse HEAD)
+python -m evaluation.run_hosted_comparison \
+    --model-id 'beam-1-0' \
+    --case-id 'CLM-2026-005097-L1' \
+    --repeat-index 1 \
+    --code-commit "$commit" \
+    --confirm-live
+```
+
+Windows (PowerShell):
+
+```powershell
+$commit = git rev-parse HEAD
+python -m evaluation.run_hosted_comparison `
+    --model-id 'beam-1-0' `
+    --case-id 'CLM-2026-005097-L1' `
+    --repeat-index 1 `
+    --code-commit $commit `
+    --confirm-live
+```
+
+Completed runs are skipped on a resumed command. A partial directory is never
+overwritten automatically and must be inspected before retrying. Artifacts are
+written under `.local-output/hosted-comparison/` and remain uncommitted. Score
+available progress without making provider calls:
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+python -m evaluation.score_hosted_comparison --allow-partial
+```
+
+Windows (PowerShell):
+
+```powershell
+python -m evaluation.score_hosted_comparison --allow-partial
+```
+
+Partial reports never name a winner. Omitting `--allow-partial` requires all
+24 planned runs before applying the documented safety-first ranking and tie
+breakers. Only a complete report can support the model decision. The V10
+report selected Beam with zero critical safety and provider failures, while
+also recording its 75% joint accuracy and conservative write-off limitations.
 
 ## Run the knowledge and retrieval tests
 
@@ -363,7 +684,7 @@ OK
 
 ## Run the pilot evaluation
 
-The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot (#12)
+The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot
 scores each compared system against one case per denied service line. Two
 synthetic development datasets have independent labeler artifacts and separate
 adjudicated answer keys in [`datasets/labels/`](datasets/labels/), following
@@ -497,13 +818,14 @@ These limitations define the work assigned to the agentic extension; they are no
 - [x] Wrap deterministic baseline findings and routing behind typed interfaces.
 - [x] Implement a validated common tool dispatcher.
 - [x] Add versioned payer-policy and encounter-note retrieval.
-- [ ] Add eligibility retrieval if retained after the scope decision in #30.
+- [ ] Add eligibility retrieval if retained after the scope decision.
 - [x] Implement a bounded planning loop with structured model outputs behind scripted offline boundaries.
 - [x] Connect typed routing, tool, validation, output, and canonical-trace adapters.
 - [x] Add criterion-level evidence assessment and resolvable citations.
 - [x] Add deterministic safety, citation, formula, and filing-deadline validation.
-- [ ] Add provider-specific hosted transport, tool-less evidence verification,
-  and grounded drafting through #34.
+- [x] Add the OpenAI-compatible hosted transport and strict action schemas.
+- [ ] Complete live hosted execution and freeze the selected model.
+- [ ] Add tool-less evidence verification and grounded drafting.
 - [ ] Build development and held-out synthetic datasets.
 - [ ] Compare the agentic system against the unchanged baseline.
 - [ ] Conduct stakeholder review of representative system reports.
@@ -520,6 +842,7 @@ docs/decisions/           Architecture decision records
 evaluation/               Evaluation and fault-injection harnesses
 knowledge/                Versioned policy and synthetic evidence corpus
 src/claim_agent/agent/    Bounded LLM orchestration
+  hosted/                 Hosted client, schemas, transport, and configuration
 src/claim_agent/contracts Shared schemas and enums
 src/claim_agent/output/   Reports and appeal preparation
 src/claim_agent/safety/   Deterministic validation and human-review gates
