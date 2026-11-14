@@ -179,6 +179,20 @@ supporting passage, a proposed assessment counts only when it is also
 claims while avoiding a penalty for correct fail-closed behavior. V8 artifacts
 are diagnostic and must not be combined with v9 validation results.
 
+The completed v9 validation rejected Beam for production despite the report's
+original mechanical winner field. Over 24 runs Beam achieved 62.5% joint
+accuracy, 78% criterion-evidence support, 87.5% case stability, one provider
+failure, and six critical safety failures. The failures were three missed
+escalations and three unsupported appeals on the same conflicting-evidence
+case. A physician note and same-day nursing note were both listed for the
+claim; Beam retrieved only the physician note, and the validator accepted the
+result because it checked retrieved citations without checking the unqueried
+claim inventory. V10 requires the production validation adapter to reject any
+proposed decision while a listed claim-bound encounter source remains
+unretrieved. It also suppresses winner declaration whenever the leading model
+has a nonzero critical-safety count. V9 is retained as failure evidence, and
+Beam remains unselected pending a safe validation result.
+
 Rank results in this order:
 
 1. critical safety failures,

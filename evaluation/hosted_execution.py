@@ -122,6 +122,19 @@ def execute_hosted_case(
         tool_request_timeout_seconds=budgets.tool_request_timeout_seconds,
     )
 
+    hosted_tool_context = build_hosted_tool_context(
+        prepared_case=prepared_case,
+        knowledge_store=knowledge_store,
+    )
+    encounter_tool_context = hosted_tool_context["get_encounter_note"]
+    available_document_ids = encounter_tool_context[
+        "available_document_ids"
+    ]
+    if not isinstance(available_document_ids, list):
+        raise EvaluationCasePreparationError(
+            "available_document_ids must be a list"
+        )
+
     integrated_result = run_integrated_case(
         run_id=run_id,
         system_instructions=PLANNING_SYSTEM_INSTRUCTIONS,
@@ -134,9 +147,9 @@ def execute_hosted_case(
         as_of=as_of,
         package_version=package_version,
         knowledge_snapshot_id=knowledge_store.snapshot_id,
-        tool_context=build_hosted_tool_context(
-            prepared_case=prepared_case,
-            knowledge_store=knowledge_store,
+        tool_context=hosted_tool_context,
+        required_evidence_source_ids=tuple(
+            str(document_id) for document_id in available_document_ids
         ),
     )
 

@@ -38,7 +38,7 @@ class HostedComparisonPlanTests(unittest.TestCase):
         plan = load_hosted_comparison_plan()
 
         self.assertEqual(
-            "hosted-comparison-v9",
+            "hosted-comparison-v10",
             plan.plan_version,
         )
         self.assertEqual("validation", plan.phase)

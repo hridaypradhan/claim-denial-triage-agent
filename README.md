@@ -294,6 +294,17 @@ manual-review runs use the dedicated manual-review metric. An adjudicated
 assessment is also `UNKNOWN` and has no citation. V8 artifacts remain
 diagnostic and are not mixed with the corrected v9 validation.
 
+The complete v9 validation did not accept Beam for production. Across 24 runs
+it achieved 62.5% joint accuracy, 78% criterion-evidence support, one provider
+failure, and six critical safety failures. All six safety failures came from
+three repetitions of one conflicting-evidence case: Beam retrieved only the
+physician note, omitted a listed same-day nursing note, and proposed an appeal
+that the validator accepted. V10 adds a deterministic completeness gate: a
+decision cannot be accepted until every encounter source listed for the active
+claim has been retrieved. The scorer also refuses to declare any winner with a
+nonzero critical-safety count. V9 remains the failed validation record; Beam is
+not the selected production model.
+
 ### Implemented packages and remaining boundaries
 
 The repository is organized around the following implemented packages and

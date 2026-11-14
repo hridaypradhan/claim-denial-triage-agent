@@ -22,6 +22,7 @@ from claim_agent.contracts import (
     AgentDecision,
     BaselineFinding,
     EvidencePassage,
+    ValidationProblem,
     ValidationOutcome,
     ValidationResult,
 )
@@ -40,6 +41,7 @@ class DecisionValidationAdapter:
         evidence_provider: EvidenceProvider,
         policy_formula_provider: PolicyFormulaProvider,
         as_of: date,
+        required_evidence_source_ids: Sequence[str] = (),
     ) -> None:
         """Store the run-specific context needed for deterministic validation."""
 
@@ -47,6 +49,9 @@ class DecisionValidationAdapter:
         self._evidence_provider = evidence_provider
         self._policy_formula_provider = policy_formula_provider
         self._as_of = as_of
+        self._required_evidence_source_ids = tuple(
+            required_evidence_source_ids
+        )
         self._last_proposed_decision: Optional[AgentDecision] = None
         self._last_validation_result: Optional[ValidationResult] = None
 
@@ -87,6 +92,35 @@ class DecisionValidationAdapter:
             )
 
         self._last_proposed_decision = proposed_decision
+
+        retrieved_source_ids = {
+            passage.source_id for passage in self._evidence_provider()
+        }
+        missing_source_ids = sorted(
+            set(self._required_evidence_source_ids)
+            - retrieved_source_ids
+        )
+        if missing_source_ids:
+            problem = ValidationProblem(
+                code="SAFETY_ESCALATION_UNQUERIED_EVIDENCE",
+                field_path="citation_ids",
+                message=(
+                    "A decision cannot be accepted before retrieving all "
+                    "listed claim-bound evidence sources; missing: "
+                    + ", ".join(missing_source_ids)
+                ),
+                is_repairable=False,
+            )
+            shared_result = ValidationResult(
+                decision_id=proposed_decision.decision_id,
+                claim_id=proposed_decision.claim_id,
+                service_line_id=proposed_decision.service_line_id,
+                outcome=ValidationOutcome.REJECTED_MANUAL_REVIEW,
+                validation_problems=[problem],
+                manual_review_reasons=[problem.code],
+            )
+            self._last_validation_result = shared_result
+            return _to_runtime_validation_result(shared_result)
 
         shared_result = validate_agent_decision(
             decision=proposed_decision,

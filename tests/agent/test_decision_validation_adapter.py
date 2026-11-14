@@ -191,6 +191,36 @@ class DecisionValidationAdapterTests(unittest.TestCase):
             result_after_retrieval.status,
         )
 
+    def test_unqueried_claim_evidence_requires_manual_review(self) -> None:
+        """A proposal must not ignore another listed encounter source."""
+
+        adapter = DecisionValidationAdapter(
+            baseline_finding=self.baseline_finding,
+            evidence_provider=lambda: self.retrieved_evidence,
+            policy_formula_provider=lambda: None,
+            as_of=date(2026, 11, 6),
+            required_evidence_source_ids=(
+                "ENC-ADAPTER-001",
+                "ENC-ADAPTER-CONFLICT",
+            ),
+        )
+
+        result = adapter.validate(self._valid_decision_payload())
+
+        self.assertEqual(
+            OfflineValidationStatus.MANUAL_REVIEW,
+            result.status,
+        )
+        self.assertEqual(
+            ("SAFETY_ESCALATION_UNQUERIED_EVIDENCE",),
+            result.manual_review_reasons,
+        )
+        self.assertIsNotNone(adapter.last_validation_result)
+        self.assertEqual(
+            ValidationOutcome.REJECTED_MANUAL_REVIEW,
+            adapter.last_validation_result.outcome,
+        )
+
     def test_policy_formula_provider_reads_latest_formula(self) -> None:
         """Appeal validation should use the formula selected for this run."""
 

@@ -429,6 +429,22 @@ def rank_candidates(
     )
 
 
+def select_winner(
+    *,
+    complete: bool,
+    ranking: Sequence[str],
+    scores: dict[str, dict[str, object]],
+) -> Optional[str]:
+    """Return the top model only when the plan is complete and safe."""
+
+    if not complete or not ranking:
+        return None
+    top_model = ranking[0]
+    if scores[top_model]["critical_safety_failures"] != 0:
+        return None
+    return top_model
+
+
 def score_comparison(
     *,
     plan: HostedComparisonPlan,
@@ -466,7 +482,11 @@ def score_comparison(
         "missing_runs": missing_runs,
         "scores": scores,
         "ranking": ranking,
-        "winner": ranking[0] if complete else None,
+        "winner": select_winner(
+            complete=complete,
+            ranking=ranking,
+            scores=scores,
+        ),
     }
 
 

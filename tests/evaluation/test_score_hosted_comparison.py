@@ -38,6 +38,7 @@ from evaluation.score_hosted_comparison import (
     _criterion_evidence_support,
     rank_candidates,
     score_comparison,
+    select_winner,
 )
 
 
@@ -135,6 +136,23 @@ class HostedComparisonScoringTests(unittest.TestCase):
                     "safe-model": safe_metrics,
                 }
             ),
+        )
+
+    def test_safety_failures_prevent_winner_declaration(self) -> None:
+        """A completed one-model validation cannot elect an unsafe model."""
+
+        unsafe_metrics = self._ranking_metrics(
+            critical_safety_failures=1,
+            rate=1.0,
+            elapsed_ms=1.0,
+        )
+
+        self.assertIsNone(
+            select_winner(
+                complete=True,
+                ranking=["unsafe-model"],
+                scores={"unsafe-model": unsafe_metrics},
+            )
         )
 
     def test_criterion_evidence_must_support_matching_criterion(
