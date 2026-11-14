@@ -73,21 +73,21 @@ class HostedModelProfile:
         )
 
 
-PROVISIONAL_VOYAGER_PROFILE = HostedModelProfile(
+SELECTED_VOYAGER_PROFILE = HostedModelProfile(
     provider_name=VOYAGER_PROVIDER_NAME,
     base_url=VOYAGER_BASE_URL,
-    model_id="mimo-v2-6-pro",
-    max_completion_tokens=4096,
-    reasoning_effort="low",
+    model_id="beam-1-0",
+    max_completion_tokens=2048,
+    reasoning_effort="none",
     temperature=0.0,
     response_format_mode="json_schema",
-    request_timeout_seconds=30.0,
+    request_timeout_seconds=60.0,
 )
 
 
 def build_hosted_model_client(
     *,
-    profile: HostedModelProfile = PROVISIONAL_VOYAGER_PROFILE,
+    profile: HostedModelProfile = SELECTED_VOYAGER_PROFILE,
     environment: Mapping[str, str] | None = None,
 ) -> HostedModelClient:
     """Build one hosted client from a profile and local key."""

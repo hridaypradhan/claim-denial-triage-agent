@@ -160,8 +160,8 @@ class HostedRunnerTests(unittest.TestCase):
         transport = ManualReviewTransport()
         model_client = HostedModelClient(
             transport=transport,
-            model_name="mimo-v2-6-pro",
-            timeout_seconds=30.0,
+            model_name="beam-1-0",
+            timeout_seconds=60.0,
         )
 
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -192,7 +192,7 @@ class HostedRunnerTests(unittest.TestCase):
             summary["terminal_reason"],
         )
         self.assertEqual(
-            "mimo-v2-6-pro",
+            "beam-1-0",
             summary["model_id"],
         )
         self.assertEqual(
@@ -207,7 +207,7 @@ class HostedRunnerTests(unittest.TestCase):
         self.assertEqual(1, len(transport.requests))
         request = transport.requests[0]
         self.assertEqual(
-            "mimo-v2-6-pro",
+            "beam-1-0",
             request.model_name,
         )
         self.assertIn(
@@ -231,7 +231,7 @@ class HostedRunnerTests(unittest.TestCase):
             trace_lines[0]["payload"]["config"]["config_version"],
         )
         self.assertEqual(
-            "low",
+            "none",
             trace_lines[0]["payload"]["config"][
                 "model_parameters"
             ]["provider_options"]["reasoning_effort"],

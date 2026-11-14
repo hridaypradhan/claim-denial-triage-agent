@@ -19,7 +19,7 @@ from claim_agent.agent.hosted.configuration import (
     build_hosted_run_configuration,
 )
 from claim_agent.agent.hosted.factory import (
-    PROVISIONAL_VOYAGER_PROFILE,
+    SELECTED_VOYAGER_PROFILE,
     HostedModelConfigurationError,
     HostedModelProfile,
     build_hosted_model_client,
@@ -59,7 +59,7 @@ def run_hosted_demo(
     *,
     run_id: str = HOSTED_DEMO_RUN_ID,
     model_client: ModelClient | None = None,
-    profile: HostedModelProfile = PROVISIONAL_VOYAGER_PROFILE,
+    profile: HostedModelProfile = SELECTED_VOYAGER_PROFILE,
     trace_output_directory: Path | None = None,
     code_commit: str = DEMO_CODE_COMMIT,
 ) -> Mapping[str, object]:

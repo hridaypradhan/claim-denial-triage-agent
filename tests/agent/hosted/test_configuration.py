@@ -8,7 +8,7 @@ from claim_agent.agent.hosted.configuration import (
     build_hosted_run_configuration,
 )
 from claim_agent.agent.hosted.factory import (
-    PROVISIONAL_VOYAGER_PROFILE,
+    SELECTED_VOYAGER_PROFILE,
 )
 from claim_agent.agent.planning_prompt import PLANNING_PROMPT_VERSION
 from claim_agent.agent.run_configuration import (
@@ -57,11 +57,11 @@ class HostedRunConfigurationTests(unittest.TestCase):
             self.configuration.config_version,
         )
         self.assertEqual(
-            PROVISIONAL_VOYAGER_PROFILE.provider_name,
+            SELECTED_VOYAGER_PROFILE.provider_name,
             self.configuration.model_provider,
         )
         self.assertEqual(
-            PROVISIONAL_VOYAGER_PROFILE.model_id,
+            SELECTED_VOYAGER_PROFILE.model_id,
             self.configuration.model_id,
         )
         self.assertEqual(
@@ -78,11 +78,11 @@ class HostedRunConfigurationTests(unittest.TestCase):
         assert options is not None
 
         self.assertEqual(
-            PROVISIONAL_VOYAGER_PROFILE.reasoning_effort,
+            SELECTED_VOYAGER_PROFILE.reasoning_effort,
             options.reasoning_effort,
         )
         self.assertEqual(
-            PROVISIONAL_VOYAGER_PROFILE.response_format_mode,
+            SELECTED_VOYAGER_PROFILE.response_format_mode,
             options.response_format_mode,
         )
         self.assertIs(
@@ -98,7 +98,7 @@ class HostedRunConfigurationTests(unittest.TestCase):
         self.assertEqual(1, self.configuration.max_repair_attempts)
         self.assertEqual(7, self.configuration.max_total_steps)
         self.assertEqual(
-            PROVISIONAL_VOYAGER_PROFILE.request_timeout_seconds,
+            SELECTED_VOYAGER_PROFILE.request_timeout_seconds,
             self.configuration.model_request_timeout_seconds,
         )
 
@@ -166,7 +166,7 @@ class HostedRunConfigurationTests(unittest.TestCase):
 
         model_parameters = event.payload["config"]["model_parameters"]
         self.assertEqual(
-            "low",
+            "none",
             model_parameters["provider_options"]["reasoning_effort"],
         )
         self.assertIs(

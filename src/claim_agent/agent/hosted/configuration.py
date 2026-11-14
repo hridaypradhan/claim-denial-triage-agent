@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Sequence
 
 from claim_agent.agent.hosted.factory import (
-    PROVISIONAL_VOYAGER_PROFILE,
+    SELECTED_VOYAGER_PROFILE,
     HostedModelProfile,
 )
 from claim_agent.agent.planning_prompt import PLANNING_PROMPT_VERSION
@@ -24,7 +24,7 @@ def build_hosted_run_configuration(
     knowledge_snapshot_id: str,
     allowed_tools: Sequence[AllowedTool],
     budget_limits: RuntimeBudgetLimits,
-    profile: HostedModelProfile = PROVISIONAL_VOYAGER_PROFILE,
+    profile: HostedModelProfile = SELECTED_VOYAGER_PROFILE,
     max_tool_retries: int = 1,
     tool_request_timeout_seconds: float = 30.0,
     runtime_seed: int = 0,

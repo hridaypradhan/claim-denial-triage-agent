@@ -8,7 +8,7 @@ from unittest.mock import patch
 from claim_agent.agent.hosted.client import HostedModelClient
 from claim_agent.agent.hosted.factory import (
     HOSTED_API_KEY_ENVIRONMENT_VARIABLE,
-    PROVISIONAL_VOYAGER_PROFILE,
+    SELECTED_VOYAGER_PROFILE,
     VOYAGER_BASE_URL,
     VOYAGER_PROVIDER_NAME,
     HostedModelConfigurationError,
@@ -23,12 +23,12 @@ from claim_agent.agent.hosted.openai_chat import (
 class HostedModelFactoryTests(unittest.TestCase):
     """Verify frozen settings and local credential handling."""
 
-    def test_provisional_profile_records_voyager_settings(
+    def test_selected_profile_records_voyager_settings(
         self,
     ) -> None:
-        """The initial profile should be explicit and reproducible."""
+        """The selected profile should be explicit and reproducible."""
 
-        profile = PROVISIONAL_VOYAGER_PROFILE
+        profile = SELECTED_VOYAGER_PROFILE
 
         self.assertEqual(
             VOYAGER_PROVIDER_NAME,
@@ -39,7 +39,7 @@ class HostedModelFactoryTests(unittest.TestCase):
             profile.base_url,
         )
         self.assertEqual(
-            "mimo-v2-6-pro",
+            "beam-1-0",
             profile.model_id,
         )
         self.assertEqual(
@@ -47,7 +47,7 @@ class HostedModelFactoryTests(unittest.TestCase):
             profile.response_format_mode,
         )
         self.assertEqual(
-            "low",
+            "none",
             profile.reasoning_effort,
         )
         self.assertEqual(
@@ -64,14 +64,14 @@ class HostedModelFactoryTests(unittest.TestCase):
     ) -> None:
         """Transport settings should preserve non-secret values."""
 
-        settings = PROVISIONAL_VOYAGER_PROFILE.to_transport_settings()
+        settings = SELECTED_VOYAGER_PROFILE.to_transport_settings()
 
         self.assertEqual(
             VOYAGER_BASE_URL,
             settings.base_url,
         )
         self.assertEqual(
-            4096,
+            2048,
             settings.max_completion_tokens,
         )
         self.assertEqual(

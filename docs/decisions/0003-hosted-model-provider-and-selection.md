@@ -1,6 +1,6 @@
 # 0003: Hosted model provider, selection, and failure policy
 
-- **Status:** Proposed
+- **Status:** Proposed — selection complete; required review pending
 - **Date:** 2026-11-13
 - **Issue:** #48
 - **Owner:** Hriday Pradhan
@@ -179,7 +179,7 @@ supporting passage, a proposed assessment counts only when it is also
 claims while avoiding a penalty for correct fail-closed behavior. V8 artifacts
 are diagnostic and must not be combined with v9 validation results.
 
-The completed v9 validation rejected Beam for production despite the report's
+The completed v9 validation rejected Beam despite the report's
 original mechanical winner field. Over 24 runs Beam achieved 62.5% joint
 accuracy, 78% criterion-evidence support, 87.5% case stability, one provider
 failure, and six critical safety failures. The failures were three missed
@@ -191,7 +191,48 @@ claim inventory. V10 requires the production validation adapter to reject any
 proposed decision while a listed claim-bound encounter source remains
 unretrieved. It also suppresses winner declaration whenever the leading model
 has a nonzero critical-safety count. V9 is retained as failure evidence, and
-Beam remains unselected pending a safe validation result.
+Beam remained unselected pending a safe validation result.
+
+V10 repeated the complete 24-run validation after adding that deterministic
+completeness gate. The result selected `beam-1-0` under the ranking frozen
+below:
+
+| Measure | V10 result |
+| --- | ---: |
+| Completed runs | 24 of 24 |
+| Critical safety failures | 0 |
+| Provider failures | 0 |
+| Joint root-cause and disposition accuracy | 18 of 24 (75%) |
+| Correct manual-review behavior | 19 of 24 (79.17%) |
+| Criterion-evidence support | 41 of 54 (75.93%) |
+| Citation precision | 147 of 147 (100%) |
+| Policy-request correctness | 24 of 24 (100%) |
+| Schema validity | 75 of 75 (100%) |
+| Tool validity | 51 of 51 (100%) |
+| Stable cases across three repetitions | 6 of 8 (75%) |
+
+All six incorrect results were conservative failures on two cases whose
+adjudicated disposition was `WRITE_OFF`. Five ended in manual review and one
+proposed `NO_ACTION_CONTRACTUAL`; no unsafe decision was accepted. This is an
+important limitation: the selection identifies the safest compatible model in
+the tested shortlist for a bounded, fail-closed, human-review workflow. It does
+not establish autonomous production readiness or authorize an external claim
+action.
+
+The selected non-secret runtime configuration is:
+
+- provider `asu-rc-voyager` at `https://openai.rc.asu.edu/v1`,
+- model `beam-1-0`, prompt `planning-v2`, and strict `json_schema` responses,
+- `reasoning_effort=none`, `max_completion_tokens=2048`, and
+  `temperature=0.0`,
+- gateway-added capabilities disabled,
+- 60-second provider-request and 300-second whole-run limits,
+- at most four model calls, three tool calls, one repair, and seven total
+  runtime steps, with one tool retry and a 30-second tool-request timeout.
+
+The implementation and development evidence are complete, but this record
+remains Proposed until the required reviewer confirms the selection. That
+review changes only the ADR status; it must not alter the frozen V10 evidence.
 
 Rank results in this order:
 

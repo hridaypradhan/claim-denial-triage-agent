@@ -189,13 +189,14 @@ provider text, request IDs, and token counts back into the runtime response.
 Its fake-transport tests run offline. An OpenAI Chat Completions-compatible
 transport now maps those requests to a configurable endpoint while disabling
 automatic SDK retries and provider-hosted tools. A frozen, non-secret model
-profile constructs the provisional Voyager client and reads each developer's
+profile constructs the selected Voyager client and reads each developer's
 credential only from the local `CLAIM_AGENT_LLM_API_KEY` environment variable.
 The hosted CLI runs the same production-shaped case through this boundary,
 writes a uniquely named canonical trace by default, and prints a non-secret
 JSON summary. Its offline end-to-end tests inject a fake transport and require
-no credential or network access. Comparative live Voyager validation remains
-pending.
+no credential or network access. The development-only Voyager comparison and
+validation selected `beam-1-0` for this bounded workflow; required ADR review
+remains pending.
 Hosted-call timeouts consume the attempted model-call budget, emit
 `MODEL_FAILED`, and produce an audited `MANUAL_REVIEW` package with terminal
 reason `model_timeout`.
@@ -214,10 +215,12 @@ Normal tests will remain offline, each developer will use an individual local
 credential, gateway-added capabilities and automatic model selection will be
 disabled, and no hosted failure will fall back to the scripted model or another
 hosted model. A timeout, provider failure, or unusable response must instead
-produce an audited `MANUAL_REVIEW` outcome. The initial integration model was
-`mimo-v2-6-pro`; the final model will be frozen only after a documented
-development-only comparison described in
+produce an audited `MANUAL_REVIEW` outcome. The frozen runtime profile uses
+`beam-1-0`, selected by the development-only comparison described in
 [`decision 0003`](docs/decisions/0003-hosted-model-provider-and-selection.md).
+This selection means it was the safest compatible model in the tested
+shortlist under the deterministic, human-review boundary; it does not mean the
+model is approved for autonomous claim action.
 
 The first live smoke run confirmed Voyager connectivity, strict hosted
 actions, and local tool dispatch. It also exposed an integration gap: the
@@ -294,7 +297,7 @@ manual-review runs use the dedicated manual-review metric. An adjudicated
 assessment is also `UNKNOWN` and has no citation. V8 artifacts remain
 diagnostic and are not mixed with the corrected v9 validation.
 
-The complete v9 validation did not accept Beam for production. Across 24 runs
+The complete v9 validation did not accept Beam. Across 24 runs
 it achieved 62.5% joint accuracy, 78% criterion-evidence support, one provider
 failure, and six critical safety failures. All six safety failures came from
 three repetitions of one conflicting-evidence case: Beam retrieved only the
@@ -302,8 +305,17 @@ physician note, omitted a listed same-day nursing note, and proposed an appeal
 that the validator accepted. V10 adds a deterministic completeness gate: a
 decision cannot be accepted until every encounter source listed for the active
 claim has been retrieved. The scorer also refuses to declare any winner with a
-nonzero critical-safety count. V9 remains the failed validation record; Beam is
-not the selected production model.
+nonzero critical-safety count. V9 remains the failed validation record.
+
+V10 reran all 24 Beam validation cases after adding the deterministic
+claim-source completeness gate. It completed with zero provider failures,
+zero critical safety failures, 100% schema validity, 100% tool validity, 100%
+citation precision, 75% joint accuracy, 75.93% criterion-evidence support, and
+75% repeated-run case stability. All six incorrect outcomes were conservative
+misses on two expected write-off cases; no unsafe decision was accepted. Under
+the frozen safety-first ranking, V10 selects `beam-1-0` for the bounded hosted
+runtime. The output remains `PENDING_REVIEW`, and named ADR reviewer approval
+is still required before the decision record becomes Accepted.
 
 ### Implemented packages and remaining boundaries
 
@@ -316,8 +328,8 @@ explicitly tracked extension points:
   production-shaped adapters, and canonical traces.
 - [`src/claim_agent/agent/hosted/`](src/claim_agent/agent/hosted/) — the
   provider-neutral hosted client, strict action schema, OpenAI-compatible
-  transport, Voyager configuration, and hosted runner; comparative live
-  validation remains incomplete.
+  transport, selected Voyager configuration, and hosted runner; the V10
+  development validation is complete and ADR review remains pending.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
 - [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v1 above; eligibility records not yet added).
@@ -569,14 +581,16 @@ prints a concise JSON error. A timeout, provider failure, invalid response, or
 insufficient evidence fails closed to a traced `MANUAL_REVIEW` result; the
 runner never substitutes the scripted model or another hosted model.
 
-## Compare hosted models on development data
+## Reproduce the hosted-model validation on development data
 
-The frozen development-only v6 plan compares `qwen35-397b-a17b`, `qwen36-27b`,
-and `beam-1-0` on eight representative Dataset B cases with three
-repetitions. Each run receives valid claim-bound encounter document IDs and
-policy lookup fields from the trusted manifest. The total runtime budget is
-300 seconds, with each provider request limited to 60 seconds. Validate the
-plan without credentials or network access:
+The frozen development-only v10 plan validates the selected `beam-1-0`
+configuration on eight representative Dataset B cases with three repetitions.
+The earlier v7 smoke gate compared Beam with `qwen35-397b-a17b` and
+`qwen36-27b`; only Beam passed the compatibility and grounding gate. Each run
+receives valid claim-bound encounter document IDs and policy lookup fields
+from the trusted manifest. The total runtime budget is 300 seconds, with each
+provider request limited to 60 seconds. Validate the plan without credentials
+or network access:
 
 macOS or Linux (Bash/Zsh):
 
@@ -592,17 +606,17 @@ $env:PYTHONPATH = '.\src'
 python -m evaluation.hosted_comparison
 ```
 
-The plan contains 72 candidate/case repetitions. A repetition can require as
-many as four bounded model calls, so 72 is not an API-request estimate. Live
-execution requires `--confirm-live`, an exact commit, and may be narrowed to a
-single model, case, and repeat for the initial smoke test:
+The plan contains 24 case repetitions. A repetition can require as many as
+four bounded model calls, so 24 is not an API-request estimate. Live execution
+requires `--confirm-live` and an exact commit. It may be narrowed to a single
+case and repeat for a smoke test:
 
 macOS or Linux (Bash/Zsh):
 
 ```bash
 commit=$(git rev-parse HEAD)
 python -m evaluation.run_hosted_comparison \
-    --model-id 'qwen35-397b-a17b' \
+    --model-id 'beam-1-0' \
     --case-id 'CLM-2026-005097-L1' \
     --repeat-index 1 \
     --code-commit "$commit" \
@@ -614,7 +628,7 @@ Windows (PowerShell):
 ```powershell
 $commit = git rev-parse HEAD
 python -m evaluation.run_hosted_comparison `
-    --model-id 'qwen35-397b-a17b' `
+    --model-id 'beam-1-0' `
     --case-id 'CLM-2026-005097-L1' `
     --repeat-index 1 `
     --code-commit $commit `
@@ -639,10 +653,10 @@ python -m evaluation.score_hosted_comparison --allow-partial
 ```
 
 Partial reports never name a winner. Omitting `--allow-partial` requires all
-72 planned runs before applying the documented safety-first ranking and tie
-breakers. Only a complete report can be used to accept the final model. Do not
-expand v6 into the full run until its three candidates pass the documented
-one-case compatibility gate.
+24 planned runs before applying the documented safety-first ranking and tie
+breakers. Only a complete report can support the model decision. The V10
+report selected Beam with zero critical safety and provider failures, while
+also recording its 75% joint accuracy and conservative write-off limitations.
 
 ## Run the knowledge and retrieval tests
 
