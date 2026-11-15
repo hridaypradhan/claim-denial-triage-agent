@@ -126,6 +126,24 @@ outside the agent's route allowlist pending routing-owner approval. An unknown
 CARC or unlisted payer returns `NO_MATCH`, not the baseline's default profile.
 `calculate_deadline` and eligibility retrieval are not implemented yet.
 
+To check the corpus, or to freeze it for the final evaluation (#62):
+
+```bash
+python -m claim_agent.tools.snapshot_freeze validate
+python -m claim_agent.tools.snapshot_freeze freeze --id <final-id> \
+  --unavailable "<CLAIM_ID>:<document_type>:<reason>"
+```
+
+`validate` checks every manifest hash, the manifest fields against each
+document, policy dates, codes, formulas, and version overlaps, encounter claim
+binding, passage IDs, and files missing from the manifest. `freeze` refuses a
+draft ID or an invalid corpus. It sets the final `snapshot_id` and writes
+`knowledge/SNAPSHOT_LOCK.json` with the manifest's SHA-256 and any evidence that
+is intentionally unavailable. After that, a test fails on any corpus change,
+including a source edited together with its manifest hash, so a changed corpus
+needs a new snapshot ID. Each evaluation run records `knowledge_snapshot_id`
+and the knowledge manifest's hash in its `run_manifest.json`.
+
 ### Scripted offline agent runtime
 
 The agent package now provides an offline vertical slice for developing and verifying runtime behavior before production integrations are available:
@@ -366,7 +384,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 93 tests
+Ran 105 tests
 OK
 ```
 
