@@ -36,6 +36,7 @@ ESCALATION_MISSING_POLICY_FORMULA = "SAFETY_ESCALATION_MISSING_POLICY_FORMULA"
 ESCALATION_UNSUPPORTED_CRITERION = "SAFETY_ESCALATION_UNSUPPORTED_CRITERION"
 ESCALATION_MISSING_ENCOUNTER_CITATION = "SAFETY_ESCALATION_MISSING_ENCOUNTER_CITATION"
 
+
 # --- Enums ---
 class Disposition(str, Enum):
     APPEAL_WITH_DOCUMENTATION = "APPEAL_WITH_DOCUMENTATION"
@@ -104,6 +105,13 @@ class CriterionStatus(str, Enum):
     NOT_MET = "NOT_MET"
     UNKNOWN = "UNKNOWN"
     CONFLICTING = "CONFLICTING"
+
+
+class EvidenceRequirementCategory(str, Enum):
+    DECISION_CRITICAL = "DECISION_CRITICAL"
+    CORRECTION_INPUT = "CORRECTION_INPUT"
+    HELPFUL_NONESSENTIAL = "HELPFUL_NONESSENTIAL"
+
 
 # --- Shared Base Configuration ---
 class StrictContract(BaseModel):
@@ -199,6 +207,31 @@ class RouteDecision(StrictContract):
     reason_code: str
     routing_reason: str
     authorized_tools: List[str] = Field(default_factory=list)
+
+
+# --- Contract v0.1: Required-Evidence Safety Decisions (#49) ---
+class ClassifiedEvidenceRequirement(StrictContract):
+    requirement: str
+    category: EvidenceRequirementCategory
+    satisfied: bool
+    reason: str
+
+
+class RequiredEvidenceSafetyDecision(StrictContract):
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    claim_id: str
+    service_line_id: int
+    requires_manual_review: bool
+    recommended_outcome: RouteOutcome
+    reason_code: str
+    rationale: str
+    classified_requirements: List[ClassifiedEvidenceRequirement] = Field(
+        default_factory=list
+    )
+    missing_critical_evidence: List[str] = Field(default_factory=list)
+    correction_supplied_inputs: List[str] = Field(default_factory=list)
+    nonessential_evidence: List[str] = Field(default_factory=list)
+
 
 # --- Contract v0.1: Agent Decisions ---
 class CriterionAssessment(StrictContract):
