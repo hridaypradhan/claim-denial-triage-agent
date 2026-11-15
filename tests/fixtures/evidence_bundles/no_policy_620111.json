@@ -21,5 +21,14 @@
       "source_ids": [],
       "passage_ids": []
     }
+  ],
+  "available_sources": [
+    {
+      "source_id": "ENC-CLM-2026-620111-CN",
+      "version": "1",
+      "source_type": "encounter_note",
+      "document_type": "clinical_note",
+      "retrieved": false
+    }
   ]
 }

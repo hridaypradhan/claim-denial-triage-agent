@@ -196,5 +196,41 @@ class RecorderSafetyTest(unittest.TestCase):
         self.assertEqual(rec.freeze().retrievals, ())
 
 
+class AvailableSourcesTest(unittest.TestCase):
+    """For #49: the claim's listed documents, retrieved or not, with their types."""
+
+    def test_retrieved_documents_are_flagged(self):
+        bundle = appeal_bundle()
+        self.assertEqual(
+            {(s.source_id, s.document_type, s.retrieved) for s in bundle.available_sources},
+            {("ENC-CLM-2026-005097-CN", "clinical_note", True), ("ENC-CLM-2026-005097-PN", "progress_notes", True)},
+        )
+        self.assertEqual(bundle.unretrieved_sources, ())
+
+    def test_a_listed_document_that_was_never_retrieved_is_reported(self):
+        (unqueried,) = no_policy_bundle().unretrieved_sources
+        self.assertEqual((unqueried.source_id, unqueried.source_type, unqueried.document_type),
+                         ("ENC-CLM-2026-620111-CN", "encounter_note", "clinical_note"))
+
+    def test_passages_carry_source_and_document_types(self):
+        types = {(p.passage.source_id, p.source_type, p.document_type) for p in appeal_bundle().passages}
+        self.assertIn(("POL-BCBSAZ-MRI-BRAIN", "medical_policy", None), types)
+        self.assertIn(("ENC-CLM-2026-005097-CN", "encounter_note", "clinical_note"), types)
+
+    def test_an_inconsistent_retrieved_flag_is_rejected(self):
+        bundle = no_policy_bundle()
+        wrong = bundle.available_sources[0].model_copy(update={"retrieved": True})
+        with self.assertRaises(ValidationError):
+            EvidenceBundle(run_id="R", knowledge_snapshot_id="k", scope=bundle.scope,
+                           retrievals=bundle.retrievals, available_sources=(wrong,))
+
+    def test_available_sources_default_to_none(self):
+        rec = recorder((ToolStatus.OK, [passage()], {"document_type": "clinical_note"}))
+        rec.dispatch("REQ-1", ENCOUNTER_NOTE_TOOL, {})
+        bundle = rec.freeze()
+        self.assertEqual(bundle.available_sources, ())
+        self.assertEqual(bundle.passages[0].document_type, "clinical_note")
+
+
 if __name__ == "__main__":
     unittest.main()

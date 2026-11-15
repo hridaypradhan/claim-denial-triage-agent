@@ -75,10 +75,22 @@ class RetrievalRecord(StrictContract):
     passage_ids: Tuple[str, ...] = ()
 
 
+class AvailableSource(StrictContract):
+    """A document the manifest lists for the claim, whether or not the run retrieved it."""
+
+    source_id: str = Field(min_length=1)
+    version: str = Field(min_length=1)
+    source_type: str = Field(min_length=1)
+    document_type: Optional[str] = None
+    retrieved: bool = False
+
+
 class BundledPassage(StrictContract):
     """One retrieved passage plus where and for which claim it was retrieved."""
 
     passage: EvidencePassage
+    source_type: str = Field(min_length=1)
+    document_type: Optional[str] = None
     claim_id: str
     payer: str
     procedure_code: str
@@ -100,6 +112,7 @@ class EvidenceBundle(StrictContract):
     policy_formula: Optional[str] = None
     passages: Tuple[BundledPassage, ...] = ()
     retrievals: Tuple[RetrievalRecord, ...] = ()
+    available_sources: Tuple[AvailableSource, ...] = ()
 
     @model_validator(mode="after")
     def _check_consistency(self) -> "EvidenceBundle":
@@ -119,11 +132,23 @@ class EvidenceBundle(StrictContract):
                 raise ValueError(f"passage {pid} is bound to a different claim scope")
             if item.call_index not in call_indexes:
                 raise ValueError(f"passage {pid} names retrieval call {item.call_index}, which is not recorded")
+            if item.source_type != item.passage.source_type:
+                raise ValueError(f"passage {pid} has a source_type that differs from its passage")
+        retrieved_sources = {(p.passage.source_id, p.passage.version) for p in self.passages}
+        for source in self.available_sources:
+            if source.retrieved != ((source.source_id, source.version) in retrieved_sources):
+                raise ValueError(f"available source {source.source_id} has an inconsistent retrieved flag")
         return self
 
     @property
     def passage_ids(self) -> Tuple[str, ...]:
         return tuple(item.passage.passage_id for item in self.passages)
+
+    @property
+    def unretrieved_sources(self) -> Tuple[AvailableSource, ...]:
+        """Documents listed for the claim that the run never retrieved."""
+
+        return tuple(source for source in self.available_sources if not source.retrieved)
 
     @property
     def evidence_passages(self) -> Tuple[EvidencePassage, ...]:
@@ -203,8 +228,13 @@ class EvidenceBundleRecorder:
         run_id: str,
         knowledge_snapshot_id: str,
         scope: ClaimEvidenceScope,
+        available_sources: Sequence[AvailableSource] = (),
     ) -> None:
+        """``available_sources`` lists the claim's documents, usually from
+        ``claim_available_sources``; their ``retrieved`` flags are set at freeze."""
+
         self._dispatcher = dispatcher
+        self._available_sources = tuple(available_sources)
         self._run_id = run_id
         self._snapshot_id = knowledge_snapshot_id
         self._scope = scope
@@ -262,6 +292,8 @@ class EvidenceBundleRecorder:
                 continue  # keep the first retrieval's provenance
             self._passages[passage.passage_id] = BundledPassage(
                 passage=passage,
+                source_type=passage.source_type,
+                document_type=result.data.get("document_type"),
                 claim_id=self._scope.claim_id,
                 payer=self._scope.payer,
                 procedure_code=self._scope.procedure_code,
@@ -275,6 +307,11 @@ class EvidenceBundleRecorder:
         """Return the run's immutable bundle; later calls return the same bundle."""
 
         if self._frozen is None:
+            retrieved = {(p.passage.source_id, p.passage.version) for p in self._passages.values()}
+            available = tuple(
+                source.model_copy(update={"retrieved": (source.source_id, source.version) in retrieved})
+                for source in self._available_sources
+            )
             self._frozen = EvidenceBundle(
                 run_id=self._run_id,
                 knowledge_snapshot_id=self._snapshot_id,
@@ -282,8 +319,25 @@ class EvidenceBundleRecorder:
                 policy_formula=self._policy_formula,
                 passages=tuple(self._passages.values()),
                 retrievals=tuple(self._retrievals),
+                available_sources=available,
             )
         return self._frozen
+
+
+def claim_available_sources(knowledge_store: object, claim_id: str) -> Tuple[AvailableSource, ...]:
+    """The encounter documents the manifest lists for one claim, none yet retrieved."""
+
+    from claim_agent.tools.encounter_notes import claim_document_inventory
+
+    return tuple(
+        AvailableSource(
+            source_id=document.document_id,
+            version=document.version,
+            source_type="encounter_note",
+            document_type=document.document_type,
+        )
+        for document in claim_document_inventory(knowledge_store, claim_id)
+    )
 
 
 def source_claim_index(manifest_sources: Sequence[Mapping[str, object]]) -> Dict[str, str]:

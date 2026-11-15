@@ -15,6 +15,7 @@ from pathlib import Path
 from claim_agent.tools.dispatcher import ENCOUNTER_NOTE_TOOL, MEDICAL_POLICY_TOOL, ToolDispatcher
 from claim_agent.tools.evidence_bundle import (
     ClaimEvidenceScope,
+    claim_available_sources,
     EvidenceBundle,
     EvidenceBundleRecorder,
 )
@@ -27,7 +28,10 @@ FIXTURES = REPO_ROOT / "tests" / "fixtures" / "evidence_bundles"
 
 def _record(run_id, scope, calls):
     store = KnowledgeStore(KNOWLEDGE)
-    recorder = EvidenceBundleRecorder(ToolDispatcher(store), run_id, store.snapshot_id, scope)
+    recorder = EvidenceBundleRecorder(
+        ToolDispatcher(store), run_id, store.snapshot_id, scope,
+        available_sources=claim_available_sources(store, scope.claim_id),
+    )
     for index, (tool, arguments) in enumerate(calls, start=1):
         recorder.dispatch(f"REQ-{index}", tool, arguments)
     return recorder.freeze()
@@ -49,7 +53,11 @@ def appeal_bundle() -> EvidenceBundle:
 
 
 def no_policy_bundle() -> EvidenceBundle:
-    """CLM-2026-620111: UHC has no policy in the corpus, so retrieval returns NO_MATCH."""
+    """CLM-2026-620111: UHC has no policy in the corpus, so retrieval returns NO_MATCH.
+
+    The claim's clinical note is listed but never retrieved, so it shows up in
+    ``unretrieved_sources``.
+    """
 
     scope = ClaimEvidenceScope(
         claim_id="CLM-2026-620111", service_line_id=1, payer="UHC",
