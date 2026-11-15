@@ -68,10 +68,48 @@ class EvidenceBundleRecorder:
         return result
 
     def _record(self, request_id: str, tool_name: str, result: ToolResult) -> None:
+        """Validate one result completely, then record it; a rejected result leaves no trace."""
+
         if result.request_id != request_id or result.tool_name != tool_name:
             raise EvidenceBundleError("Tool result identity does not match its request.")
         call_index = len(self._retrievals) + 1
         ok = result.status is ToolStatus.OK
+        formula = None
+        new_passages: Dict[str, BundledPassage] = {}
+
+        if ok:
+            reported_claim = result.data.get("claim_id")
+            if reported_claim is not None and reported_claim != self._scope.claim_id:
+                raise EvidenceBundleError(f"{tool_name} returned evidence for claim {reported_claim!r}.")
+            reported_snapshot = result.data.get("knowledge_snapshot_id")
+            if reported_snapshot is not None and reported_snapshot != self._snapshot_id:
+                raise EvidenceBundleError(f"{tool_name} returned evidence from snapshot {reported_snapshot!r}.")
+            formula = result.data.get("criteria_formula")
+            if formula is not None and self._policy_formula is not None and self._policy_formula != formula:
+                raise EvidenceBundleError("A run cannot contain conflicting policy formulas.")
+
+            for passage in result.evidence_passages:
+                existing = self._passages.get(passage.passage_id) or new_passages.get(passage.passage_id)
+                if existing is not None:
+                    if existing.passage != passage:
+                        raise EvidenceBundleError(
+                            f"Passage {passage.passage_id} was returned with conflicting content."
+                        )
+                    continue  # keep the first retrieval's provenance
+                new_passages[passage.passage_id] = BundledPassage(
+                    passage=passage,
+                    source_type=passage.source_type,
+                    document_type=result.data.get("document_type"),
+                    claim_id=self._scope.claim_id,
+                    payer=self._scope.payer,
+                    procedure_code=self._scope.procedure_code,
+                    service_date=self._scope.service_date,
+                    tool_name=tool_name,
+                    request_id=request_id,
+                    call_index=call_index,
+                )
+
+        # Every check passed: update the recorder state together.
         self._retrievals.append(
             RetrievalRecord(
                 call_index=call_index,
@@ -83,40 +121,9 @@ class EvidenceBundleRecorder:
                 passage_ids=tuple(p.passage_id for p in result.evidence_passages) if ok else (),
             )
         )
-        if not ok:
-            return
-
-        reported_claim = result.data.get("claim_id")
-        if reported_claim is not None and reported_claim != self._scope.claim_id:
-            raise EvidenceBundleError(f"{tool_name} returned evidence for claim {reported_claim!r}.")
-        reported_snapshot = result.data.get("knowledge_snapshot_id")
-        if reported_snapshot is not None and reported_snapshot != self._snapshot_id:
-            raise EvidenceBundleError(f"{tool_name} returned evidence from snapshot {reported_snapshot!r}.")
-
-        formula = result.data.get("criteria_formula")
         if formula is not None:
-            if self._policy_formula is not None and self._policy_formula != formula:
-                raise EvidenceBundleError("A run cannot contain conflicting policy formulas.")
             self._policy_formula = formula
-
-        for passage in result.evidence_passages:
-            existing = self._passages.get(passage.passage_id)
-            if existing is not None:
-                if existing.passage != passage:
-                    raise EvidenceBundleError(f"Passage {passage.passage_id} was returned with conflicting content.")
-                continue  # keep the first retrieval's provenance
-            self._passages[passage.passage_id] = BundledPassage(
-                passage=passage,
-                source_type=passage.source_type,
-                document_type=result.data.get("document_type"),
-                claim_id=self._scope.claim_id,
-                payer=self._scope.payer,
-                procedure_code=self._scope.procedure_code,
-                service_date=self._scope.service_date,
-                tool_name=tool_name,
-                request_id=request_id,
-                call_index=call_index,
-            )
+        self._passages.update(new_passages)
 
     def freeze(self) -> EvidenceBundle:
         """Return the run's immutable bundle; later calls return the same bundle."""

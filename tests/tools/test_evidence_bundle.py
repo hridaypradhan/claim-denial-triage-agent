@@ -232,5 +232,82 @@ class AvailableSourcesTest(unittest.TestCase):
         self.assertEqual(bundle.passages[0].document_type, "clinical_note")
 
 
+class HardeningTest(unittest.TestCase):
+    """Regressions from review: deep immutability, bound provenance, atomic recording."""
+
+    def test_nothing_inside_a_bundle_can_be_changed(self):
+        bundle = appeal_bundle()
+        before = bundle.fingerprint()
+        mutations = {
+            "scope": lambda: setattr(bundle.scope, "claim_id", "CLM-OTHER"),
+            "retrieval": lambda: setattr(bundle.retrievals[0], "request_id", "REQ-X"),
+            "bundled passage": lambda: setattr(bundle.passages[0], "call_index", 2),
+            "evidence passage": lambda: setattr(bundle.passages[0].passage, "text", "changed"),
+            "available source": lambda: setattr(bundle.available_sources[0], "retrieved", False),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(part=name):
+                with self.assertRaises(ValidationError):
+                    mutate()
+        self.assertEqual(bundle.fingerprint(), before)
+
+    def rebuild(self, bundle, passages=None, retrievals=None):
+        return EvidenceBundle(
+            run_id=bundle.run_id, knowledge_snapshot_id=bundle.knowledge_snapshot_id, scope=bundle.scope,
+            policy_formula=bundle.policy_formula,
+            passages=bundle.passages if passages is None else passages,
+            retrievals=bundle.retrievals if retrievals is None else retrievals,
+            available_sources=bundle.available_sources,
+        )
+
+    def test_forged_passage_provenance_is_rejected(self):
+        bundle = appeal_bundle()
+        first = bundle.passages[0]
+        forgeries = {
+            "request ID": first.model_copy(update={"request_id": "REQ-FAKE"}),
+            "tool name": first.model_copy(update={"tool_name": "get_encounter_note"}),
+            "call number": first.model_copy(update={"call_index": 2}),
+        }
+        self.assertEqual(self.rebuild(bundle).fingerprint(), bundle.fingerprint())
+        for name, forged in forgeries.items():
+            with self.subTest(forged=name):
+                with self.assertRaises(ValidationError):
+                    self.rebuild(bundle, passages=(forged, *bundle.passages[1:]))
+
+    def test_retrieval_records_must_match_the_bundled_passages(self):
+        bundle = appeal_bundle()
+        call = bundle.retrievals[1]
+        bad_calls = {
+            "lists a passage the bundle lacks": call.model_copy(update={"passage_ids": call.passage_ids + ("X@v1#L9",)}),
+            "omits the source of its passages": call.model_copy(update={"source_ids": ()}),
+            "failed but holds passages": call.model_copy(update={"status": ToolStatus.ERROR, "error_code": "NO_MATCH"}),
+            "renumbered": call.model_copy(update={"call_index": 9}),
+        }
+        for name, bad in bad_calls.items():
+            with self.subTest(call=name):
+                retrievals = (bundle.retrievals[0], bad, *bundle.retrievals[2:])
+                with self.assertRaises(ValidationError):
+                    self.rebuild(bundle, retrievals=retrievals)
+
+    def test_a_rejected_result_leaves_no_trace(self):
+        ok_first = (ToolStatus.OK, [passage("ENC-CLM-1@v1#L1", "a")], {"criteria_formula": "A"})
+        rejected = {
+            "other claim": (ToolStatus.OK, [passage("ENC-CLM-1@v1#L2")], {"claim_id": "CLM-2"}),
+            "other snapshot": (ToolStatus.OK, [passage("ENC-CLM-1@v1#L2")], {"knowledge_snapshot_id": "old"}),
+            "conflicting formula": (ToolStatus.OK, [passage("ENC-CLM-1@v1#L2")], {"criteria_formula": "B"}),
+            "conflicting content": (ToolStatus.OK, [passage("ENC-CLM-1@v1#L2"), passage("ENC-CLM-1@v1#L1", "b")], {}),
+        }
+        for name, result in rejected.items():
+            with self.subTest(rejected=name):
+                rec = recorder(ok_first, result)
+                rec.dispatch("REQ-1", ENCOUNTER_NOTE_TOOL, {})
+                with self.assertRaises(EvidenceBundleError):
+                    rec.dispatch("REQ-2", ENCOUNTER_NOTE_TOOL, {})
+                bundle = rec.freeze()
+                self.assertEqual([r.request_id for r in bundle.retrievals], ["REQ-1"])
+                self.assertEqual(bundle.passage_ids, ("ENC-CLM-1@v1#L1",))
+                self.assertEqual(bundle.policy_formula, "A")
+
+
 if __name__ == "__main__":
     unittest.main()

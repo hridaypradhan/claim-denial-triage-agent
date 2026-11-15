@@ -112,6 +112,9 @@ class StrictContract(BaseModel):
 
 # --- Contract v0.1: Tools ---
 class EvidencePassage(StrictContract):
+    # Frozen so a passage held in an EvidenceBundle can't change after the run.
+    model_config = StrictContract.model_config | {"frozen": True}
+
     passage_id: str = Field(description="Unique ID for this specific passage")
     source_id: str = Field(description="The source document identifier")
     source_type: str = Field(description="The type of the source document")

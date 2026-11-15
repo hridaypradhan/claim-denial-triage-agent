@@ -33,6 +33,8 @@ class CitationProblemCode(str, Enum):
 
 
 class CitationProblem(StrictContract):
+    model_config = StrictContract.model_config | {"frozen": True}
+
     code: CitationProblemCode
     citation_index: int
     citation_id: str
@@ -50,6 +52,8 @@ class CitationResolutionError(ValueError):
 class ClaimEvidenceScope(StrictContract):
     """The trusted claim fields every bundled passage is bound to."""
 
+    model_config = StrictContract.model_config | {"frozen": True}
+
     claim_id: str = Field(min_length=1)
     service_line_id: int
     payer: str = Field(min_length=1)
@@ -59,6 +63,8 @@ class ClaimEvidenceScope(StrictContract):
 
 class RetrievalRecord(StrictContract):
     """One tool call made during the run, successful or not."""
+
+    model_config = StrictContract.model_config | {"frozen": True}
 
     call_index: int = Field(ge=1)
     request_id: str = Field(min_length=1)
@@ -72,6 +78,8 @@ class RetrievalRecord(StrictContract):
 class AvailableSource(StrictContract):
     """A document the manifest lists for the claim, whether or not the run retrieved it."""
 
+    model_config = StrictContract.model_config | {"frozen": True}
+
     source_id: str = Field(min_length=1)
     version: str = Field(min_length=1)
     source_type: str = Field(min_length=1)
@@ -81,6 +89,8 @@ class AvailableSource(StrictContract):
 
 class BundledPassage(StrictContract):
     """One retrieved passage plus where and for which claim it was retrieved."""
+
+    model_config = StrictContract.model_config | {"frozen": True}
 
     passage: EvidencePassage
     source_type: str = Field(min_length=1)
@@ -111,7 +121,16 @@ class EvidenceBundle(StrictContract):
     @model_validator(mode="after")
     def _check_consistency(self) -> "EvidenceBundle":
         seen = set()
-        call_indexes = {r.call_index for r in self.retrievals}
+        calls = {r.call_index: r for r in self.retrievals}
+        if len(calls) != len(self.retrievals) or sorted(calls) != list(range(1, len(calls) + 1)):
+            raise ValueError("retrieval calls must be numbered 1..n without gaps or repeats")
+        bundled_ids = {item.passage.passage_id for item in self.passages}
+        for call in self.retrievals:
+            if call.status is not ToolStatus.OK and (call.passage_ids or call.error_code is None):
+                raise ValueError(f"failed call {call.call_index} must have an error code and no passages")
+            missing = set(call.passage_ids) - bundled_ids
+            if missing:
+                raise ValueError(f"call {call.call_index} returned passages missing from the bundle: {sorted(missing)}")
         for item in self.passages:
             pid = item.passage.passage_id
             if pid in seen:
@@ -124,8 +143,15 @@ class EvidenceBundle(StrictContract):
                 self.scope.service_date,
             ):
                 raise ValueError(f"passage {pid} is bound to a different claim scope")
-            if item.call_index not in call_indexes:
+            call = calls.get(item.call_index)
+            if call is None:
                 raise ValueError(f"passage {pid} names retrieval call {item.call_index}, which is not recorded")
+            if (item.request_id, item.tool_name) != (call.request_id, call.tool_name):
+                raise ValueError(f"passage {pid} does not match the request and tool of call {item.call_index}")
+            if call.status is not ToolStatus.OK or pid not in call.passage_ids:
+                raise ValueError(f"passage {pid} was not returned by call {item.call_index}")
+            if f"{item.passage.source_id}@v{item.passage.version}" not in call.source_ids:
+                raise ValueError(f"passage {pid} comes from a source call {item.call_index} did not report")
             if item.source_type != item.passage.source_type:
                 raise ValueError(f"passage {pid} has a source_type that differs from its passage")
         retrieved_sources = {(p.passage.source_id, p.passage.version) for p in self.passages}
