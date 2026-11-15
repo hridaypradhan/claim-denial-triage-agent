@@ -1,0 +1,12 @@
+{
+  "contract_version": "0.1",
+  "decision_id": "dec-005097-01",
+  "claim_id": "CLM-2026-005097",
+  "service_line_id": 1,
+  "outcome": "DISAGREE",
+  "rationale": "Note states therapy lasted 2 weeks, contradicting the 6-week policy requirement.",
+  "supported_criterion_ids": [],
+  "disputed_criterion_ids": ["CRIT-A"],
+  "unresolved_questions": [],
+  "citation_ids": ["POL-UHC-72148@v1#p1", "ENC-CLM-2026-005097-CN@v1#p1"]
+}
