@@ -138,7 +138,7 @@ def predict_scripted_agent(case: Case, as_of: date) -> Prediction:
         )
         trace_events = ()
 
-    return _prediction_from_package(
+    return prediction_from_output_package(
         case=case,
         system=SCRIPTED_AGENT,
         output_package=output_package,
@@ -174,7 +174,7 @@ def predict_escalate_all(case: Case, as_of: date) -> Prediction:
             knowledge_snapshot_id=knowledge_store.snapshot_id,
         )
 
-    return _prediction_from_package(
+    return prediction_from_output_package(
         case=case,
         system=ESCALATE_ALL,
         output_package=output_package,
@@ -182,7 +182,7 @@ def predict_escalate_all(case: Case, as_of: date) -> Prediction:
     )
 
 
-def _prediction_from_package(
+def prediction_from_output_package(
     case: Case,
     system: str,
     output_package: OutputPackage,
@@ -194,8 +194,7 @@ def _prediction_from_package(
     # the baseline filing deadline in evaluation results.
     filing_deadline = (
         output_package.baseline_finding.filing_deadline
-        if output_package.final_disposition
-        in DEADLINE_BEARING_DISPOSITIONS
+        if output_package.final_disposition in DEADLINE_BEARING_DISPOSITIONS
         else None
     )
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from typing import Optional
 
-from claim_agent.agent.hosted_model import (
+from claim_agent.agent.hosted.client import (
     HostedModelClient,
     HostedModelTimeoutError,
     HostedModelTransport,

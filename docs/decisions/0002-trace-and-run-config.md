@@ -1,7 +1,8 @@
 # 0002: Trace events and agent run configuration
 
 - **Status:** Accepted
-- **Version:** 0.2 (`trace_version` and `config_version` are both `"0.2"`)
+- **Version:** Trace 0.2; configuration 0.2 with a backward-compatible hosted
+  extension at configuration 0.3
 - **Date:** 2026-11-07 (first draft 2026-10-29)
 - **Issue:** #7
 - **Requirements owner:** Sachin Kothandaraman (evaluation)
@@ -255,7 +256,7 @@ All of these fields are frozen before the held-out evaluation. A repeat run must
 | `code_commit` | string | Git commit of the code that ran |
 | `model_provider` | string | |
 | `model_id` | string | Exact dated model version, never an alias |
-| `model_parameters` | object | Every sampling parameter: at least `temperature`, `top_p`, and `max_output_tokens`. A parameter that is not sent is `null` |
+| `model_parameters` | object | Every sampling parameter: at least `temperature`, `top_p`, and `max_output_tokens`. A parameter that is not sent is `null`. Hosted configuration 0.3 also records `provider_options`: `reasoning_effort`, `response_format_mode`, and whether gateway addons are enabled |
 | `prompt_version` | string | |
 | `runtime_seed` | int | Seed for everything the runtime controls: the scripted fake model and any runtime randomness |
 | `provider_seed` | int or `null` | Seed sent to the model provider. `null` when the provider does not support one |
@@ -272,6 +273,12 @@ All of these fields are frozen before the held-out evaluation. A repeat run must
 | `knowledge_snapshot_id` | string | Frozen knowledge corpus version, for example `knowledge-v0` |
 
 Fields typed "number" are always written as floats (`30.0`, not `30`), and int fields are always written as integers. This keeps the hash below identical across runs.
+
+Configuration 0.3 extends `model_parameters` only for hosted runs. Version-0.2
+scripted configurations omit `provider_options`, preserving their canonical
+JSON and existing hashes. The hosted options are non-secret and are included
+in `config_sha256`; API credentials are never included in the configuration or
+trace.
 
 ### How `config_sha256` is calculated
 
