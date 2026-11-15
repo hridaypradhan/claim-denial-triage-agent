@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-710319-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710319",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-16",
+  "author_role": "Otolaryngologist",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710319-CN@v1#L1",
+      "text": "Chief complaint: congestion."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710319-CN@v1#L2",
+      "text": "Congestion for 4 months."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710319-CN@v1#L3",
+      "text": "Has not used intranasal steroids or saline irrigation."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710319-CN@v1#L4",
+      "text": "No orbital, neurological, or mass findings."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710319-CN@v1#L5",
+      "text": "Assessment: chronic sinusitis (J32.9)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710319-CN@v1#L6",
+      "text": "Plan: CT of the paranasal sinuses without contrast (CPT 70486)."
+    }
+  ]
+}

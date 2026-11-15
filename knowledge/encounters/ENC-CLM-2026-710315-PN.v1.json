@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-710315-PN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710315",
+  "document_type": "progress_note",
+  "note_date": "2026-08-18",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710315-PN@v1#L1",
+      "text": "Visit for shortness of breath and right knee pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710315-PN@v1#L2",
+      "text": "Heart failure exacerbation assessed; diuretic dose increased."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710315-PN@v1#L3",
+      "text": "E/M documented separately from the injection note."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710315-PN@v1#L4",
+      "text": "Assessment: chronic systolic heart failure; right knee osteoarthritis (I50.22, M17.11)."
+    }
+  ]
+}

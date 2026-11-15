@@ -1,0 +1,20 @@
+{
+  "source_id": "ENC-CLM-2026-710301-PNL",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710301",
+  "document_type": "payer_notification_log",
+  "note_date": "2026-07-13",
+  "author_role": "Utilization review coordinator",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710301-PNL@v1#L1",
+      "text": "Payer notification log for the emergency department visit on 2026-07-10."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710301-PNL@v1#L2",
+      "text": "UHC notified of the emergency CT on 2026-07-13, the next business day."
+    }
+  ]
+}
