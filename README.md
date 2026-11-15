@@ -157,6 +157,10 @@ including a source edited together with its manifest hash, so a changed corpus
 needs a new snapshot ID. Each evaluation run records `knowledge_snapshot_id`
 and the knowledge manifest's hash in its `run_manifest.json`.
 
+[`docs/evidence_coverage.md`](docs/evidence_coverage.md) maps each evidence
+failure mode (no match, version, unavailable, conflicting, timeout,
+instruction-like, cross-claim, and citation) to the tests that cover it.
+
 ### Scripted offline agent runtime
 
 The agent package now provides an offline vertical slice for developing and verifying runtime behavior before production integrations are available:
@@ -763,7 +767,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 132 tests
+Ran 147 tests
 OK
 ```
 
