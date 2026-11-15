@@ -1,0 +1,22 @@
+{
+  "contract_version": "0.1",
+  "draft_id": "draft-005097-01",
+  "decision_id": "dec-005097-01",
+  "claim_id": "CLM-2026-005097",
+  "service_line_id": 1,
+  "disposition": "APPEAL_WITH_DOCUMENTATION",
+  "approval_state": "PENDING_REVIEW",
+  "subject": "Medical Necessity Appeal - Claim CLM-2026-005097 (Line 1)",
+  "body": "Per policy POL-UHC-72148@v1#p1, conservative therapy of at least 6 weeks is required. Clinical note ENC-CLM-2026-005097-CN@v1#p1 documents 6 weeks of completed physical therapy.",
+  "grounded_claims": [
+    {
+      "statement": "Policy requires at least 6 weeks of conservative therapy.",
+      "citation_ids": ["POL-UHC-72148@v1#p1"]
+    },
+    {
+      "statement": "Patient completed 6 weeks of physical therapy without relief.",
+      "citation_ids": ["ENC-CLM-2026-005097-CN@v1#p1"]
+    }
+  ],
+  "citation_ids": ["POL-UHC-72148@v1#p1", "ENC-CLM-2026-005097-CN@v1#p1"]
+}
