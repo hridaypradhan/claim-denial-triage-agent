@@ -30,9 +30,11 @@ from claim_agent.agent.trace_writer import JsonLinesTraceWriter
 from evaluation.metrics import ALL_SAFETY_ERRORS, CaseFacts, SystemScore, score_system
 from evaluation.pilot_data import REPO_ROOT, Dataset, load_dataset, load_labels
 from evaluation.systems import (
+    KNOWLEDGE_ROOT,
     SYSTEMS,
     Prediction,
 )
+from claim_agent.tools.knowledge_store import KnowledgeStore
 
 HAS_TRACES = {"baseline-v1": False, "escalate-all": False}
 
@@ -241,6 +243,8 @@ def run(arguments: Optional[Sequence[str]] = None) -> int:
         "manifest_sha256": _sha256(args.manifest),
         "labels_sha256": _sha256(args.labels),
         "code_commit": _git_commit(),
+        "knowledge_snapshot_id": KnowledgeStore(KNOWLEDGE_ROOT).snapshot_id,
+        "knowledge_manifest_sha256": _sha256(KNOWLEDGE_ROOT / "manifest.json"),
         "output_package_count": output_package_count,
         "canonical_trace_count": trace_count,
     }

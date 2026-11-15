@@ -254,6 +254,13 @@ class SetADatasetTest(unittest.TestCase):
                 run_manifest["canonical_trace_count"],
                 2,
             )
+            knowledge_manifest = json.loads(
+                (REPO_ROOT / "knowledge" / "manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                run_manifest["knowledge_snapshot_id"],
+                knowledge_manifest["snapshot_id"],
+            )
 
             scores = json.loads(
                 (output_directory / "scores.json").read_text(
