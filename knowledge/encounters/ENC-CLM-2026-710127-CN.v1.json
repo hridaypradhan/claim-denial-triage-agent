@@ -1,0 +1,32 @@
+{
+  "source_id": "ENC-CLM-2026-710127-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710127",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-22",
+  "author_role": "Nephrologist",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710127-CN@v1#L1",
+      "text": "Follow-up visit for chronic kidney disease."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710127-CN@v1#L2",
+      "text": "Diagnosis: chronic kidney disease stage 4."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710127-CN@v1#L3",
+      "text": "Vitamin D: routine repeat. Prior level 38 ng/mL (normal), with no change in therapy."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710127-CN@v1#L4",
+      "text": "Assessment: chronic kidney disease stage 4 (N18.4)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710127-CN@v1#L5",
+      "text": "Plan: 25-hydroxy vitamin D level (CPT 82306)."
+    }
+  ]
+}

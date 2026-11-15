@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-710117-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710117",
+  "document_type": "clinical_note",
+  "note_date": "2026-06-29",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710117-CN@v1#L1",
+      "text": "Chief complaint: snoring."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710117-CN@v1#L2",
+      "text": "Sleep history: witnessed apneas and snoring. Epworth Sleepiness Scale score 11."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710117-CN@v1#L3",
+      "text": "Assessment: suspected obstructive sleep apnea (G47.33)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710117-CN@v1#L4",
+      "text": "Plan: home sleep apnea test (CPT 95806)."
+    }
+  ]
+}

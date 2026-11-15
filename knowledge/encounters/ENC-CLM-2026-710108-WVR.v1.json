@@ -1,0 +1,24 @@
+{
+  "source_id": "ENC-CLM-2026-710108-WVR",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710108",
+  "document_type": "signed_waiver",
+  "note_date": "2026-07-16",
+  "author_role": "Front desk",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710108-WVR@v1#L1",
+      "text": "Financial responsibility waiver for MRI lumbar spine (CPT 72148), date of service 2026-07-16."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710108-WVR@v1#L2",
+      "text": "The patient was told the payer may deny the MRI as not medically necessary."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710108-WVR@v1#L3",
+      "text": "The patient signed the waiver, accepting financial responsibility if the MRI is denied."
+    }
+  ]
+}

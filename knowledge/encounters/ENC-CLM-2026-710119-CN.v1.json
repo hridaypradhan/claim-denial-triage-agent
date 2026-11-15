@@ -1,0 +1,20 @@
+{
+  "source_id": "ENC-CLM-2026-710119-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710119",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-30",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710119-CN@v1#L1",
+      "text": "Follow-up visit for heart failure."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710119-CN@v1#L2",
+      "text": "Sleep history: patient denies snoring. Epworth Sleepiness Scale score 3."
+    }
+  ]
+}

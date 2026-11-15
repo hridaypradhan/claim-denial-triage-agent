@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-710123-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710123",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-14",
+  "author_role": "Orthopedic physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710123-CN@v1#L1",
+      "text": "Chief complaint: left knee pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710123-CN@v1#L2",
+      "text": "Exam: left knee catching, with joint-line tenderness."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710123-CN@v1#L3",
+      "text": "Imaging: standing knee X-rays obtained 2026-06-30."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710123-CN@v1#L4",
+      "text": "Treatment so far: six weeks of physical therapy and bracing without improvement."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710123-CN@v1#L5",
+      "text": "Assessment: left knee pain (M25.562)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710123-CN@v1#L6",
+      "text": "Plan: MRI left knee without contrast (CPT 73721)."
+    }
+  ]
+}

@@ -109,6 +109,7 @@ It contains:
 - Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
 - Thirteen synthetic encounter documents for the Dataset B pilot claims `CLM-2026-620102` to `CLM-2026-620112` (case list in issue #12). They cover missing, explicitly negative, and conflicting evidence, a prior imaging report, physical therapy evaluations on either side of the policy version date, and a note containing instruction-like text.
 - Eight synthetic held-out policies (#58), none of them payer text: UHC lumbar spine MRI (72148, 72158), Cigna sleep testing (95810, 95806), Aetna knee MRI in two dated versions (73721; v1 through 2026-06-30, v2 from 2026-07-01), Medicare Part B vitamin D testing (82306), UHC advanced-imaging authorization for urgent studies (74177, 70450), Aetna same-day E/M with modifier 25 (99212–99215), and BCBS Arizona sinus CT (70486).
+- Thirty-three synthetic encounter documents for held-out batch A, claims `CLM-2026-710101` to `CLM-2026-710128` (#58), written to `datasets/held_out/EVIDENCE_SPECS.md`. They include consult notes, a physical therapy discharge summary, a home sleep test report, and signed waivers.
 
 Every passage has a stable citation ID such as
 `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in
@@ -364,7 +365,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 81 tests
+Ran 86 tests
 OK
 ```
 
