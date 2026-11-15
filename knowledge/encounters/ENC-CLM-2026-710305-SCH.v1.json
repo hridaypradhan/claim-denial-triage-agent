@@ -1,0 +1,16 @@
+{
+  "source_id": "ENC-CLM-2026-710305-SCH",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710305",
+  "document_type": "scheduling_record",
+  "note_date": "2026-07-21",
+  "author_role": "Scheduler",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710305-SCH@v1#L1",
+      "text": "Elective outpatient head CT booked on 2026-07-21 for 2026-08-04."
+    }
+  ]
+}

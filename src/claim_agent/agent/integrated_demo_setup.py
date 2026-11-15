@@ -9,6 +9,10 @@ from typing import Tuple
 
 from baseline.triage.claim import load_claim
 
+from claim_agent.agent.planning_prompt import (
+    PLANNING_PROMPT_VERSION,
+)
+from claim_agent.agent.router import analyze_and_route_claim
 from claim_agent.agent.run_configuration import (
     AgentRunConfig,
     AllowedTool,
@@ -23,7 +27,6 @@ from claim_agent.agent.tool_request_guard import (
     ClaimToolContext,
     build_claim_tool_context,
 )
-from claim_agent.agent.router import analyze_and_route_claim
 from claim_agent.contracts import (
     BaselineFinding,
     RouteDecision,
@@ -133,7 +136,7 @@ def build_demo_run_configuration(
             temperature=0.0,
             top_p=None,
         ),
-        prompt_version="integrated-demo-v1",
+        prompt_version=PLANNING_PROMPT_VERSION,
         runtime_seed=0,
         provider_seed=None,
         provider_seed_supported=False,

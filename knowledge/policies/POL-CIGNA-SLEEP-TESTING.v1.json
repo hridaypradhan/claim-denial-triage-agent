@@ -1,0 +1,58 @@
+{
+  "source_id": "POL-CIGNA-SLEEP-TESTING",
+  "source_type": "medical_policy",
+  "version": "1",
+  "synthetic": true,
+  "synthetic_notice": "Synthetic policy written for this project. It is modeled on the general structure of public coverage policies but is not the text or position of Cigna.",
+  "title": "Attended Polysomnography and Home Sleep Apnea Testing",
+  "payer": "CIGNA",
+  "procedure_codes": [
+    "95810",
+    "95806"
+  ],
+  "effective_from": "2026-01-01",
+  "effective_to": null,
+  "criteria": [
+    {
+      "criterion_id": "A",
+      "summary": "Symptoms of obstructive sleep apnea",
+      "passage_id": "POL-CIGNA-SLEEP-TESTING@v1#P3"
+    },
+    {
+      "criterion_id": "B",
+      "summary": "Home sleep apnea test nondiagnostic, negative despite high suspicion, or contraindicated",
+      "passage_id": "POL-CIGNA-SLEEP-TESTING@v1#P4"
+    }
+  ],
+  "criteria_formulas": {
+    "95810": "A AND B",
+    "95806": "A"
+  },
+  "passages": [
+    {
+      "passage_id": "POL-CIGNA-SLEEP-TESTING@v1#P1",
+      "section": "1. Scope",
+      "text": "This policy applies to outpatient professional claims for attended in-laboratory polysomnography, CPT 95810, and unattended home sleep apnea testing, CPT 95806, with dates of service on or after January 1, 2026."
+    },
+    {
+      "passage_id": "POL-CIGNA-SLEEP-TESTING@v1#P2",
+      "section": "2. Coverage statement",
+      "text": "Home sleep apnea testing is considered medically necessary when criterion 3.1 is met. Attended polysomnography is considered medically necessary when criteria 3.1 and 3.2 are both met."
+    },
+    {
+      "passage_id": "POL-CIGNA-SLEEP-TESTING@v1#P3",
+      "section": "3.1 Clinical symptoms",
+      "text": "The member has symptoms of obstructive sleep apnea: habitual snoring or witnessed apneas, together with excessive daytime sleepiness, for example an Epworth Sleepiness Scale score above 10."
+    },
+    {
+      "passage_id": "POL-CIGNA-SLEEP-TESTING@v1#P4",
+      "section": "3.2 Need for attended study",
+      "text": "A home sleep apnea test was nondiagnostic, or was negative despite a high pretest probability, or is contraindicated by a documented comorbidity: moderate or severe cardiopulmonary disease, neuromuscular disease, or chronic opioid use."
+    },
+    {
+      "passage_id": "POL-CIGNA-SLEEP-TESTING@v1#P5",
+      "section": "4. Documentation",
+      "text": "Documentation supporting each applicable criterion must be available in the medical record on request. Absence of documentation for a required criterion does not establish that the criterion was not met."
+    }
+  ]
+}

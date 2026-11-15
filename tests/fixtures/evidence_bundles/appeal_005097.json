@@ -1,7 +1,7 @@
 {
   "bundle_version": "0.1",
   "run_id": "FIXTURE-APPEAL-005097",
-  "knowledge_snapshot_id": "knowledge-v1",
+  "knowledge_snapshot_id": "knowledge-v2-draft",
   "scope": {
     "claim_id": "CLM-2026-005097",
     "service_line_id": 1,

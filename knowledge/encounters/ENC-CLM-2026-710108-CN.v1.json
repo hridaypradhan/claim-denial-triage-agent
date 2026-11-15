@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-710108-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710108",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-13",
+  "author_role": "Ordering primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710108-CN@v1#L1",
+      "text": "Chief complaint: low back pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710108-CN@v1#L2",
+      "text": "History: low back pain for 7 weeks."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710108-CN@v1#L3",
+      "text": "Treatment so far: no physical therapy and no medication trial."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710108-CN@v1#L4",
+      "text": "Exam: no red flags. Neurologic exam normal."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710108-CN@v1#L5",
+      "text": "Assessment: low back pain (M54.50)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710108-CN@v1#L6",
+      "text": "Plan: order MRI lumbar spine without contrast (CPT 72148)."
+    }
+  ]
+}

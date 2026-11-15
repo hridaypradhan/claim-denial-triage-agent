@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from typing import Mapping
 
 from claim_agent.contracts import (
     CONTRACT_VERSION,
@@ -33,6 +34,7 @@ class PreparedRuntimeCase:
 def prepare_runtime_case(
     baseline_finding: BaselineFinding,
     route_decision: RouteDecision,
+    tool_context: Mapping[str, object] | None = None,
 ) -> PreparedRuntimeCase:
     """Validate typed inputs and prepare deterministic runtime context."""
 
@@ -51,6 +53,8 @@ def prepare_runtime_case(
         "baseline_finding": baseline_finding.model_dump(mode="json"),
         "route_decision": route_decision.model_dump(mode="json"),
     }
+    if tool_context is not None:
+        case_data["tool_context"] = dict(tool_context)
     serialized_case_data = json.dumps(
         case_data,
         sort_keys=True,

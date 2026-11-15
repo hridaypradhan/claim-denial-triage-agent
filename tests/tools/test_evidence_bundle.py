@@ -68,7 +68,7 @@ class FixtureTest(unittest.TestCase):
         for name in FIXTURE_BUILDERS:
             with self.subTest(fixture=name):
                 bundle = EvidenceBundle.model_validate_json((FIXTURES / name).read_text(encoding="utf-8"))
-                self.assertEqual(bundle.knowledge_snapshot_id, "knowledge-v1")
+                self.assertEqual(bundle.knowledge_snapshot_id, KnowledgeStore(KNOWLEDGE).snapshot_id)
 
     def test_no_match_call_is_recorded_without_evidence(self):
         bundle = no_policy_bundle()

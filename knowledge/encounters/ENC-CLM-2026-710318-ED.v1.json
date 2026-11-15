@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-710318-ED",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710318",
+  "document_type": "ed_note",
+  "note_date": "2026-07-16",
+  "author_role": "Emergency physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710318-ED@v1#L1",
+      "text": "Chief complaint: sinus pain and eye swelling."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710318-ED@v1#L2",
+      "text": "Sinus symptoms for 3 weeks."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710318-ED@v1#L3",
+      "text": "No nasal steroid or saline used yet."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710318-ED@v1#L4",
+      "text": "Periorbital swelling and proptosis. Suspected orbital cellulitis."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710318-ED@v1#L5",
+      "text": "Assessment: acute sinusitis; suspected orbital cellulitis (J01.90, H05.011)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710318-ED@v1#L6",
+      "text": "Plan: CT of the paranasal sinuses without contrast (CPT 70486)."
+    }
+  ]
+}

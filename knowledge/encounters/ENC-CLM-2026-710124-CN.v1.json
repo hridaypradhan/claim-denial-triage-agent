@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-710124-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710124",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-29",
+  "author_role": "Orthopedic physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710124-CN@v1#L1",
+      "text": "Chief complaint: left knee pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710124-CN@v1#L2",
+      "text": "Exam: left knee locking episodes."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710124-CN@v1#L3",
+      "text": "Imaging: standing knee X-rays obtained 2026-07-15."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710124-CN@v1#L4",
+      "text": "Treatment so far: has not tried physical therapy, bracing, or NSAIDs."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710124-CN@v1#L5",
+      "text": "Assessment: left knee pain (M25.562)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710124-CN@v1#L6",
+      "text": "Plan: MRI left knee without contrast (CPT 73721)."
+    }
+  ]
+}

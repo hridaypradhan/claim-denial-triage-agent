@@ -1,0 +1,24 @@
+{
+  "source_id": "ENC-CLM-2026-710128-WVR",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710128",
+  "document_type": "signed_waiver",
+  "note_date": "2026-08-05",
+  "author_role": "Front desk",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710128-WVR@v1#L1",
+      "text": "Advance Beneficiary Notice of Noncoverage (ABN) for a 25-hydroxy vitamin D test (CPT 82306), date of service 2026-08-05."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710128-WVR@v1#L2",
+      "text": "The patient was told Medicare may not pay for this test."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710128-WVR@v1#L3",
+      "text": "The patient signed the ABN, choosing to receive the test and accepting financial responsibility."
+    }
+  ]
+}

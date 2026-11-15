@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-710305-ED",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710305",
+  "document_type": "ed_note",
+  "note_date": "2026-08-04",
+  "author_role": "Emergency physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710305-ED@v1#L1",
+      "text": "Chief complaint: confusion."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710305-ED@v1#L2",
+      "text": "Acute confusion. Stat head CT ordered."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710305-ED@v1#L3",
+      "text": "Assessment: altered mental status (R41.0)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710305-ED@v1#L4",
+      "text": "Plan: CT head without contrast (CPT 70450)."
+    }
+  ]
+}

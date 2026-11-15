@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-710125-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710125",
+  "document_type": "clinical_note",
+  "note_date": "2026-08-05",
+  "author_role": "Orthopedic physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710125-CN@v1#L1",
+      "text": "Chief complaint: right knee instability."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710125-CN@v1#L2",
+      "text": "Exam: right knee instability."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710125-CN@v1#L3",
+      "text": "Imaging: most recent knee X-rays dated 2026-04-02; no newer imaging."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710125-CN@v1#L4",
+      "text": "Treatment so far: five weeks of physical therapy without improvement."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710125-CN@v1#L5",
+      "text": "Assessment: right knee pain (M25.561)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710125-CN@v1#L6",
+      "text": "Plan: MRI right knee without contrast (CPT 73721)."
+    }
+  ]
+}

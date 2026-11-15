@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-710308-PN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710308",
+  "document_type": "progress_note",
+  "note_date": "2026-07-08",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710308-PN@v1#L1",
+      "text": "Visit for diabetes follow-up and right knee pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710308-PN@v1#L2",
+      "text": "Uncontrolled type 2 diabetes reviewed; metformin increased. This was separate from the knee injection."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710308-PN@v1#L3",
+      "text": "The E/M history, exam, and plan are recorded in their own section, apart from the procedure note."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710308-PN@v1#L4",
+      "text": "Assessment: type 2 diabetes with hyperglycemia; right knee osteoarthritis (E11.65, M17.11)."
+    }
+  ]
+}

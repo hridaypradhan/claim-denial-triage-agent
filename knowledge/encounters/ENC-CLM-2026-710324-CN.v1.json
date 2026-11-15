@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-710324-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710324",
+  "document_type": "clinical_note",
+  "note_date": "2026-03-16",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710324-CN@v1#L1",
+      "text": "Chief complaint: low back pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710324-CN@v1#L2",
+      "text": "Low back pain for 10 weeks after 6 weeks of physical therapy without relief."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710324-CN@v1#L3",
+      "text": "Assessment: lumbar radiculopathy (M54.16)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710324-CN@v1#L4",
+      "text": "Plan: order MRI lumbar spine without contrast (CPT 72148)."
+    }
+  ]
+}

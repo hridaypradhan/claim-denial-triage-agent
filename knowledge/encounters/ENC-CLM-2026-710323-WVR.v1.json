@@ -1,0 +1,20 @@
+{
+  "source_id": "ENC-CLM-2026-710323-WVR",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710323",
+  "document_type": "signed_waiver",
+  "note_date": "2026-08-20",
+  "author_role": "Front desk",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710323-WVR@v1#L1",
+      "text": "Financial responsibility waiver for CT of the paranasal sinuses (CPT 70486), date of service 2026-08-20."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710323-WVR@v1#L2",
+      "text": "The patient signed the waiver, accepting financial responsibility if the CT is denied."
+    }
+  ]
+}
