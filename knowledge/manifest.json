@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.1",
-  "snapshot_id": "knowledge-v1",
+  "snapshot_id": "knowledge-v2-draft",
   "note": "Every source the read-only tools may return. Tools resolve sources only through this manifest. All entries are synthetic unless origin.url is set and origin.terms_status is 'permitted'.",
   "sources": [
     {
@@ -295,6 +295,172 @@
         "access_date": null,
         "terms_status": "synthetic",
         "notes": "Synthetic note; contains no real patient information."
+      }
+    },
+    {
+      "source_id": "POL-UHC-MRI-LSPINE",
+      "source_type": "medical_policy",
+      "version": "1",
+      "path": "policies/POL-UHC-MRI-LSPINE.v1.json",
+      "sha256": "272274891fd95038521529274135ea0520a17cc14647a10d0b34a648792303ee",
+      "payer": "UHC",
+      "procedure_codes": [
+        "72148",
+        "72158"
+      ],
+      "effective_from": "2026-04-01",
+      "effective_to": null,
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "POL-CIGNA-SLEEP-TESTING",
+      "source_type": "medical_policy",
+      "version": "1",
+      "path": "policies/POL-CIGNA-SLEEP-TESTING.v1.json",
+      "sha256": "02e57290f6d6666c3bb91800ea6670d7da52f2e7bb8632c997fbac8c5e3aaca9",
+      "payer": "CIGNA",
+      "procedure_codes": [
+        "95810",
+        "95806"
+      ],
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "POL-AETNA-MRI-KNEE",
+      "source_type": "medical_policy",
+      "version": "1",
+      "path": "policies/POL-AETNA-MRI-KNEE.v1.json",
+      "sha256": "8de254da9b0f16671aad6bd0812cdf820a73ea760f506bf588c74ad768c26b88",
+      "payer": "AETNA",
+      "procedure_codes": [
+        "73721"
+      ],
+      "effective_from": "2026-01-01",
+      "effective_to": "2026-06-30",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "POL-AETNA-MRI-KNEE",
+      "source_type": "medical_policy",
+      "version": "2",
+      "path": "policies/POL-AETNA-MRI-KNEE.v2.json",
+      "sha256": "df8d5ed55ea97cf2029cc16eeff2196bff3ff53937e4981789a715131b7ca907",
+      "payer": "AETNA",
+      "procedure_codes": [
+        "73721"
+      ],
+      "effective_from": "2026-07-01",
+      "effective_to": null,
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "POL-MEDICAREB-VITD-TESTING",
+      "source_type": "medical_policy",
+      "version": "1",
+      "path": "policies/POL-MEDICAREB-VITD-TESTING.v1.json",
+      "sha256": "b885e4c5a06415b191877796bdd9e81233f68866ea4224a8b4ca95003926cd2e",
+      "payer": "MEDICARE_B",
+      "procedure_codes": [
+        "82306"
+      ],
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "POL-UHC-AUTH-ADV-IMAGING",
+      "source_type": "medical_policy",
+      "version": "1",
+      "path": "policies/POL-UHC-AUTH-ADV-IMAGING.v1.json",
+      "sha256": "5dbd05e70764d08893b6187870dd780525c1ca0f45da9bf3e2ec464decca834a",
+      "payer": "UHC",
+      "procedure_codes": [
+        "74177",
+        "70450"
+      ],
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "POL-AETNA-EM-MOD25",
+      "source_type": "medical_policy",
+      "version": "1",
+      "path": "policies/POL-AETNA-EM-MOD25.v1.json",
+      "sha256": "d9fb1ac8d357b6a7e5276825d0c4d8afeb631a74dbafe338a424112bbf035eba",
+      "payer": "AETNA",
+      "procedure_codes": [
+        "99212",
+        "99213",
+        "99214",
+        "99215"
+      ],
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
+      }
+    },
+    {
+      "source_id": "POL-BCBSAZ-CT-SINUS",
+      "source_type": "medical_policy",
+      "version": "1",
+      "path": "policies/POL-BCBSAZ-CT-SINUS.v1.json",
+      "sha256": "19e5f4e7790c9d7b8ded63abe084e8ae87cb3a414aa1c373360f59d839f16cd4",
+      "payer": "BCBS_AZ",
+      "procedure_codes": [
+        "70486"
+      ],
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Authored for this project; not payer text."
       }
     }
   ]

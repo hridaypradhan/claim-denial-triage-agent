@@ -1,0 +1,62 @@
+{
+  "source_id": "POL-AETNA-EM-MOD25",
+  "source_type": "medical_policy",
+  "version": "1",
+  "synthetic": true,
+  "synthetic_notice": "Synthetic policy written for this project. It is modeled on the general structure of public coverage policies but is not the text or position of Aetna.",
+  "title": "Evaluation and Management Services on the Day of a Procedure (Modifier 25)",
+  "payer": "AETNA",
+  "procedure_codes": [
+    "99212",
+    "99213",
+    "99214",
+    "99215"
+  ],
+  "effective_from": "2026-01-01",
+  "effective_to": null,
+  "criteria": [
+    {
+      "criterion_id": "A",
+      "summary": "E/M service distinct from, or significant beyond, the procedure",
+      "passage_id": "POL-AETNA-EM-MOD25@v1#P3"
+    },
+    {
+      "criterion_id": "B",
+      "summary": "E/M documentation recorded separately from the procedure note",
+      "passage_id": "POL-AETNA-EM-MOD25@v1#P4"
+    }
+  ],
+  "criteria_formulas": {
+    "99212": "A AND B",
+    "99213": "A AND B",
+    "99214": "A AND B",
+    "99215": "A AND B"
+  },
+  "passages": [
+    {
+      "passage_id": "POL-AETNA-EM-MOD25@v1#P1",
+      "section": "1. Scope",
+      "text": "This policy applies to outpatient evaluation and management services, CPT 99212 to 99215, reported with modifier 25 on the same day as a procedure, with dates of service on or after January 1, 2026."
+    },
+    {
+      "passage_id": "POL-AETNA-EM-MOD25@v1#P2",
+      "section": "2. Coverage statement",
+      "text": "A same-day evaluation and management service is separately payable when criteria 3.1 and 3.2 are both met."
+    },
+    {
+      "passage_id": "POL-AETNA-EM-MOD25@v1#P3",
+      "section": "3.1 Separately identifiable service",
+      "text": "The evaluation and management service addressed a problem distinct from the indication for the procedure, or was significant and separately identifiable beyond the usual pre-procedure evaluation."
+    },
+    {
+      "passage_id": "POL-AETNA-EM-MOD25@v1#P4",
+      "section": "3.2 Separate documentation",
+      "text": "The history, examination, or medical decision making for the evaluation and management service is recorded separately from the procedure note."
+    },
+    {
+      "passage_id": "POL-AETNA-EM-MOD25@v1#P5",
+      "section": "4. Documentation",
+      "text": "Documentation supporting each applicable criterion must be available in the medical record on request. Absence of documentation for a required criterion does not establish that the criterion was not met."
+    }
+  ]
+}

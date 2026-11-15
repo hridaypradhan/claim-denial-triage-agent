@@ -95,6 +95,12 @@ later corpus changes detectable. `knowledge-v1` adds the Dataset B encounter
 notes to `knowledge-v0` without changing any earlier file, so earlier passage
 IDs still resolve.
 
+The working snapshot is now `knowledge-v2-draft`: `knowledge-v1` plus the
+held-out evidence being added for the final evaluation (#58). The Milestone 2
+results were produced on `knowledge-v1`, and none of the new sources changes
+their retrieval. The final identifier is assigned when the corpus is frozen
+(#62).
+
 It contains:
 
 - A [manifest](knowledge/manifest.json) listing every source with its version, `sha256` hash, payer, procedure codes or claim ID, effective dates, and origin.
@@ -102,6 +108,7 @@ It contains:
 - A synthetic physical therapy policy (CPT 97110) under the `AETNA` payer profile in two dated versions, so the service date selects the criteria: v1 (`A AND B`) through 2026-03-31 and v2 (`A AND B AND C`) from 2026-04-01. It is not the payer's actual policy.
 - Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
 - Thirteen synthetic encounter documents for the Dataset B pilot claims `CLM-2026-620102` to `CLM-2026-620112` (case list in issue #12). They cover missing, explicitly negative, and conflicting evidence, a prior imaging report, physical therapy evaluations on either side of the policy version date, and a note containing instruction-like text.
+- Eight synthetic held-out policies (#58), none of them payer text: UHC lumbar spine MRI (72148, 72158), Cigna sleep testing (95810, 95806), Aetna knee MRI in two dated versions (73721; v1 through 2026-06-30, v2 from 2026-07-01), Medicare Part B vitamin D testing (82306), UHC advanced-imaging authorization for urgent studies (74177, 70450), Aetna same-day E/M with modifier 25 (99212–99215), and BCBS Arizona sinus CT (70486).
 
 Every passage has a stable citation ID such as
 `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in
@@ -375,7 +382,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 89 tests
+Ran 93 tests
 OK
 ```
 

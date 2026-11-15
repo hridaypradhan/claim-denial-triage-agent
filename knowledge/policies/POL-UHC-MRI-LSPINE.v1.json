@@ -1,0 +1,68 @@
+{
+  "source_id": "POL-UHC-MRI-LSPINE",
+  "source_type": "medical_policy",
+  "version": "1",
+  "synthetic": true,
+  "synthetic_notice": "Synthetic policy written for this project. It is modeled on the general structure of public coverage policies but is not the text or position of UnitedHealthcare.",
+  "title": "Magnetic Resonance Imaging of the Lumbar Spine",
+  "payer": "UHC",
+  "procedure_codes": [
+    "72148",
+    "72158"
+  ],
+  "effective_from": "2026-04-01",
+  "effective_to": null,
+  "criteria": [
+    {
+      "criterion_id": "A",
+      "summary": "Low back pain for at least 6 weeks",
+      "passage_id": "POL-UHC-MRI-LSPINE@v1#P3"
+    },
+    {
+      "criterion_id": "B",
+      "summary": "At least 6 weeks of conservative therapy without adequate improvement",
+      "passage_id": "POL-UHC-MRI-LSPINE@v1#P4"
+    },
+    {
+      "criterion_id": "C",
+      "summary": "Red flag present",
+      "passage_id": "POL-UHC-MRI-LSPINE@v1#P5"
+    }
+  ],
+  "criteria_formulas": {
+    "72148": "(A AND B) OR C",
+    "72158": "(A AND B) OR C"
+  },
+  "passages": [
+    {
+      "passage_id": "POL-UHC-MRI-LSPINE@v1#P1",
+      "section": "1. Scope",
+      "text": "This policy applies to outpatient professional claims for MRI of the lumbar spine, CPT 72148 and 72158, with dates of service on or after April 1, 2026."
+    },
+    {
+      "passage_id": "POL-UHC-MRI-LSPINE@v1#P2",
+      "section": "2. Coverage statement",
+      "text": "Lumbar spine MRI is considered medically necessary when criteria 3.1 and 3.2 are both met, or when criterion 3.3 is met."
+    },
+    {
+      "passage_id": "POL-UHC-MRI-LSPINE@v1#P3",
+      "section": "3.1 Duration of symptoms",
+      "text": "The member has low back pain, with or without radicular symptoms, that has been present for at least 6 weeks."
+    },
+    {
+      "passage_id": "POL-UHC-MRI-LSPINE@v1#P4",
+      "section": "3.2 Conservative therapy",
+      "text": "The member has completed at least 6 weeks of conservative therapy, such as physical therapy, a home exercise program, or nonsteroidal anti-inflammatory drugs, without adequate improvement."
+    },
+    {
+      "passage_id": "POL-UHC-MRI-LSPINE@v1#P5",
+      "section": "3.3 Red flags",
+      "text": "A red flag is documented: a progressive neurological deficit, suspected cauda equina syndrome, a history of cancer, or suspected spinal infection. When a red flag is present, criteria 3.1 and 3.2 do not apply."
+    },
+    {
+      "passage_id": "POL-UHC-MRI-LSPINE@v1#P6",
+      "section": "4. Documentation",
+      "text": "Documentation supporting each applicable criterion must be available in the medical record on request. Absence of documentation for a required criterion does not establish that the criterion was not met."
+    }
+  ]
+}
