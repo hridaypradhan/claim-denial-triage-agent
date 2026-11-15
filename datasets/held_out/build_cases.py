@@ -322,13 +322,13 @@ case("A", 27, "H-VITD-1", "MEDICARE_B", "2026-07-29", "2026-08-19",
      ["evidence", "criterion-ruled-out", "frequency"],
      [doc("clinical_note", "Nephrologist", "2026-07-22", [
          "[A] Chronic kidney disease stage 4.",
-         "[B] Routine repeat; prior level 38 ng/mL (normal), no change in therapy."])], VD)
+         "[B] Routine repeat; prior level 38 ng/mL (normal) on 2026-02-10, no change in therapy."])], VD)
 case("A", 28, "H-VITD-2", "MEDICARE_B", "2026-08-05", "2026-08-26",
      [line("82306", ["M81.0"], 58.0, CO151)],
      "Routine repeat test with a signed ABN on file.", ["evidence", "patient-billing", "frequency"],
      [doc("clinical_note", "Primary care physician", "2026-07-30", [
          "[A] Postmenopausal osteoporosis.",
-         "[B] Routine annual repeat; prior result normal and no change in treatment."]),
+         "[B] Routine repeat; prior result normal on 2026-02-03, no change in treatment."]),
       doc("signed_waiver", "Front desk", "2026-08-05", ["Signed ABN for the vitamin D test."])], VD, enc=WAIVER)
 
 # ---- Batch B: rule and safety, claim facts only (reviewer: Neha) -----------
@@ -475,7 +475,7 @@ case("C", 7, "H-AUTH-URGENT-5", "CIGNA", "2026-07-17", "2026-08-07",
      "Urgent CT with notification, but at Cigna, which has no authorization policy in the corpus.",
      ["evidence", "no-policy", "wrong-policy-trap", "authorization"],
      [doc("ed_note", "Emergency physician", "2026-07-17", [
-         "Suspected appendicitis; CT ordered stat. Cigna notified 2026-07-18."])], NONE_POL, pos="23")
+         "Suspected appendicitis; CT ordered stat. Cigna to be notified the next business day."])], NONE_POL, pos="23")
 MOD = ["25"]
 case("C", 8, "H-MOD25-1", "AETNA", "2026-07-08", "2026-07-29",
      [line("99214", ["E11.65", "M17.11"], 210.0, CO97, MOD), line("20610", ["M17.11"], 240.0, paid=168.0)],

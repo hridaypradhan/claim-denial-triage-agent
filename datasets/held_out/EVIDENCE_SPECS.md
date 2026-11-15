@@ -372,7 +372,7 @@ Conventions:
 - Applicable policy: POL-MEDICAREB-VITD-TESTING@v1
 - `clinical_note`, Nephrologist, dated 2026-07-22:
   - [A] Chronic kidney disease stage 4.
-  - [B] Routine repeat; prior level 38 ng/mL (normal), no change in therapy.
+  - [B] Routine repeat; prior level 38 ng/mL (normal) on 2026-02-10, no change in therapy.
 
 ### CLM-2026-710128-L1
 
@@ -382,7 +382,7 @@ Conventions:
 - Applicable policy: POL-MEDICAREB-VITD-TESTING@v1
 - `clinical_note`, Primary care physician, dated 2026-07-30:
   - [A] Postmenopausal osteoporosis.
-  - [B] Routine annual repeat; prior result normal and no change in treatment.
+  - [B] Routine repeat; prior result normal on 2026-02-03, no change in treatment.
 - `signed_waiver`, Front desk, dated 2026-08-05:
   - Signed ABN for the vitamin D test.
 
@@ -653,7 +653,7 @@ Conventions:
 - Tags: evidence, no-policy, wrong-policy-trap, authorization
 - Applicable policy: **none** (no policy for this payer, code, and date)
 - `ed_note`, Emergency physician, dated 2026-07-17:
-  - Suspected appendicitis; CT ordered stat. Cigna notified 2026-07-18.
+  - Suspected appendicitis; CT ordered stat. Cigna to be notified the next business day.
 
 ### CLM-2026-710308-L1
 
