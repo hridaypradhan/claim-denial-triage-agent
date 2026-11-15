@@ -1,0 +1,56 @@
+{
+  "source_id": "POL-AETNA-MRI-KNEE",
+  "source_type": "medical_policy",
+  "version": "1",
+  "synthetic": true,
+  "synthetic_notice": "Synthetic policy written for this project. It is modeled on the general structure of public coverage policies but is not the text or position of Aetna.",
+  "title": "Magnetic Resonance Imaging of the Knee",
+  "payer": "AETNA",
+  "procedure_codes": [
+    "73721"
+  ],
+  "effective_from": "2026-01-01",
+  "effective_to": "2026-06-30",
+  "criteria": [
+    {
+      "criterion_id": "A",
+      "summary": "Mechanical symptoms or instability on examination",
+      "passage_id": "POL-AETNA-MRI-KNEE@v1#P3"
+    },
+    {
+      "criterion_id": "B",
+      "summary": "Weight-bearing radiographs within 60 days before the MRI",
+      "passage_id": "POL-AETNA-MRI-KNEE@v1#P4"
+    }
+  ],
+  "criteria_formulas": {
+    "73721": "A AND B"
+  },
+  "passages": [
+    {
+      "passage_id": "POL-AETNA-MRI-KNEE@v1#P1",
+      "section": "1. Scope",
+      "text": "This policy applies to outpatient professional claims for MRI of a lower-extremity joint without contrast, CPT 73721, when performed for the knee, with dates of service from January 1, 2026 through June 30, 2026."
+    },
+    {
+      "passage_id": "POL-AETNA-MRI-KNEE@v1#P2",
+      "section": "2. Coverage statement",
+      "text": "Knee MRI is considered medically necessary when criteria 3.1 and 3.2 are both met."
+    },
+    {
+      "passage_id": "POL-AETNA-MRI-KNEE@v1#P3",
+      "section": "3.1 Mechanical symptoms",
+      "text": "The member has knee pain with mechanical symptoms, such as locking or catching, or with instability found on examination."
+    },
+    {
+      "passage_id": "POL-AETNA-MRI-KNEE@v1#P4",
+      "section": "3.2 Prior radiographs",
+      "text": "Weight-bearing radiographs of the knee were obtained within 60 days before the MRI."
+    },
+    {
+      "passage_id": "POL-AETNA-MRI-KNEE@v1#P5",
+      "section": "4. Documentation",
+      "text": "Documentation supporting each applicable criterion must be available in the medical record on request. Absence of documentation for a required criterion does not establish that the criterion was not met."
+    }
+  ]
+}

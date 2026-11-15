@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-710109-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710109",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-20",
+  "author_role": "Ordering primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710109-CN@v1#L1",
+      "text": "Chief complaint: mid-back pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710109-CN@v1#L2",
+      "text": "History: mid-back pain for 8 weeks after 6 weeks of physical therapy without relief."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710109-CN@v1#L3",
+      "text": "Assessment: thoracic spine pain (M54.6)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710109-CN@v1#L4",
+      "text": "Plan: order MRI thoracic spine without contrast (CPT 72146)."
+    }
+  ]
+}

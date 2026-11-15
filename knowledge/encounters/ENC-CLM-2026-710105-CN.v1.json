@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-710105-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710105",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-06",
+  "author_role": "Ordering primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710105-CN@v1#L1",
+      "text": "Chief complaint: low back pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710105-CN@v1#L2",
+      "text": "History: back pain for 2 weeks."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710105-CN@v1#L3",
+      "text": "Treatment so far: no conservative therapy tried yet."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710105-CN@v1#L4",
+      "text": "Problem list: history of breast cancer."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710105-CN@v1#L5",
+      "text": "Assessment: low back pain; history of breast cancer on the problem list (M54.50, Z85.3)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710105-CN@v1#L6",
+      "text": "Plan: order MRI lumbar spine without contrast (CPT 72148)."
+    }
+  ]
+}

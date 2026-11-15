@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-710304-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710304",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-07",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710304-CN@v1#L1",
+      "text": "Follow-up visit for a renal cyst."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710304-CN@v1#L2",
+      "text": "Routine follow-up CT for a known stable renal cyst, scheduled three weeks ahead."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710304-CN@v1#L3",
+      "text": "Assessment: renal cyst (N28.1)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710304-CN@v1#L4",
+      "text": "Plan: CT abdomen and pelvis with contrast (CPT 74177) on 2026-07-28."
+    }
+  ]
+}

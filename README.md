@@ -95,6 +95,11 @@ later corpus changes detectable. `knowledge-v1` adds the Dataset B encounter
 notes to `knowledge-v0` without changing any earlier file, so earlier passage
 IDs still resolve.
 
+The working snapshot is now `knowledge-v2-draft`: `knowledge-v1` plus the
+held-out evidence being added for the final evaluation. The Milestone 2
+results were produced on `knowledge-v1`, and none of the new sources changes
+their retrieval. The final identifier is assigned when the corpus is frozen.
+
 It contains:
 
 - A [manifest](knowledge/manifest.json) listing every source with its version, `sha256` hash, payer, procedure codes or claim ID, effective dates, and origin.
@@ -106,6 +111,19 @@ It contains:
   negative, and conflicting evidence, a prior imaging report, physical therapy
   evaluations on either side of the policy version date, and a note containing
   instruction-like text.
+- Eight synthetic held-out policies, none of them payer text: UHC lumbar spine
+  MRI, Cigna sleep testing, two dated Aetna knee MRI versions, Medicare Part B
+  vitamin D testing, UHC urgent advanced-imaging authorization, Aetna same-day
+  E/M with modifier 25, and BCBS Arizona sinus CT.
+- Thirty-three synthetic encounter documents for held-out batch A claims
+  `CLM-2026-710101` to `CLM-2026-710128`, including consult notes, a physical
+  therapy discharge summary, a home sleep test report, and signed waivers.
+- Thirty-three synthetic documents for held-out batch C claims
+  `CLM-2026-710301` to `CLM-2026-710325`, including emergency and urgent-care
+  notes, payer-notification logs, a scheduling record, progress and procedure
+  notes, and a decoy therapy note filed under a different claim. Batch B is
+  rule-based and has no documents; one listed batch C note is intentionally
+  absent.
 
 Every passage has a stable citation ID such as
 `POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in
@@ -120,6 +138,24 @@ retrieval are exercised by the integrated runtime; the new lookup tools remain
 outside the agent's route allowlist pending routing-owner approval. An unknown
 CARC or unlisted payer returns `NO_MATCH`, not the baseline's default profile.
 `calculate_deadline` and eligibility retrieval are not implemented yet.
+
+To check the corpus, or to freeze it for the final evaluation:
+
+```bash
+python -m claim_agent.tools.snapshot_freeze validate
+python -m claim_agent.tools.snapshot_freeze freeze --id <final-id> \
+  --unavailable "<CLAIM_ID>:<document_type>:<reason>"
+```
+
+`validate` checks every manifest hash, the manifest fields against each
+document, policy dates, codes, formulas, and version overlaps, encounter claim
+binding, passage IDs, and files missing from the manifest. `freeze` refuses a
+draft ID or an invalid corpus. It sets the final `snapshot_id` and writes
+`knowledge/SNAPSHOT_LOCK.json` with the manifest's SHA-256 and any evidence that
+is intentionally unavailable. After that, a test fails on any corpus change,
+including a source edited together with its manifest hash, so a changed corpus
+needs a new snapshot ID. Each evaluation run records `knowledge_snapshot_id`
+and the knowledge manifest's hash in its `run_manifest.json`.
 
 ### Scripted offline agent runtime
 
@@ -417,6 +453,23 @@ Hosted execution uses an individual ASU Research Computing Voyager key. Keep
 the key out of files and shell history by reading it into the current shell
 process.
 
+### Create and load a Voyager key
+
+1. Sign in to [ASU Research Computing Voyager](https://voyager.rc.asu.edu/)
+   with your ASU account.
+2. Open **My Profile**, select **Keys**, and choose **Create API key** under
+   **AI LLM API keys**.
+3. Give the key a purpose-specific name and copy the complete value when it is
+   displayed. Voyager shows the full secret only when a key is created or
+   rotated; the later key list shows only a masked prefix.
+4. If the complete value was not saved, rotate that key or create a replacement
+   and copy the newly displayed secret. Treat rotation as replacing the old
+   credential, and update any terminal that was using it.
+
+The key is pasted at a hidden prompt in the commands below. Nothing appears
+while pasting; press Enter once after pasting the complete value. The prompt
+label may end with a colon, but that colon is not part of the key.
+
 macOS or Linux (Bash/Zsh):
 
 ```bash
@@ -435,10 +488,42 @@ $secureKey = Read-Host 'Voyager API key' -AsSecureString
 $env:CLAIM_AGENT_LLM_API_KEY = [System.Net.NetworkCredential]::new('', $secureKey).Password
 ```
 
+Verify that the current terminal has a plausible key without printing it.
+
+macOS or Linux (Bash/Zsh):
+
+```bash
+if [[ "$CLAIM_AGENT_LLM_API_KEY" == sk_* && ${#CLAIM_AGENT_LLM_API_KEY} -gt 20 ]]; then
+    echo 'Voyager key loaded'
+else
+    echo 'Voyager key is missing or appears incomplete'
+fi
+```
+
+Windows (PowerShell):
+
+```powershell
+if (
+    -not [string]::IsNullOrWhiteSpace($env:CLAIM_AGENT_LLM_API_KEY) -and
+    $env:CLAIM_AGENT_LLM_API_KEY.StartsWith('sk_') -and
+    $env:CLAIM_AGENT_LLM_API_KEY.Length -gt 20
+) {
+    'Voyager key loaded'
+} else {
+    'Voyager key is missing or appears incomplete'
+}
+```
+
 The variable disappears when that terminal closes. Never pass the key directly
 on a command line, commit it, share one team member's key, or place it in a
 trace, screenshot, issue, or pull request. Normal tests and the scripted
-demonstration do not read this variable.
+demonstration do not read this variable. A missing key stops hosted execution
+before the run starts. An expired, revoked, or invalid key produces a provider
+authentication failure and must be replaced or rotated in Voyager.
+
+ASU Voyager access is required only for live hosted commands. A developer or
+grader without that access can still install the project, run every offline
+test, validate the frozen comparison plan, and run the scripted demonstrations.
 
 ## Run the baseline tests
 
@@ -678,7 +763,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 77 tests
+Ran 105 tests
 OK
 ```
 

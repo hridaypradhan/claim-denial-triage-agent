@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-710309-PN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710309",
+  "document_type": "progress_note",
+  "note_date": "2026-07-15",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710309-PN@v1#L1",
+      "text": "Visit for right knee pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710309-PN@v1#L2",
+      "text": "Visit solely to evaluate the knee before the planned injection. No other problems addressed."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710309-PN@v1#L3",
+      "text": "Brief E/M section recorded separately from the procedure note."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710309-PN@v1#L4",
+      "text": "Assessment: right knee osteoarthritis (M17.11)."
+    }
+  ]
+}

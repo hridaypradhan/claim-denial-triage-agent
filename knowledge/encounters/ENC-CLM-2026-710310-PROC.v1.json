@@ -1,0 +1,20 @@
+{
+  "source_id": "ENC-CLM-2026-710310-PROC",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710310",
+  "document_type": "procedure_note",
+  "note_date": "2026-07-22",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710310-PROC@v1#L1",
+      "text": "Procedure: left knee injection performed (CPT 20610)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710310-PROC@v1#L2",
+      "text": "Indication: left knee osteoarthritis (M17.12)."
+    }
+  ]
+}

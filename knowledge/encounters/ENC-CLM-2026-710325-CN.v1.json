@@ -1,0 +1,32 @@
+{
+  "source_id": "ENC-CLM-2026-710325-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710325",
+  "document_type": "clinical_note",
+  "note_date": "2026-08-12",
+  "author_role": "Orthopedic physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710325-CN@v1#L1",
+      "text": "Chief complaint: right knee pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710325-CN@v1#L2",
+      "text": "Right knee locking."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710325-CN@v1#L3",
+      "text": "Standing knee X-rays obtained 2026-08-01."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710325-CN@v1#L4",
+      "text": "Assessment: right knee pain (M25.561)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710325-CN@v1#L5",
+      "text": "Plan: MRI right knee without contrast (CPT 73721)."
+    }
+  ]
+}

@@ -1,10 +1,11 @@
 # 0003: Hosted model provider, selection, and failure policy
 
-- **Status:** Proposed — selection complete; required review pending
+- **Status:** Accepted
 - **Date:** 2026-11-13
 - **Issue:** #48
 - **Owner:** Hriday Pradhan
 - **Required reviewer:** Neha Kashyap
+- **Accepted:** 2026-11-14 after required review of the V10 selection evidence
 - **Consulted:** Sachin Kothandaraman (repeat-run evidence), Silas Sangmin (citation preservation)
 - **Affected components:** hosted-model transport, planning prompt, run configuration, canonical trace, hosted-run documentation
 

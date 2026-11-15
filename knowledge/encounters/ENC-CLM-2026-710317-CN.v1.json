@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-710317-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710317",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-01",
+  "author_role": "Otolaryngologist",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710317-CN@v1#L1",
+      "text": "Chief complaint: nasal obstruction."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710317-CN@v1#L2",
+      "text": "Nasal obstruction and facial pressure for 5 months."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710317-CN@v1#L3",
+      "text": "Six weeks of fluticasone, saline irrigation, and amoxicillin without response."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710317-CN@v1#L4",
+      "text": "No orbital or neurological signs."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710317-CN@v1#L5",
+      "text": "Assessment: chronic sinusitis (J32.9)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710317-CN@v1#L6",
+      "text": "Plan: CT of the paranasal sinuses without contrast (CPT 70486)."
+    }
+  ]
+}

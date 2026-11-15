@@ -1,0 +1,24 @@
+{
+  "source_id": "ENC-CLM-2026-710112-HST",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710112",
+  "document_type": "home_sleep_test_report",
+  "note_date": "2026-06-20",
+  "author_role": "Sleep technologist",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710112-HST@v1#L1",
+      "text": "Study: home sleep apnea test, 2026-06-20."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710112-HST@v1#L2",
+      "text": "Quality: technically inadequate, with under 4 hours of valid recording."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710112-HST@v1#L3",
+      "text": "Interpretation: nondiagnostic."
+    }
+  ]
+}

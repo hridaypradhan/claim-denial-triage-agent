@@ -1,0 +1,24 @@
+{
+  "source_id": "ENC-CLM-2026-710106-TDS",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710106",
+  "document_type": "therapy_discharge_summary",
+  "note_date": "2026-07-24",
+  "author_role": "Physical therapist",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710106-TDS@v1#L1",
+      "text": "Diagnosis: low back pain with sciatica."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710106-TDS@v1#L2",
+      "text": "Course: completed 12 visits over 6 weeks. Pain unchanged at discharge."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710106-TDS@v1#L3",
+      "text": "Status: discharged from physical therapy."
+    }
+  ]
+}

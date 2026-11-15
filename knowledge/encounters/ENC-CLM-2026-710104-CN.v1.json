@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-710104-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710104",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-01",
+  "author_role": "Ordering primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710104-CN@v1#L1",
+      "text": "Chief complaint: back pain and right foot weakness."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710104-CN@v1#L2",
+      "text": "History: back pain began 9 days ago."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710104-CN@v1#L3",
+      "text": "Treatment so far: no physical therapy or medication trial yet."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710104-CN@v1#L4",
+      "text": "Neurologic exam: new right foot drop, with weakness that has worsened over the past 3 days. Right ankle dorsiflexion 2/5."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710104-CN@v1#L5",
+      "text": "Assessment: lumbar radiculopathy with right foot drop (M54.16, M21.371)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710104-CN@v1#L6",
+      "text": "Plan: urgent MRI lumbar spine without contrast (CPT 72148)."
+    }
+  ]
+}
