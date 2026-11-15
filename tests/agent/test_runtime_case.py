@@ -112,6 +112,27 @@ class RuntimeCaseTests(unittest.TestCase):
             case_data["route_decision"]["outcome"],
         )
 
+    def test_trusted_tool_context_is_serialized_as_case_data(
+        self,
+    ) -> None:
+        """Claim-bound tool metadata should reach the planning model."""
+
+        prepared_case = prepare_runtime_case(
+            baseline_finding=make_baseline_finding(),
+            route_decision=make_route_decision(),
+            tool_context={
+                "get_encounter_note": {
+                    "claim_id": "CLM-TEST",
+                    "available_document_ids": ["ENC-TEST-CN"],
+                }
+            },
+        )
+
+        self.assertIn(
+            '"available_document_ids":["ENC-TEST-CN"]',
+            prepared_case.task_context,
+        )
+
     def test_context_serialization_is_deterministic(self) -> None:
         """Equivalent typed inputs should produce identical model context."""
 
