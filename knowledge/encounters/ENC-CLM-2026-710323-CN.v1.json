@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-710323-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710323",
+  "document_type": "clinical_note",
+  "note_date": "2026-08-13",
+  "author_role": "Otolaryngologist",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710323-CN@v1#L1",
+      "text": "Chief complaint: sinus congestion."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710323-CN@v1#L2",
+      "text": "Symptoms for 4 months."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710323-CN@v1#L3",
+      "text": "No medical therapy tried."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710323-CN@v1#L4",
+      "text": "No signs of complication."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710323-CN@v1#L5",
+      "text": "Assessment: chronic sinusitis (J32.9)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710323-CN@v1#L6",
+      "text": "Plan: CT of the paranasal sinuses without contrast (CPT 70486)."
+    }
+  ]
+}

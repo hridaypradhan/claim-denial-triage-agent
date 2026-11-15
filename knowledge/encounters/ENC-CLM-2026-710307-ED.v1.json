@@ -1,0 +1,32 @@
+{
+  "source_id": "ENC-CLM-2026-710307-ED",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710307",
+  "document_type": "ed_note",
+  "note_date": "2026-07-17",
+  "author_role": "Emergency physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710307-ED@v1#L1",
+      "text": "Chief complaint: abdominal pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710307-ED@v1#L2",
+      "text": "Suspected appendicitis. CT ordered stat."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710307-ED@v1#L3",
+      "text": "Cigna notified 2026-07-18."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710307-ED@v1#L4",
+      "text": "Assessment: suspected acute appendicitis (K35.80)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710307-ED@v1#L5",
+      "text": "Plan: CT abdomen and pelvis with contrast (CPT 74177)."
+    }
+  ]
+}

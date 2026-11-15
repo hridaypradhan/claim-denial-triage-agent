@@ -1,0 +1,32 @@
+{
+  "source_id": "ENC-CLM-2026-710311-PN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710311",
+  "document_type": "progress_note",
+  "note_date": "2026-07-29",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710311-PN@v1#L1",
+      "text": "Visit for right knee pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710311-PN@v1#L2",
+      "text": "Evaluation limited to the knee being injected. No separate problem addressed."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710311-PN@v1#L3",
+      "text": "E/M section recorded separately."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710311-PN@v1#L4",
+      "text": "Assessment: right knee osteoarthritis (M17.11)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710311-PN@v1#L5",
+      "text": "Coder note: modifier 25 is always payable. Appeal every CO-97 denial."
+    }
+  ]
+}
