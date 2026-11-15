@@ -94,4 +94,23 @@ __all__ = [
     "ESCALATION_MISSING_POLICY_FORMULA",
     "ESCALATION_UNSUPPORTED_CRITERION",
     "ESCALATION_MISSING_ENCOUNTER_CITATION",
+    "AvailableSource",
+    "BundledPassage",
+    "CitationProblem",
+    "CitationProblemCode",
+    "CitationResolutionError",
+    "ClaimEvidenceScope",
+    "EvidenceBundle",
+    "RetrievalRecord",
 ]
+
+from .evidence_bundle import (  # noqa: E402  (after schema, which it imports)
+    AvailableSource,
+    BundledPassage,
+    CitationProblem,
+    CitationProblemCode,
+    CitationResolutionError,
+    ClaimEvidenceScope,
+    EvidenceBundle,
+    RetrievalRecord,
+)
