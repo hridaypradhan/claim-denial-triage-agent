@@ -1,0 +1,66 @@
+{
+  "source_id": "POL-BCBSAZ-CT-SINUS",
+  "source_type": "medical_policy",
+  "version": "1",
+  "synthetic": true,
+  "synthetic_notice": "Synthetic policy written for this project. It is modeled on the general structure of public coverage policies but is not the text or position of Blue Cross Blue Shield of Arizona.",
+  "title": "Computed Tomography of the Paranasal Sinuses",
+  "payer": "BCBS_AZ",
+  "procedure_codes": [
+    "70486"
+  ],
+  "effective_from": "2026-01-01",
+  "effective_to": null,
+  "criteria": [
+    {
+      "criterion_id": "A",
+      "summary": "Sinonasal symptoms for at least 12 weeks",
+      "passage_id": "POL-BCBSAZ-CT-SINUS@v1#P3"
+    },
+    {
+      "criterion_id": "B",
+      "summary": "At least 4 weeks of maximal medical therapy without adequate response",
+      "passage_id": "POL-BCBSAZ-CT-SINUS@v1#P4"
+    },
+    {
+      "criterion_id": "C",
+      "summary": "Suspected complication",
+      "passage_id": "POL-BCBSAZ-CT-SINUS@v1#P5"
+    }
+  ],
+  "criteria_formulas": {
+    "70486": "(A AND B) OR C"
+  },
+  "passages": [
+    {
+      "passage_id": "POL-BCBSAZ-CT-SINUS@v1#P1",
+      "section": "1. Scope",
+      "text": "This policy applies to outpatient professional claims for CT of the maxillofacial area and paranasal sinuses without contrast, CPT 70486, with dates of service on or after January 1, 2026."
+    },
+    {
+      "passage_id": "POL-BCBSAZ-CT-SINUS@v1#P2",
+      "section": "2. Coverage statement",
+      "text": "Sinus CT is considered medically necessary when criteria 3.1 and 3.2 are both met, or when criterion 3.3 is met."
+    },
+    {
+      "passage_id": "POL-BCBSAZ-CT-SINUS@v1#P3",
+      "section": "3.1 Duration of symptoms",
+      "text": "The member has sinonasal symptoms that have been present for at least 12 weeks."
+    },
+    {
+      "passage_id": "POL-BCBSAZ-CT-SINUS@v1#P4",
+      "section": "3.2 Medical therapy",
+      "text": "The member has completed at least 4 weeks of maximal medical therapy, an intranasal steroid with saline irrigation, with or without antibiotics, without adequate response."
+    },
+    {
+      "passage_id": "POL-BCBSAZ-CT-SINUS@v1#P5",
+      "section": "3.3 Suspected complication",
+      "text": "A complication is suspected: orbital or intracranial extension, or a neoplasm. When a complication is suspected, criteria 3.1 and 3.2 do not apply."
+    },
+    {
+      "passage_id": "POL-BCBSAZ-CT-SINUS@v1#P6",
+      "section": "4. Documentation",
+      "text": "Documentation supporting each applicable criterion must be available in the medical record on request. Absence of documentation for a required criterion does not establish that the criterion was not met."
+    }
+  ]
+}

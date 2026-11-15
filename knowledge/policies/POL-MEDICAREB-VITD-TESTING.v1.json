@@ -1,0 +1,56 @@
+{
+  "source_id": "POL-MEDICAREB-VITD-TESTING",
+  "source_type": "medical_policy",
+  "version": "1",
+  "synthetic": true,
+  "synthetic_notice": "Synthetic policy written for this project. It is modeled on the general structure of public coverage policies but is not the text or position of the Centers for Medicare & Medicaid Services or a Medicare contractor.",
+  "title": "Vitamin D Assay Testing",
+  "payer": "MEDICARE_B",
+  "procedure_codes": [
+    "82306"
+  ],
+  "effective_from": "2026-01-01",
+  "effective_to": null,
+  "criteria": [
+    {
+      "criterion_id": "A",
+      "summary": "Qualifying condition documented",
+      "passage_id": "POL-MEDICAREB-VITD-TESTING@v1#P3"
+    },
+    {
+      "criterion_id": "B",
+      "summary": "Documented reason for a repeat test within 12 months",
+      "passage_id": "POL-MEDICAREB-VITD-TESTING@v1#P4"
+    }
+  ],
+  "criteria_formulas": {
+    "82306": "A AND B"
+  },
+  "passages": [
+    {
+      "passage_id": "POL-MEDICAREB-VITD-TESTING@v1#P1",
+      "section": "1. Scope",
+      "text": "This policy applies to outpatient claims for 25-hydroxy vitamin D testing, CPT 82306, with dates of service on or after January 1, 2026."
+    },
+    {
+      "passage_id": "POL-MEDICAREB-VITD-TESTING@v1#P2",
+      "section": "2. Coverage statement",
+      "text": "Vitamin D testing is considered reasonable and necessary when criteria 3.1 and 3.2 are both met. Criterion 3.2 is met for a first test in 12 months."
+    },
+    {
+      "passage_id": "POL-MEDICAREB-VITD-TESTING@v1#P3",
+      "section": "3.1 Qualifying condition",
+      "text": "A qualifying condition is documented: chronic kidney disease stage 3 to 5, a malabsorption disorder, osteoporosis, hypocalcemia, or monitoring of treatment for documented vitamin D deficiency."
+    },
+    {
+      "passage_id": "POL-MEDICAREB-VITD-TESTING@v1#P4",
+      "section": "3.2 Repeat testing",
+      "text": "When the test repeats a vitamin D test performed within the previous 12 months, the record documents a reason: a prior abnormal result followed by a change in treatment, or new symptoms."
+    },
+    {
+      "passage_id": "POL-MEDICAREB-VITD-TESTING@v1#P5",
+      "section": "4. Documentation",
+      "text": "Documentation supporting each applicable criterion must be available in the medical record on request. Absence of documentation for a required criterion does not establish that the criterion was not met."
+    }
+  ]
+}
