@@ -1,0 +1,651 @@
+{
+  "dataset": "H",
+  "name": "Held-out final evaluation",
+  "split": "held_out",
+  "as_of": "2026-10-30",
+  "rubric_version": "0.1",
+  "knowledge_snapshot_id": null,
+  "description": "Synthetic held-out cases for the final evaluation (#52). One case per denied service line. knowledge_snapshot_id is set when the corpus is frozen (#62). Never used for development checks.",
+  "cases": [
+    {
+      "case_id": "CLM-2026-710101-L1",
+      "claim_id": "CLM-2026-710101",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA01_72148_uhc.json",
+      "scenario_family_id": "H-LSPINE-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710102-L1",
+      "claim_id": "CLM-2026-710102",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA02_72148_uhc.json",
+      "scenario_family_id": "H-LSPINE-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710103-L1",
+      "claim_id": "CLM-2026-710103",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA03_72148_uhc.json",
+      "scenario_family_id": "H-LSPINE-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710104-L1",
+      "claim_id": "CLM-2026-710104",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA04_72148_uhc.json",
+      "scenario_family_id": "H-LSPINE-2",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710105-L1",
+      "claim_id": "CLM-2026-710105",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA05_72148_uhc.json",
+      "scenario_family_id": "H-LSPINE-2",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710106-L1",
+      "claim_id": "CLM-2026-710106",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA06_72148_uhc.json",
+      "scenario_family_id": "H-LSPINE-3",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710107-L1",
+      "claim_id": "CLM-2026-710107",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA07_72148_uhc.json",
+      "scenario_family_id": "H-LSPINE-4",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710108-L1",
+      "claim_id": "CLM-2026-710108",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA08_72148_uhc.json",
+      "scenario_family_id": "H-LSPINE-5",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710109-L1",
+      "claim_id": "CLM-2026-710109",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA09_72146_uhc.json",
+      "scenario_family_id": "H-LSPINE-6",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710110-L1",
+      "claim_id": "CLM-2026-710110",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA10_72148_uhc.json",
+      "scenario_family_id": "H-LSPINE-7",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710110-L2",
+      "claim_id": "CLM-2026-710110",
+      "service_line_id": 2,
+      "claim_path": "datasets/held_out/claims/HA10_72148_uhc.json",
+      "scenario_family_id": "H-LSPINE-7",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710112-L1",
+      "claim_id": "CLM-2026-710112",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA12_95810_cigna.json",
+      "scenario_family_id": "H-PSG-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710113-L1",
+      "claim_id": "CLM-2026-710113",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA13_95810_cigna.json",
+      "scenario_family_id": "H-PSG-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710114-L1",
+      "claim_id": "CLM-2026-710114",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA14_95810_cigna.json",
+      "scenario_family_id": "H-PSG-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710115-L1",
+      "claim_id": "CLM-2026-710115",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA15_95810_cigna.json",
+      "scenario_family_id": "H-PSG-2",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710116-L1",
+      "claim_id": "CLM-2026-710116",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA16_95810_aetna.json",
+      "scenario_family_id": "H-PSG-3",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710117-L1",
+      "claim_id": "CLM-2026-710117",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA17_95806_cigna.json",
+      "scenario_family_id": "H-HSAT-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710118-L1",
+      "claim_id": "CLM-2026-710118",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA18_95806_cigna.json",
+      "scenario_family_id": "H-HSAT-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710119-L1",
+      "claim_id": "CLM-2026-710119",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA19_95810_cigna.json",
+      "scenario_family_id": "H-PSG-4",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710120-L1",
+      "claim_id": "CLM-2026-710120",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA20_73721_aetna.json",
+      "scenario_family_id": "H-KNEE-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710121-L1",
+      "claim_id": "CLM-2026-710121",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA21_73721_aetna.json",
+      "scenario_family_id": "H-KNEE-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710122-L1",
+      "claim_id": "CLM-2026-710122",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA22_73721_aetna.json",
+      "scenario_family_id": "H-KNEE-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710123-L1",
+      "claim_id": "CLM-2026-710123",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA23_73721_aetna.json",
+      "scenario_family_id": "H-KNEE-2",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710124-L1",
+      "claim_id": "CLM-2026-710124",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA24_73721_aetna.json",
+      "scenario_family_id": "H-KNEE-2",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710125-L1",
+      "claim_id": "CLM-2026-710125",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA25_73721_aetna.json",
+      "scenario_family_id": "H-KNEE-2",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710126-L1",
+      "claim_id": "CLM-2026-710126",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA26_82306_medicare_b.json",
+      "scenario_family_id": "H-VITD-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710127-L1",
+      "claim_id": "CLM-2026-710127",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA27_82306_medicare_b.json",
+      "scenario_family_id": "H-VITD-1",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710128-L1",
+      "claim_id": "CLM-2026-710128",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HA28_82306_medicare_b.json",
+      "scenario_family_id": "H-VITD-2",
+      "batch": "A"
+    },
+    {
+      "case_id": "CLM-2026-710201-L1",
+      "claim_id": "CLM-2026-710201",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB01_74177_cigna.json",
+      "scenario_family_id": "H-AUTH-ONFILE",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710202-L1",
+      "claim_id": "CLM-2026-710202",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB02_78452_bcbs_az.json",
+      "scenario_family_id": "H-AUTH-CLOSED",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710203-L1",
+      "claim_id": "CLM-2026-710203",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB03_99213_uhc.json",
+      "scenario_family_id": "H-BUNDLE-NOMOD",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710204-L1",
+      "claim_id": "CLM-2026-710204",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB04_99203_cigna.json",
+      "scenario_family_id": "H-COB",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710205-L1",
+      "claim_id": "CLM-2026-710205",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB05_99203_cigna.json",
+      "scenario_family_id": "H-COB",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710206-L1",
+      "claim_id": "CLM-2026-710206",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB06_99214_bcbs_az.json",
+      "scenario_family_id": "H-WRONG-PAYER",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710207-L1",
+      "claim_id": "CLM-2026-710207",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB07_99214_bcbs_az.json",
+      "scenario_family_id": "H-WRONG-PAYER",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710208-L1",
+      "claim_id": "CLM-2026-710208",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB08_99213_aetna.json",
+      "scenario_family_id": "H-ELIG",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710209-L1",
+      "claim_id": "CLM-2026-710209",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB09_99213_aetna.json",
+      "scenario_family_id": "H-ELIG",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710210-L1",
+      "claim_id": "CLM-2026-710210",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB10_99214_uhc.json",
+      "scenario_family_id": "H-TIMELY",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710211-L1",
+      "claim_id": "CLM-2026-710211",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB11_99214_uhc.json",
+      "scenario_family_id": "H-TIMELY",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710212-L1",
+      "claim_id": "CLM-2026-710212",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB12_99214_uhc.json",
+      "scenario_family_id": "H-TIMELY-LATE",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710213-L1",
+      "claim_id": "CLM-2026-710213",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB13_99213_aetna.json",
+      "scenario_family_id": "H-CODING",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710214-L1",
+      "claim_id": "CLM-2026-710214",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB14_20610_bcbs_az.json",
+      "scenario_family_id": "H-CODING-DX",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710215-L1",
+      "claim_id": "CLM-2026-710215",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB15_99204_uhc.json",
+      "scenario_family_id": "H-CODING-BARE",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710216-L1",
+      "claim_id": "CLM-2026-710216",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB16_99213_cigna.json",
+      "scenario_family_id": "H-CODING-LATE",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710217-L1",
+      "claim_id": "CLM-2026-710217",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB17_15780_uhc.json",
+      "scenario_family_id": "H-NONCOV",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710218-L1",
+      "claim_id": "CLM-2026-710218",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB18_15780_uhc.json",
+      "scenario_family_id": "H-NONCOV",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710219-L1",
+      "claim_id": "CLM-2026-710219",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB19_97810_bcbs_az.json",
+      "scenario_family_id": "H-NONCOV-PR",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710220-L1",
+      "claim_id": "CLM-2026-710220",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB20_97810_aetna.json",
+      "scenario_family_id": "H-WAIVER-CONFLICT",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710221-L1",
+      "claim_id": "CLM-2026-710221",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB21_99214_medicare_b.json",
+      "scenario_family_id": "H-CONTRACT",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710222-L1",
+      "claim_id": "CLM-2026-710222",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB22_99215_uhc.json",
+      "scenario_family_id": "H-CONTRACT",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710223-L1",
+      "claim_id": "CLM-2026-710223",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB23_99213_aetna.json",
+      "scenario_family_id": "H-UNMAPPED",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710224-L1",
+      "claim_id": "CLM-2026-710224",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB24_99214_mountain_health_plan.json",
+      "scenario_family_id": "H-UNKNOWN-PAYER",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710225-L1",
+      "claim_id": "CLM-2026-710225",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB25_99213_bcbs_az.json",
+      "scenario_family_id": "H-DUPLICATE",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710226-L1",
+      "claim_id": "CLM-2026-710226",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HB26_99214_cigna.json",
+      "scenario_family_id": "H-MULTI-RULE",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710226-L2",
+      "claim_id": "CLM-2026-710226",
+      "service_line_id": 2,
+      "claim_path": "datasets/held_out/claims/HB26_99214_cigna.json",
+      "scenario_family_id": "H-MULTI-RULE",
+      "batch": "B"
+    },
+    {
+      "case_id": "CLM-2026-710301-L1",
+      "claim_id": "CLM-2026-710301",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC01_74177_uhc.json",
+      "scenario_family_id": "H-AUTH-URGENT-1",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710302-L1",
+      "claim_id": "CLM-2026-710302",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC02_70450_uhc.json",
+      "scenario_family_id": "H-AUTH-URGENT-1",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710303-L1",
+      "claim_id": "CLM-2026-710303",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC03_74177_uhc.json",
+      "scenario_family_id": "H-AUTH-URGENT-1",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710304-L1",
+      "claim_id": "CLM-2026-710304",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC04_74177_uhc.json",
+      "scenario_family_id": "H-AUTH-URGENT-2",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710305-L1",
+      "claim_id": "CLM-2026-710305",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC05_70450_uhc.json",
+      "scenario_family_id": "H-AUTH-URGENT-3",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710306-L1",
+      "claim_id": "CLM-2026-710306",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC06_74177_uhc.json",
+      "scenario_family_id": "H-AUTH-URGENT-4",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710307-L1",
+      "claim_id": "CLM-2026-710307",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC07_74177_cigna.json",
+      "scenario_family_id": "H-AUTH-URGENT-5",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710308-L1",
+      "claim_id": "CLM-2026-710308",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC08_99214_aetna.json",
+      "scenario_family_id": "H-MOD25-1",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710309-L1",
+      "claim_id": "CLM-2026-710309",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC09_99213_aetna.json",
+      "scenario_family_id": "H-MOD25-1",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710310-L1",
+      "claim_id": "CLM-2026-710310",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC10_99214_aetna.json",
+      "scenario_family_id": "H-MOD25-1",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710311-L1",
+      "claim_id": "CLM-2026-710311",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC11_99213_aetna.json",
+      "scenario_family_id": "H-MOD25-2",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710312-L1",
+      "claim_id": "CLM-2026-710312",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC12_99214_bcbs_az.json",
+      "scenario_family_id": "H-MOD25-3",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710313-L1",
+      "claim_id": "CLM-2026-710313",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC13_99213_aetna.json",
+      "scenario_family_id": "H-MOD25-4",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710314-L1",
+      "claim_id": "CLM-2026-710314",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC14_99214_aetna.json",
+      "scenario_family_id": "H-MOD25-5",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710315-L1",
+      "claim_id": "CLM-2026-710315",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC15_99215_aetna.json",
+      "scenario_family_id": "H-MOD25-6",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710315-L2",
+      "claim_id": "CLM-2026-710315",
+      "service_line_id": 2,
+      "claim_path": "datasets/held_out/claims/HC15_99215_aetna.json",
+      "scenario_family_id": "H-MOD25-6",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710317-L1",
+      "claim_id": "CLM-2026-710317",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC17_70486_bcbs_az.json",
+      "scenario_family_id": "H-CTSINUS-1",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710318-L1",
+      "claim_id": "CLM-2026-710318",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC18_70486_bcbs_az.json",
+      "scenario_family_id": "H-CTSINUS-1",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710319-L1",
+      "claim_id": "CLM-2026-710319",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC19_70486_bcbs_az.json",
+      "scenario_family_id": "H-CTSINUS-1",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710320-L1",
+      "claim_id": "CLM-2026-710320",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC20_70486_bcbs_az.json",
+      "scenario_family_id": "H-CTSINUS-1",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710321-L1",
+      "claim_id": "CLM-2026-710321",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC21_70486_bcbs_az.json",
+      "scenario_family_id": "H-CTSINUS-2",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710322-L1",
+      "claim_id": "CLM-2026-710322",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC22_70486_bcbs_az.json",
+      "scenario_family_id": "H-CTSINUS-3",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710323-L1",
+      "claim_id": "CLM-2026-710323",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC23_70486_bcbs_az.json",
+      "scenario_family_id": "H-CTSINUS-4",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710324-L1",
+      "claim_id": "CLM-2026-710324",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC24_72148_uhc.json",
+      "scenario_family_id": "H-LSPINE-8",
+      "batch": "C"
+    },
+    {
+      "case_id": "CLM-2026-710325-L1",
+      "claim_id": "CLM-2026-710325",
+      "service_line_id": 1,
+      "claim_path": "datasets/held_out/claims/HC25_73721_aetna.json",
+      "scenario_family_id": "H-KNEE-3",
+      "batch": "C"
+    }
+  ]
+}
