@@ -1,0 +1,40 @@
+{
+  "claim_id": "CLM-2026-710201",
+  "patient_account": "PA-SYN-HB01",
+  "payer": "CIGNA",
+  "date_of_service": "2026-07-14",
+  "remit_date": "2026-08-04",
+  "billed_amount": 1640.0,
+  "paid_amount": 0.0,
+  "place_of_service": "22",
+  "rendering_provider_npi": "1000000000",
+  "denials": [
+    {
+      "group_code": "CO",
+      "carc": "15",
+      "rarc": [],
+      "amount": 1640.0,
+      "service_line": 1
+    }
+  ],
+  "service_lines": [
+    {
+      "line": 1,
+      "cpt": "74177",
+      "modifiers": [],
+      "units": 1,
+      "charge": 1640.0,
+      "icd10": [
+        "R10.31"
+      ]
+    }
+  ],
+  "encounter": {
+    "prior_auth_number": "AUTH-CG-558120",
+    "referral_on_file": false,
+    "documentation_attached": [
+      "clinical_note"
+    ],
+    "eligibility_verified_on": "2026-07-14"
+  }
+}

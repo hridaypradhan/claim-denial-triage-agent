@@ -146,7 +146,7 @@ Primary ownership means coordinating design, implementation, tests, and document
 
 - Runtime prompts, model repair behavior, or tool implementation.
 - Deterministic safety policy or final report-generation code.
-- Unilateral held-out labels; every held-out case requires two independent labelers.
+- Unreviewed held-out labels; every held-out label batch is reviewed by another team member (#63).
 
 **Must coordinate with**
 
@@ -214,7 +214,7 @@ Later work may be developed behind fake interfaces, but it cannot merge before i
 2. Use the original six cases only for development and regression.
 3. Create at least 20 additional development cases and 80 held-out cases.
 4. Keep scenario variants and counterfactual pairs in the same split.
-5. Assign two independent labelers to each held-out case and resolve disagreements before reviewing outputs.
+5. Give each held-out case one primary label, then have a different team member review each batch against the frozen rubric, final claims, and final evidence, recording any disputed fields. Resolve every dispute, with another reviewer adjudicating when needed, before reviewing outputs. Reviewers check labels; they do not write a second full label set (#63).
 6. Freeze splits, labels, model, prompt, parameters, budgets, and knowledge snapshot before final evaluation.
 7. Run the baseline once and the agent three times per held-out case.
 8. Never tune against held-out failures; preserve them for final analysis.
