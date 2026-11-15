@@ -1,0 +1,20 @@
+{
+  "source_id": "ENC-CLM-2026-710308-PROC",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710308",
+  "document_type": "procedure_note",
+  "note_date": "2026-07-08",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710308-PROC@v1#L1",
+      "text": "Procedure: right knee corticosteroid injection (CPT 20610)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710308-PROC@v1#L2",
+      "text": "Indication: right knee osteoarthritis (M17.11)."
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "source_id": "ENC-CLM-2026-710105-CON",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710105",
+  "document_type": "consult_note",
+  "note_date": "2026-07-07",
+  "author_role": "Oncology nurse practitioner",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710105-CON@v1#L1",
+      "text": "Reason for consult: review of cancer history before spine imaging."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710105-CON@v1#L2",
+      "text": "No history of malignancy. The 2019 breast lesion was benign on biopsy."
+    }
+  ]
+}

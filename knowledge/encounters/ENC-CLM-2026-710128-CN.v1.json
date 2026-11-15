@@ -1,0 +1,32 @@
+{
+  "source_id": "ENC-CLM-2026-710128-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710128",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-30",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710128-CN@v1#L1",
+      "text": "Annual visit."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710128-CN@v1#L2",
+      "text": "Diagnosis: postmenopausal osteoporosis."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710128-CN@v1#L3",
+      "text": "Vitamin D: routine repeat. Prior result normal on 2026-02-03, and no change in treatment."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710128-CN@v1#L4",
+      "text": "Assessment: postmenopausal osteoporosis (M81.0)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710128-CN@v1#L5",
+      "text": "Plan: 25-hydroxy vitamin D level (CPT 82306)."
+    }
+  ]
+}

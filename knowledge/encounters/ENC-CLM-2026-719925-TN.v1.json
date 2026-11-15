@@ -1,0 +1,20 @@
+{
+  "source_id": "ENC-CLM-2026-719925-TN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-719925",
+  "document_type": "therapy_note",
+  "note_date": "2026-08-01",
+  "author_role": "Physical therapist",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-719925-TN@v1#L1",
+      "text": "Diagnosis: right knee pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-719925-TN@v1#L2",
+      "text": "Course: six weeks of knee physical therapy completed."
+    }
+  ]
+}

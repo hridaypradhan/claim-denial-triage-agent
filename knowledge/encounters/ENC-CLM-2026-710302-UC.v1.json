@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-710302-UC",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710302",
+  "document_type": "urgent_care_note",
+  "note_date": "2026-07-15",
+  "author_role": "Urgent care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710302-UC@v1#L1",
+      "text": "Chief complaint: head injury."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710302-UC@v1#L2",
+      "text": "Head injury with brief loss of consciousness while taking apixaban. Stat head CT ordered."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710302-UC@v1#L3",
+      "text": "Assessment: concussion with brief loss of consciousness (S06.0X1A)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710302-UC@v1#L4",
+      "text": "Plan: CT head without contrast (CPT 70450)."
+    }
+  ]
+}

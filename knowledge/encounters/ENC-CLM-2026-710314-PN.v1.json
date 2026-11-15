@@ -1,0 +1,28 @@
+{
+  "source_id": "ENC-CLM-2026-710314-PN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710314",
+  "document_type": "progress_note",
+  "note_date": "2026-03-30",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710314-PN@v1#L1",
+      "text": "Visit for diabetes follow-up and right knee pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710314-PN@v1#L2",
+      "text": "Diabetes managed separately; insulin started."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710314-PN@v1#L3",
+      "text": "E/M documented in its own section."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710314-PN@v1#L4",
+      "text": "Assessment: type 2 diabetes with hyperglycemia; right knee osteoarthritis (E11.65, M17.11)."
+    }
+  ]
+}

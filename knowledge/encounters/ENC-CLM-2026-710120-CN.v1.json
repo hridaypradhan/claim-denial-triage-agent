@@ -1,0 +1,32 @@
+{
+  "source_id": "ENC-CLM-2026-710120-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710120",
+  "document_type": "clinical_note",
+  "note_date": "2026-06-03",
+  "author_role": "Orthopedic physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710120-CN@v1#L1",
+      "text": "Chief complaint: right knee pain."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710120-CN@v1#L2",
+      "text": "Exam: right knee locking and catching. Positive McMurray test."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710120-CN@v1#L3",
+      "text": "Imaging: standing knee X-rays obtained 2026-05-20."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710120-CN@v1#L4",
+      "text": "Assessment: right knee pain with internal derangement (M25.561, M23.8X1)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710120-CN@v1#L5",
+      "text": "Plan: MRI right knee without contrast (CPT 73721)."
+    }
+  ]
+}

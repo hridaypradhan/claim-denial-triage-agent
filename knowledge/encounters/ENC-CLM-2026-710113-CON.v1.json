@@ -1,0 +1,36 @@
+{
+  "source_id": "ENC-CLM-2026-710113-CON",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710113",
+  "document_type": "consult_note",
+  "note_date": "2026-07-08",
+  "author_role": "Sleep medicine physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710113-CON@v1#L1",
+      "text": "Reason for consult: snoring and suspected sleep apnea."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710113-CON@v1#L2",
+      "text": "Sleep history: snoring and witnessed apneas. Epworth Sleepiness Scale score 13."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710113-CON@v1#L3",
+      "text": "No prior home sleep test."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710113-CON@v1#L4",
+      "text": "No cardiopulmonary or neuromuscular disease. Home sleep testing is not contraindicated."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710113-CON@v1#L5",
+      "text": "Assessment: suspected obstructive sleep apnea (G47.33)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710113-CON@v1#L6",
+      "text": "Plan: order attended in-laboratory polysomnography (CPT 95810)."
+    }
+  ]
+}

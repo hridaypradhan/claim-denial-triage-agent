@@ -1,0 +1,32 @@
+{
+  "source_id": "ENC-CLM-2026-710121-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710121",
+  "document_type": "clinical_note",
+  "note_date": "2026-06-24",
+  "author_role": "Orthopedic physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710121-CN@v1#L1",
+      "text": "Chief complaint: right knee giving way."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710121-CN@v1#L2",
+      "text": "Exam: right knee giving way, with instability on exam."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710121-CN@v1#L3",
+      "text": "Imaging: standing knee X-rays obtained 2026-06-10."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710121-CN@v1#L4",
+      "text": "Assessment: right knee pain (M25.561)."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710121-CN@v1#L5",
+      "text": "Plan: MRI right knee without contrast (CPT 73721)."
+    }
+  ]
+}

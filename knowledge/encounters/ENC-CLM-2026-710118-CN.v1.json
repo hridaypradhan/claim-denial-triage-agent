@@ -1,0 +1,24 @@
+{
+  "source_id": "ENC-CLM-2026-710118-CN",
+  "source_type": "encounter_note",
+  "version": "1",
+  "synthetic": true,
+  "claim_id": "CLM-2026-710118",
+  "document_type": "clinical_note",
+  "note_date": "2026-07-22",
+  "author_role": "Primary care physician",
+  "passages": [
+    {
+      "passage_id": "ENC-CLM-2026-710118-CN@v1#L1",
+      "text": "Chief complaint: patient asks about a sleep study."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710118-CN@v1#L2",
+      "text": "Sleep history: bed partner reports no snoring and no witnessed apneas. Epworth Sleepiness Scale score 4."
+    },
+    {
+      "passage_id": "ENC-CLM-2026-710118-CN@v1#L3",
+      "text": "Plan: home sleep apnea test (CPT 95806), ordered at the patient's request."
+    }
+  ]
+}
