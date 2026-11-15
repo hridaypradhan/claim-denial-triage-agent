@@ -69,6 +69,12 @@ class EvidenceStatus(str, Enum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
+class EvidenceRequirementCategory(str, Enum):
+    DECISION_CRITICAL = "DECISION_CRITICAL"
+    CORRECTION_INPUT = "CORRECTION_INPUT"
+    HELPFUL_NONESSENTIAL = "HELPFUL_NONESSENTIAL"
+
+
 class RouteOutcome(str, Enum):
     DETERMINISTIC_ONLY = "DETERMINISTIC_ONLY"
     AGENT_REQUIRED = "AGENT_REQUIRED"
@@ -107,12 +113,6 @@ class CriterionStatus(str, Enum):
     CONFLICTING = "CONFLICTING"
 
 
-class EvidenceRequirementCategory(str, Enum):
-    DECISION_CRITICAL = "DECISION_CRITICAL"
-    CORRECTION_INPUT = "CORRECTION_INPUT"
-    HELPFUL_NONESSENTIAL = "HELPFUL_NONESSENTIAL"
-
-
 # --- Shared Base Configuration ---
 class StrictContract(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
@@ -120,9 +120,6 @@ class StrictContract(BaseModel):
 
 # --- Contract v0.1: Tools ---
 class EvidencePassage(StrictContract):
-    # Frozen so a passage held in an EvidenceBundle can't change after the run.
-    model_config = StrictContract.model_config | {"frozen": True}
-
     passage_id: str = Field(description="Unique ID for this specific passage")
     source_id: str = Field(description="The source document identifier")
     source_type: str = Field(description="The type of the source document")
@@ -214,23 +211,48 @@ class ClassifiedEvidenceRequirement(StrictContract):
     requirement: str
     category: EvidenceRequirementCategory
     satisfied: bool
+    supplied: bool = False
     reason: str
 
 
 class RequiredEvidenceSafetyDecision(StrictContract):
+    """Safety gate output deciding whether evidence gaps force MANUAL_REVIEW.
+
+    When ``requires_manual_review`` is True, ``recommended_outcome`` is
+    ``RouteOutcome.MANUAL_REVIEW``. When safe to proceed, ``recommended_outcome``
+    is ``None`` so routing (#57) preserves normal deterministic vs. agent route
+    selection.
+    """
+
     contract_version: str = Field(default=CONTRACT_VERSION)
     claim_id: str
     service_line_id: int
     requires_manual_review: bool
-    recommended_outcome: RouteOutcome
+    recommended_outcome: Optional[RouteOutcome] = None
     reason_code: str
     rationale: str
     classified_requirements: List[ClassifiedEvidenceRequirement] = Field(
         default_factory=list
     )
     missing_critical_evidence: List[str] = Field(default_factory=list)
-    correction_supplied_inputs: List[str] = Field(default_factory=list)
+    expected_correction_inputs: List[str] = Field(default_factory=list)
+    supplied_correction_inputs: List[str] = Field(default_factory=list)
     nonessential_evidence: List[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_outcome_invariant(self):
+        if self.requires_manual_review:
+            if self.recommended_outcome != RouteOutcome.MANUAL_REVIEW:
+                raise ValueError(
+                    "recommended_outcome must be MANUAL_REVIEW when "
+                    "requires_manual_review is True."
+                )
+        elif self.recommended_outcome is not None:
+            raise ValueError(
+                "recommended_outcome must be None when requires_manual_review is "
+                "False so normal routing is not overridden."
+            )
+        return self
 
 
 # --- Contract v0.1: Agent Decisions ---

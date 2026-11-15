@@ -2,8 +2,8 @@
 
 Distinguishes decision-critical evidence from fields supplied by a proposed
 correction itself and helpful-but-nonessential documents, returning a stable
-decision contract that routing (#57) can consume without reinterpreting safety
-rules.
+safety decision that routing (#57) can consume without overriding normal
+DETERMINISTIC_ONLY vs. AGENT_REQUIRED route selection.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ REASON_MISSING_DECISION_CRITICAL = "MISSING_DECISION_CRITICAL_EVIDENCE"
 REASON_CORRECTION_INPUTS_ONLY = "CORRECTION_SUPPLIED_INPUTS_ONLY"
 REASON_NONESSENTIAL_ONLY = "NONESSENTIAL_EVIDENCE_ONLY"
 
-# Claim-form fields that can be supplied directly by a proposed correction
+# Claim-form fields supplied directly by a proposed correction action
 CORRECTION_SUPPLYABLE_FIELDS = frozenset(
     {
         "procedure_code",
@@ -41,9 +41,10 @@ CORRECTION_SUPPLYABLE_FIELDS = frozenset(
     }
 )
 
-# Helpful contextual/reference artifacts that do not block deterministic action
+# Helpful contextual/reference artifacts that do not block proceeding
 HELPFUL_NONESSENTIAL_EVIDENCE = frozenset(
     {
+        "updated_insurance_card",
         "plan_benefit_reference",
         "supplemental_notes",
         "informational_reference",
@@ -65,7 +66,6 @@ DECISION_CRITICAL_EVIDENCE = frozenset(
         "835_remittance",
         "prior_claim_history",
         "clearinghouse_acceptance_report",
-        "updated_insurance_card",
         "eligibility_response",
         "carc_lookup",
     }
@@ -86,37 +86,58 @@ def classify_evidence_requirement(
     nonessential_set = HELPFUL_NONESSENTIAL_EVIDENCE | {
         item.strip().lower() for item in nonessential_overrides
     }
-    supplied_correction_keys = {
-        key.strip().lower()
-        for key, value in (correction_inputs or {}).items()
-        if value is not None and value != "" and value != []
+    normalized_correction_map = {
+        key.strip().lower(): value for key, value in (correction_inputs or {}).items()
     }
 
-    # 1. Explicit helpful-but-nonessential documents never force manual review.
+    # 1. Helpful-but-nonessential documents never force manual review.
     if normalized in nonessential_set:
+        is_supplied = normalized in available_set
         return ClassifiedEvidenceRequirement(
             requirement=requirement,
             category=EvidenceRequirementCategory.HELPFUL_NONESSENTIAL,
             satisfied=True,
+            supplied=is_supplied,
             reason=(
                 f"'{requirement}' is helpful context rather than decision-critical "
                 "evidence."
             ),
         )
 
-    # 2. Fields supplied by the proposed correction itself do not require
-    # external document retrieval to avoid manual review.
+    # 2. Fields supplied by the proposed correction itself do not require external
+    # retrieval to avoid manual review. When correction_inputs is omitted or
+    # empty, the field remains expected from the correction action (supplied=False)
+    # without falsely marking it as already supplied.
     if normalized in CORRECTION_SUPPLYABLE_FIELDS:
-        if correction_inputs is None or normalized in supplied_correction_keys:
+        has_key = normalized in normalized_correction_map
+        val = normalized_correction_map.get(normalized)
+        is_explicitly_blank = has_key and (val is None or val == "" or val == [])
+        is_supplied = has_key and not is_explicitly_blank
+        if is_explicitly_blank:
             return ClassifiedEvidenceRequirement(
                 requirement=requirement,
                 category=EvidenceRequirementCategory.CORRECTION_INPUT,
-                satisfied=True,
+                satisfied=False,
+                supplied=False,
                 reason=(
-                    f"'{requirement}' is supplied directly by the proposed "
-                    "claim correction."
+                    f"Correction input '{requirement}' was provided with an empty value."
                 ),
             )
+        reason = (
+            f"'{requirement}' was supplied in correction_inputs."
+            if is_supplied
+            else (
+                f"'{requirement}' is expected from the proposed claim correction "
+                "rather than external evidence."
+            )
+        )
+        return ClassifiedEvidenceRequirement(
+            requirement=requirement,
+            category=EvidenceRequirementCategory.CORRECTION_INPUT,
+            satisfied=True,
+            supplied=is_supplied,
+            reason=reason,
+        )
 
     # 3. Decision-critical evidence (known external artifacts, or any unknown
     # requirement token by fail-closed default) must be present in available
@@ -142,6 +163,7 @@ def classify_evidence_requirement(
         requirement=requirement,
         category=EvidenceRequirementCategory.DECISION_CRITICAL,
         satisfied=is_present,
+        supplied=is_present,
         reason=reason,
     )
 
@@ -153,13 +175,17 @@ def evaluate_required_evidence_safety(
     correction_inputs: Optional[Mapping[str, object]] = None,
     nonessential_evidence: Sequence[str] = (),
 ) -> RequiredEvidenceSafetyDecision:
-    """Evaluate whether a baseline finding's required evidence is safe to act on.
+    """Evaluate whether missing required evidence forces MANUAL_REVIEW.
 
     Rules:
-    - Missing decision-critical evidence requires MANUAL_REVIEW.
+    - Missing decision-critical evidence forces MANUAL_REVIEW.
     - Fields supplied by the proposed correction itself do not force MANUAL_REVIEW.
-    - Helpful-but-nonessential documents do not force MANUAL_REVIEW.
+    - Helpful-but-nonessential documents (e.g., updated_insurance_card) do not
+      force MANUAL_REVIEW.
     - Unknown/unrecognized requirement tokens fail closed as DECISION_CRITICAL.
+    - When safe to continue, returns ``requires_manual_review=False`` and
+      ``recommended_outcome=None`` so routing (#57) preserves normal
+      DETERMINISTIC_ONLY vs. AGENT_REQUIRED route selection.
     """
 
     if finding.baseline_disposition == Disposition.MANUAL_REVIEW:
@@ -177,9 +203,9 @@ def evaluate_required_evidence_safety(
             claim_id=finding.claim_id,
             service_line_id=finding.service_line_id,
             requires_manual_review=False,
-            recommended_outcome=RouteOutcome.DETERMINISTIC_ONLY,
+            recommended_outcome=None,
             reason_code=REASON_NO_REQUIRED_EVIDENCE,
-            rationale="No external evidence is required to execute the action.",
+            rationale="No external evidence is required; safe to continue normal routing.",
         )
 
     classified = [
@@ -198,11 +224,22 @@ def evaluate_required_evidence_safety(
         if item.category == EvidenceRequirementCategory.DECISION_CRITICAL
         and not item.satisfied
     ]
-    correction_supplied = [
+    unsatisfied_correction = [
         item.requirement
         for item in classified
         if item.category == EvidenceRequirementCategory.CORRECTION_INPUT
-        and item.satisfied
+        and not item.satisfied
+    ]
+    expected_correction = [
+        item.requirement
+        for item in classified
+        if item.category == EvidenceRequirementCategory.CORRECTION_INPUT
+    ]
+    supplied_correction = [
+        item.requirement
+        for item in classified
+        if item.category == EvidenceRequirementCategory.CORRECTION_INPUT
+        and item.supplied
     ]
     nonessential_items = [
         item.requirement
@@ -210,7 +247,8 @@ def evaluate_required_evidence_safety(
         if item.category == EvidenceRequirementCategory.HELPFUL_NONESSENTIAL
     ]
 
-    if missing_critical:
+    if missing_critical or unsatisfied_correction:
+        missing_all = missing_critical + unsatisfied_correction
         return RequiredEvidenceSafetyDecision(
             claim_id=finding.claim_id,
             service_line_id=finding.service_line_id,
@@ -219,11 +257,12 @@ def evaluate_required_evidence_safety(
             reason_code=REASON_MISSING_DECISION_CRITICAL,
             rationale=(
                 "Missing decision-critical evidence requires manual review: "
-                + ", ".join(missing_critical)
+                + ", ".join(missing_all)
             ),
             classified_requirements=classified,
-            missing_critical_evidence=missing_critical,
-            correction_supplied_inputs=correction_supplied,
+            missing_critical_evidence=missing_all,
+            expected_correction_inputs=expected_correction,
+            supplied_correction_inputs=supplied_correction,
             nonessential_evidence=nonessential_items,
         )
 
@@ -233,27 +272,33 @@ def evaluate_required_evidence_safety(
     )
     if has_critical_satisfied:
         reason_code = REASON_DECISION_CRITICAL_SATISFIED
-        rationale = "All decision-critical evidence requirements are satisfied."
-    elif correction_supplied:
+        rationale = (
+            "All decision-critical evidence requirements are satisfied; "
+            "safe to continue normal routing."
+        )
+    elif expected_correction:
         reason_code = REASON_CORRECTION_INPUTS_ONLY
         rationale = (
-            "Required fields are supplied directly by the proposed correction."
+            "Required fields are supplied by the proposed claim correction; "
+            "safe to continue normal routing."
         )
     else:
         reason_code = REASON_NONESSENTIAL_ONLY
         rationale = (
-            "Only helpful-but-nonessential documents were listed; safe to proceed."
+            "Only helpful-but-nonessential documents were listed; "
+            "safe to continue normal routing."
         )
 
     return RequiredEvidenceSafetyDecision(
         claim_id=finding.claim_id,
         service_line_id=finding.service_line_id,
         requires_manual_review=False,
-        recommended_outcome=RouteOutcome.DETERMINISTIC_ONLY,
+        recommended_outcome=None,
         reason_code=reason_code,
         rationale=rationale,
         classified_requirements=classified,
         missing_critical_evidence=[],
-        correction_supplied_inputs=correction_supplied,
+        expected_correction_inputs=expected_correction,
+        supplied_correction_inputs=supplied_correction,
         nonessential_evidence=nonessential_items,
     )

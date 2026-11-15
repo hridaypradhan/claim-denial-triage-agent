@@ -1,9 +1,11 @@
 from datetime import date
+from pathlib import Path
 
 from claim_agent.contracts.schema import (
     BaselineFinding,
     Disposition,
     EvidenceRequirementCategory,
+    OutputPackage,
     RootCause,
     RouteOutcome,
 )
@@ -15,6 +17,21 @@ from claim_agent.safety.required_evidence import (
     REASON_NO_REQUIRED_EVIDENCE,
     evaluate_required_evidence_safety,
 )
+
+M2_OUTPUT_DIR = (
+    Path(__file__).resolve().parents[2]
+    / "evaluation"
+    / "results"
+    / "m2-pilot"
+    / "set_a-scripted-agent"
+    / "output_packages"
+)
+
+
+def _load_preserved_finding(case_id: str) -> BaselineFinding:
+    pkg_path = M2_OUTPUT_DIR / f"{case_id}.json"
+    pkg = OutputPackage.model_validate_json(pkg_path.read_text(encoding="utf-8"))
+    return pkg.baseline_finding
 
 
 def _make_finding(
@@ -38,14 +55,8 @@ def _make_finding(
     )
 
 
-def test_milestone_2_case_610101_missing_ncci_lookup_requires_manual_review():
-    finding = _make_finding(
-        claim_id="CLM-2026-610101",
-        root_cause=RootCause.BUNDLING_NCCI,
-        disposition=Disposition.CORRECT_AND_RESUBMIT,
-        denial_codes=["CO-97"],
-        required_evidence=["ncci_edit_lookup"],
-    )
+def test_preserved_m2_610101_missing_ncci_lookup_escalates_to_manual_review():
+    finding = _load_preserved_finding("CLM-2026-610101-L1")
 
     decision = evaluate_required_evidence_safety(finding, available_evidence=[])
 
@@ -55,14 +66,8 @@ def test_milestone_2_case_610101_missing_ncci_lookup_requires_manual_review():
     assert decision.missing_critical_evidence == ["ncci_edit_lookup"]
 
 
-def test_milestone_2_case_610107_missing_cob_evidence_requires_manual_review():
-    finding = _make_finding(
-        claim_id="CLM-2026-610107",
-        root_cause=RootCause.COORDINATION_OF_BENEFITS,
-        disposition=Disposition.ROUTE_TO_CORRECT_PAYER,
-        denial_codes=["CO-22", "MA04"],
-        required_evidence=["primary_eob", "cob_confirmation"],
-    )
+def test_preserved_m2_610107_missing_cob_evidence_escalates_to_manual_review():
+    finding = _load_preserved_finding("CLM-2026-610107-L1")
 
     decision = evaluate_required_evidence_safety(
         finding, available_evidence=["primary_eob"]
@@ -74,51 +79,70 @@ def test_milestone_2_case_610107_missing_cob_evidence_requires_manual_review():
     assert decision.missing_critical_evidence == ["cob_confirmation"]
 
 
-def test_correction_supplied_fields_do_not_force_manual_review():
-    finding = _make_finding(
-        root_cause=RootCause.CODING,
-        disposition=Disposition.CORRECT_AND_RESUBMIT,
-        denial_codes=["CO-16", "N290", "M76"],
-        required_evidence=["rendering_provider_npi", "diagnosis_code"],
-    )
-
-    decision = evaluate_required_evidence_safety(
-        finding,
-        available_evidence=[],
-        correction_inputs={
-            "rendering_provider_npi": "1234567890",
-            "diagnosis_code": "M54.5",
-        },
-    )
-
-    assert decision.requires_manual_review is False
-    assert decision.recommended_outcome == RouteOutcome.DETERMINISTIC_ONLY
-    assert decision.reason_code == REASON_CORRECTION_INPUTS_ONLY
-    assert decision.correction_supplied_inputs == [
-        "rendering_provider_npi",
-        "diagnosis_code",
-    ]
-    assert decision.missing_critical_evidence == []
-
-
-def test_helpful_nonessential_documents_do_not_force_manual_review():
-    finding = _make_finding(
-        root_cause=RootCause.NON_COVERED_BENEFIT,
-        disposition=Disposition.BILL_PATIENT,
-        denial_codes=["PR-96", "N130"],
-        required_evidence=["plan_benefit_reference"],
-    )
+def test_preserved_m2_610104_updated_insurance_card_is_helpful_and_safe_to_route():
+    finding = _load_preserved_finding("CLM-2026-610104-L1")
+    assert finding.baseline_disposition == Disposition.ROUTE_TO_CORRECT_PAYER
+    assert finding.required_evidence == ["updated_insurance_card"]
 
     decision = evaluate_required_evidence_safety(finding, available_evidence=[])
 
     assert decision.requires_manual_review is False
-    assert decision.recommended_outcome == RouteOutcome.DETERMINISTIC_ONLY
+    assert decision.recommended_outcome is None
     assert decision.reason_code == REASON_NONESSENTIAL_ONLY
-    assert decision.nonessential_evidence == ["plan_benefit_reference"]
-    assert all(
-        item.category == EvidenceRequirementCategory.HELPFUL_NONESSENTIAL
-        for item in decision.classified_requirements
+    assert decision.missing_critical_evidence == []
+    assert decision.nonessential_evidence == ["updated_insurance_card"]
+    assert decision.classified_requirements[0].category == (
+        EvidenceRequirementCategory.HELPFUL_NONESSENTIAL
     )
+
+
+def test_preserved_m2_005311_and_610115_correction_inputs_consistent_when_omitted_or_empty():
+    finding_005311 = _load_preserved_finding("CLM-2026-005311-L1")
+    finding_610115 = _load_preserved_finding("CLM-2026-610115-L1")
+    assert finding_005311.required_evidence == ["rendering_provider_npi"]
+    assert finding_610115.required_evidence == ["procedure_code"]
+
+    for finding, expected_field in (
+        (finding_005311, "rendering_provider_npi"),
+        (finding_610115, "procedure_code"),
+    ):
+        dec_omitted = evaluate_required_evidence_safety(finding)
+        dec_empty = evaluate_required_evidence_safety(finding, correction_inputs={})
+
+        for dec in (dec_omitted, dec_empty):
+            assert dec.requires_manual_review is False
+            assert dec.recommended_outcome is None
+            assert dec.reason_code == REASON_CORRECTION_INPUTS_ONLY
+            assert dec.expected_correction_inputs == [expected_field]
+            assert dec.supplied_correction_inputs == []
+            assert dec.classified_requirements[0].supplied is False
+
+    dec_supplied = evaluate_required_evidence_safety(
+        finding_005311,
+        correction_inputs={"rendering_provider_npi": "1234567890"},
+    )
+    assert dec_supplied.requires_manual_review is False
+    assert dec_supplied.expected_correction_inputs == ["rendering_provider_npi"]
+    assert dec_supplied.supplied_correction_inputs == ["rendering_provider_npi"]
+    assert dec_supplied.classified_requirements[0].supplied is True
+
+
+def test_evidence_supported_appeal_does_not_override_agent_routing():
+    finding = _make_finding(
+        claim_id="CLM-2026-005097",
+        root_cause=RootCause.MEDICAL_NECESSITY,
+        disposition=Disposition.APPEAL_WITH_DOCUMENTATION,
+        denial_codes=["CO-50"],
+        required_evidence=["clinical_note"],
+    )
+
+    decision = evaluate_required_evidence_safety(
+        finding, available_evidence=["clinical_note"]
+    )
+
+    assert decision.requires_manual_review is False
+    assert decision.recommended_outcome is None
+    assert decision.reason_code == REASON_DECISION_CRITICAL_SATISFIED
 
 
 def test_existing_deterministic_cases_without_evidence_gaps_proceed():
@@ -132,23 +156,5 @@ def test_existing_deterministic_cases_without_evidence_gaps_proceed():
     decision = evaluate_required_evidence_safety(finding)
 
     assert decision.requires_manual_review is False
-    assert decision.recommended_outcome == RouteOutcome.DETERMINISTIC_ONLY
+    assert decision.recommended_outcome is None
     assert decision.reason_code == REASON_NO_REQUIRED_EVIDENCE
-
-
-def test_decision_critical_evidence_satisfied_allows_proceeding():
-    finding = _make_finding(
-        claim_id="CLM-2026-610101",
-        root_cause=RootCause.BUNDLING_NCCI,
-        disposition=Disposition.CORRECT_AND_RESUBMIT,
-        denial_codes=["CO-97"],
-        required_evidence=["ncci_edit_lookup"],
-    )
-
-    decision = evaluate_required_evidence_safety(
-        finding, available_evidence=["ncci_edit_lookup"]
-    )
-
-    assert decision.requires_manual_review is False
-    assert decision.recommended_outcome == RouteOutcome.DETERMINISTIC_ONLY
-    assert decision.reason_code == REASON_DECISION_CRITICAL_SATISFIED
