@@ -254,7 +254,7 @@ case("A", 17, "H-HSAT-1", "CIGNA", "2026-07-06", "2026-08-03",
      [doc("clinical_note", "Primary care physician", "2026-06-29", [
          "[A] Witnessed apneas and snoring; Epworth 11."])], SL)
 case("A", 18, "H-HSAT-1", "CIGNA", "2026-07-29", "2026-08-26",
-     [line("95806", ["R06.83"], 410.0, CO50)],
+     [line("95806", ["G47.9"], 410.0, CO50)],
      "Home sleep test where symptoms are explicitly denied.", ["evidence", "criterion-ruled-out"],
      [doc("clinical_note", "Primary care physician", "2026-07-22", [
          "[A] Bed partner reports no snoring and no witnessed apneas; Epworth 4. Test ordered at patient request."])], SL)

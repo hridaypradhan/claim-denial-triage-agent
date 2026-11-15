@@ -71,7 +71,7 @@ Batch B needs no documents. Case `CLM-2026-710313-L1` must have **no** note in t
 
 ## Open questions for review
 
-1. **Labeling procedure.** The development guide says every held-out case needs two independent labelers (rule 5). #63 instead has one primary labeler with one reviewer per batch. The team should confirm which one applies before labeling starts.
+1. **Labeling procedure (settled).** #63 applies: one primary labeler, plus one reviewer per batch who checks each label against the frozen rubric, claims, and evidence. The development guide now says the same. Rubric v0.1 §8 still describes two independent labelers; it is frozen, so the difference is recorded here instead of edited there.
 2. **Corpus effort.** Batches A and C need about 60 notes and 8 policy versions. Silas, please confirm this is feasible, or name families to shrink.
 3. **Safety expectations.** Neha, please confirm the batch B cases tagged `required-evidence` match the rule you are defining in #49, especially `H-CODING-DX` (the corrected diagnosis isn't stated in the case) and `H-WAIVER-CONFLICT`.
 4. **Development cases.** The guide also asks for at least 20 more development cases. They aren't part of #52.
