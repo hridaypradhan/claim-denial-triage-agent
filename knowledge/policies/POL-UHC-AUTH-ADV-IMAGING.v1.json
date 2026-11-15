@@ -1,0 +1,58 @@
+{
+  "source_id": "POL-UHC-AUTH-ADV-IMAGING",
+  "source_type": "medical_policy",
+  "version": "1",
+  "synthetic": true,
+  "synthetic_notice": "Synthetic policy written for this project. It is modeled on the general structure of public coverage policies but is not the text or position of UnitedHealthcare.",
+  "title": "Advanced Imaging Prior Authorization: Urgent and Emergent Services",
+  "payer": "UHC",
+  "procedure_codes": [
+    "74177",
+    "70450"
+  ],
+  "effective_from": "2026-01-01",
+  "effective_to": null,
+  "criteria": [
+    {
+      "criterion_id": "A",
+      "summary": "Study documented as urgent or emergent",
+      "passage_id": "POL-UHC-AUTH-ADV-IMAGING@v1#P3"
+    },
+    {
+      "criterion_id": "B",
+      "summary": "Payer notified within 2 business days after the service",
+      "passage_id": "POL-UHC-AUTH-ADV-IMAGING@v1#P4"
+    }
+  ],
+  "criteria_formulas": {
+    "74177": "A AND B",
+    "70450": "A AND B"
+  },
+  "passages": [
+    {
+      "passage_id": "POL-UHC-AUTH-ADV-IMAGING@v1#P1",
+      "section": "1. Scope",
+      "text": "This policy applies to outpatient professional claims for CT of the abdomen and pelvis with contrast, CPT 74177, and CT of the head without contrast, CPT 70450, with dates of service on or after January 1, 2026, that were performed without prior authorization."
+    },
+    {
+      "passage_id": "POL-UHC-AUTH-ADV-IMAGING@v1#P2",
+      "section": "2. Coverage statement",
+      "text": "A service performed without prior authorization is eligible for review on appeal when criteria 3.1 and 3.2 are both met."
+    },
+    {
+      "passage_id": "POL-UHC-AUTH-ADV-IMAGING@v1#P3",
+      "section": "3.1 Urgent or emergent service",
+      "text": "The ordering clinician documented the study as urgent or emergent, for example in an emergency department, urgent care, or transfer setting, so that waiting for authorization would have risked harm to the member."
+    },
+    {
+      "passage_id": "POL-UHC-AUTH-ADV-IMAGING@v1#P4",
+      "section": "3.2 Timely notification",
+      "text": "The payer was notified of the service within 2 business days after the date of service."
+    },
+    {
+      "passage_id": "POL-UHC-AUTH-ADV-IMAGING@v1#P5",
+      "section": "4. Documentation",
+      "text": "Documentation supporting each applicable criterion must be available in the medical record on request. Absence of documentation for a required criterion does not establish that the criterion was not met."
+    }
+  ]
+}
