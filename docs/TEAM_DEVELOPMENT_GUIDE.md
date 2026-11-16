@@ -73,8 +73,8 @@ Primary ownership means coordinating design, implementation, tests, and document
   evidence without deciding eligibility. The evidence bundle records the
   eligibility snapshot on each retrieval that read it.
 - Knowledge manifests, passage IDs, provenance, and no-match/error responses.
-- The optional `calculate_deadline` dispatcher wrapper tracked by #29; the
-  frozen baseline currently supplies deterministic deadline arithmetic.
+- The optional `calculate_deadline` tool (#54), which reports the deadline the
+  frozen baseline computed for the run; route authorization is #55.
 - The per-claim document inventory, built from the knowledge manifest.
 - Policy corpus selection and source metadata: URL, access date, effective date, payer, procedure, section, and version. A policy is included only when its terms of use permit.
 - The retrieval-method architecture decision.
@@ -164,7 +164,7 @@ Primary ownership means coordinating design, implementation, tests, and document
 | Policy, encounter, and eligibility tools (#56) | Silas | Evaluation provenance requirements from Sachin |
 | Fake dispatcher for the offline vertical slice | Silas | Tool contracts from Neha; consumer review from Hriday |
 | Policy corpus selection and source metadata | Silas | Payer/procedure coverage needs from Sachin |
-| Optional `calculate_deadline` tool wrapper under #29 | Silas | Scope decision and deadline arithmetic from Neha |
+| Optional `calculate_deadline` tool (#54) | Silas | Deadline from the frozen baseline finding; route authorization from Hriday (#55) |
 | Per-claim document inventory (*default*) | Silas | Built from the knowledge manifest; case fixtures from Sachin use the same document IDs |
 | Single bounded tool retry (*default*) | Hriday | Dispatcher reports `retryable`; each retry counts against the tool-call budget, not planning turns |
 | Untrusted-text handling (*default*) | Hriday | Tools return text unmodified; the runtime passes it to the model as labelled data |

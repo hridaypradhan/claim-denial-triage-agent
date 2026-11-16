@@ -140,7 +140,10 @@ tables. All four return the shared `ToolResult` contract. Policy and encounter
 retrieval are exercised by the integrated runtime; the new lookup tools remain
 outside the agent's route allowlist pending routing-owner approval. An unknown
 CARC or unlisted payer returns `NO_MATCH`, not the baseline's default profile.
-`calculate_deadline` is not implemented yet.
+`calculate_deadline` reports the run's filing deadline, its status, and days
+remaining or overdue from the trusted baseline finding, without recomputing
+it. It is wired into every run but available to the agent only on routes that
+authorize it (none yet).
 
 `get_eligibility_evidence` (#56) returns a payer's eligibility response for the
 claim's own member account: coverage periods and citable passages such as
@@ -394,7 +397,7 @@ explicitly tracked extension points:
 - [`evaluation/`](evaluation/) — accepted trace examples plus the comparison
   harness.
 
-Route authorization for eligibility retrieval, an agent-callable deadline wrapper, live hosted-model
+Route authorization for the deadline and eligibility tools, live hosted-model
 execution, evidence verification, grounded drafting, and the full comparative
 evaluation remain incomplete rather than implied by directory names.
 
@@ -406,6 +409,7 @@ evaluation remain incomplete rather than implied by directory names.
 - Missing, conflicting, unsupported, or unavailable evidence must lead to manual review.
 - Retrieved policy and clinical text is treated as untrusted data, not as instructions.
 - Illustrative payer rules must not be interpreted as verified contract terms.
+- Required-evidence safety evaluation (`src/claim_agent/safety/required_evidence.py`, documented in [`docs/contracts/required-evidence-safety.md`](docs/contracts/required-evidence-safety.md)) escalates missing decision-critical evidence (`ncci_edit_lookup`, `primary_eob`, `cob_confirmation`, and unrecognized tokens) to `MANUAL_REVIEW`, while allowing correction-supplied fields, helpful-but-nonessential documents (`updated_insurance_card`), and evidence-supported appeals to continue normal routing without overriding `DETERMINISTIC_ONLY` vs. `AGENT_REQUIRED` selection.
 
 ### Tool-less evidence verifier contract
 
@@ -788,7 +792,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 161 tests
+Ran 171 tests
 OK
 ```
 
