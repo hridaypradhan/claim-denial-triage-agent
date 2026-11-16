@@ -395,6 +395,12 @@ evaluation remain incomplete rather than implied by directory names.
 - Retrieved policy and clinical text is treated as untrusted data, not as instructions.
 - Illustrative payer rules must not be interpreted as verified contract terms.
 
+### Tool-less evidence verifier contract
+
+- The evidence verifier (`VerifierInput`, `VerifierReport`, `VerifierValidationResult`) has **no tool authority** (`authorized_tools` must be empty) and receives only a proposed `AgentDecision` plus the frozen same-run `EvidenceBundle` (providing `run_id`, `knowledge_snapshot_id`, `fingerprint()`, `passages`, and `check_citations()`).
+- Deterministic safety validation runs first and cannot be overridden: if `ValidationResult.outcome != ACCEPTED` or does not match the exact `proposed_decision`, verification fails closed to manual review.
+- Only a coherent `AGREE` report—with matching identities, resolved criterion IDs, resolved same-run citations, and empty `disputed_criterion_ids` and `unresolved_questions`—avoids escalation; `DISAGREE`, `UNCERTAIN`, `INVALID_OUTPUT`, `PROVIDER_FAILURE`, and `TIMEOUT` all require manual review.
+
 ## Requirements
 
 The baseline itself has no third-party dependencies. The agent, retrieval,

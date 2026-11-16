@@ -1,0 +1,21 @@
+{
+  "contract_version": "0.1",
+  "decision_id": "dec-005097-01",
+  "claim_id": "CLM-2026-005097",
+  "service_line_id": 1,
+  "outcome": "INVALID_OUTPUT",
+  "requires_manual_review": true,
+  "reason_code": "VERIFIER_INVALID_OUTPUT",
+  "validated_report": null,
+  "validation_problems": [
+    {
+      "code": "VERIFIER_INVALID_OUTPUT",
+      "field_path": "verifier_output",
+      "message": "Verifier output failed schema validation.",
+      "is_repairable": false
+    }
+  ],
+  "run_id": "run-005097-01",
+  "knowledge_snapshot_id": "knowledge-v1",
+  "bundle_fingerprint": "5e77cb45d10ec625ab837e54e49612ac9bf90a48046ccd7e83f515b4a3d4b7c1"
+}

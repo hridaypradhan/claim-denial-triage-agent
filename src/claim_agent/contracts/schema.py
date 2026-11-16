@@ -1,8 +1,11 @@
 from datetime import date
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+if TYPE_CHECKING:
+    from claim_agent.contracts.evidence_bundle import EvidenceBundle
 
 CONTRACT_VERSION = "0.1"
 
@@ -35,6 +38,7 @@ ESCALATION_PROHIBITED_APPEAL = "SAFETY_ESCALATION_PROHIBITED_APPEAL"
 ESCALATION_MISSING_POLICY_FORMULA = "SAFETY_ESCALATION_MISSING_POLICY_FORMULA"
 ESCALATION_UNSUPPORTED_CRITERION = "SAFETY_ESCALATION_UNSUPPORTED_CRITERION"
 ESCALATION_MISSING_ENCOUNTER_CITATION = "SAFETY_ESCALATION_MISSING_ENCOUNTER_CITATION"
+
 
 # --- Enums ---
 class Disposition(str, Enum):
@@ -105,6 +109,16 @@ class CriterionStatus(str, Enum):
     UNKNOWN = "UNKNOWN"
     CONFLICTING = "CONFLICTING"
 
+
+class VerificationOutcome(str, Enum):
+    AGREE = "AGREE"
+    DISAGREE = "DISAGREE"
+    UNCERTAIN = "UNCERTAIN"
+    INVALID_OUTPUT = "INVALID_OUTPUT"
+    PROVIDER_FAILURE = "PROVIDER_FAILURE"
+    TIMEOUT = "TIMEOUT"
+
+
 # --- Shared Base Configuration ---
 class StrictContract(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
@@ -112,8 +126,7 @@ class StrictContract(BaseModel):
 
 # --- Contract v0.1: Tools ---
 class EvidencePassage(StrictContract):
-    # Frozen so a passage held in an EvidenceBundle can't change after the run.
-    model_config = StrictContract.model_config | {"frozen": True}
+    model_config = ConfigDict(frozen=True)
 
     passage_id: str = Field(description="Unique ID for this specific passage")
     source_id: str = Field(description="The source document identifier")
@@ -200,6 +213,7 @@ class RouteDecision(StrictContract):
     routing_reason: str
     authorized_tools: List[str] = Field(default_factory=list)
 
+
 # --- Contract v0.1: Agent Decisions ---
 class CriterionAssessment(StrictContract):
     criterion_id: str
@@ -269,6 +283,108 @@ class ValidationResult(StrictContract):
                 raise ValueError(
                     "At least one manual_review_reasons is required for "
                     "REJECTED_MANUAL_REVIEW."
+                )
+        return self
+
+
+# --- Contract v0.1: Tool-less Evidence Verifier (#50) ---
+class VerifierInput(StrictContract):
+    """Frozen input for the tool-less verifier (#50).
+
+    Takes the proposed decision and the frozen same-run EvidenceBundle (#59).
+    The verifier has zero tool authority (`authorized_tools` must remain empty),
+    and the proposed decision must match the bundle's claim/service-line scope.
+    """
+
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    proposed_decision: AgentDecision
+    evidence_bundle: "EvidenceBundle"
+    authorized_tools: List[str] = Field(default_factory=list)
+
+    @property
+    def run_id(self) -> str:
+        return self.evidence_bundle.run_id
+
+    @property
+    def knowledge_snapshot_id(self) -> str:
+        return self.evidence_bundle.knowledge_snapshot_id
+
+    @property
+    def bundle_fingerprint(self) -> str:
+        return self.evidence_bundle.fingerprint()
+
+    @model_validator(mode="after")
+    def validate_toolless_and_scope(self):
+        if self.authorized_tools:
+            raise ValueError(
+                "Verifier has no tool authority; authorized_tools must be empty."
+            )
+        if not self.evidence_bundle.passages:
+            raise ValueError(
+                "Verifier input requires same-run retrieved passages in evidence_bundle."
+            )
+        if (
+            self.proposed_decision.claim_id != self.evidence_bundle.scope.claim_id
+            or self.proposed_decision.service_line_id
+            != self.evidence_bundle.scope.service_line_id
+        ):
+            raise ValueError(
+                "proposed_decision claim_id/service_line_id does not match "
+                "evidence_bundle.scope."
+            )
+        return self
+
+
+class VerifierReport(StrictContract):
+    """Structured output returned by the tool-less evidence verifier."""
+
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    decision_id: str
+    claim_id: str
+    service_line_id: int
+    outcome: Literal[
+        VerificationOutcome.AGREE,
+        VerificationOutcome.DISAGREE,
+        VerificationOutcome.UNCERTAIN,
+    ]
+    rationale: str = Field(min_length=1)
+    supported_criterion_ids: List[str] = Field(default_factory=list)
+    disputed_criterion_ids: List[str] = Field(default_factory=list)
+    unresolved_questions: List[str] = Field(default_factory=list)
+    citation_ids: List[str] = Field(default_factory=list)
+
+
+class VerifierValidationResult(StrictContract):
+    """Deterministic fail-safe result bound to the originating canonical bundle."""
+
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    decision_id: str
+    claim_id: str
+    service_line_id: int
+    run_id: str = Field(min_length=1)
+    knowledge_snapshot_id: str = Field(min_length=1)
+    bundle_fingerprint: str = Field(min_length=1)
+    outcome: VerificationOutcome
+    requires_manual_review: bool
+    reason_code: str
+    validated_report: Optional[VerifierReport] = Field(None)
+    validation_problems: List[ValidationProblem] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_fail_safe_invariants(self):
+        if self.outcome == VerificationOutcome.AGREE:
+            if self.requires_manual_review:
+                raise ValueError(
+                    "AGREE outcome must not set requires_manual_review=True."
+                )
+            if self.validated_report is None:
+                raise ValueError(
+                    "validated_report is required when outcome is AGREE."
+                )
+        else:
+            if not self.requires_manual_review:
+                raise ValueError(
+                    f"Verifier outcome {self.outcome.value} must require manual review."
                 )
         return self
 
