@@ -1,0 +1,17 @@
+{
+  "contract_version": "0.1",
+  "decision_id": "dec-005097-01",
+  "claim_id": "CLM-2026-005097",
+  "service_line_id": 1,
+  "outcome": "UNCERTAIN",
+  "rationale": "Clinical note mentions physical therapy attendance but does not confirm a full 6-week duration.",
+  "supported_criterion_ids": [],
+  "disputed_criterion_ids": [],
+  "unresolved_questions": [
+    "Exact start and end dates of conservative physical therapy are not documented."
+  ],
+  "citation_ids": [
+    "POL-UHC-72148@v1#p1",
+    "ENC-CLM-2026-005097-CN@v1#p1"
+  ]
+}

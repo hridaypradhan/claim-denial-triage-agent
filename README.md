@@ -95,10 +95,13 @@ later corpus changes detectable. `knowledge-v1` adds the Dataset B encounter
 notes to `knowledge-v0` without changing any earlier file, so earlier passage
 IDs still resolve.
 
-The working snapshot is now `knowledge-v2-draft`: `knowledge-v1` plus the
-held-out evidence being added for the final evaluation. The Milestone 2
-results were produced on `knowledge-v1`, and none of the new sources changes
-their retrieval. The final identifier is assigned when the corpus is frozen.
+The final snapshot is **`knowledge-v2`**, frozen for the final evaluation
+(#62): `knowledge-v1` plus the held-out policies and evidence (#58), 92 sources
+in all. [`knowledge/SNAPSHOT_LOCK.json`](knowledge/SNAPSHOT_LOCK.json) records
+its manifest hash and the one document that is intentionally unavailable
+(`CLM-2026-710313`'s clinical note). Any change to the corpus now fails the
+tests and needs a new snapshot ID. The Milestone 2 results were produced on
+`knowledge-v1`, and none of the new sources changes their retrieval.
 
 It contains:
 
@@ -156,6 +159,10 @@ is intentionally unavailable. After that, a test fails on any corpus change,
 including a source edited together with its manifest hash, so a changed corpus
 needs a new snapshot ID. Each evaluation run records `knowledge_snapshot_id`
 and the knowledge manifest's hash in its `run_manifest.json`.
+
+[`docs/evidence_coverage.md`](docs/evidence_coverage.md) maps each evidence
+failure mode (no match, version, unavailable, conflicting, timeout,
+instruction-like, cross-claim, and citation) to the tests that cover it.
 
 ### Scripted offline agent runtime
 
@@ -388,6 +395,12 @@ evaluation remain incomplete rather than implied by directory names.
 - Retrieved policy and clinical text is treated as untrusted data, not as instructions.
 - Illustrative payer rules must not be interpreted as verified contract terms.
 - Required-evidence safety evaluation (`src/claim_agent/safety/required_evidence.py`, documented in [`docs/contracts/required-evidence-safety.md`](docs/contracts/required-evidence-safety.md)) escalates missing decision-critical evidence (`ncci_edit_lookup`, `primary_eob`, `cob_confirmation`, and unrecognized tokens) to `MANUAL_REVIEW`, while allowing correction-supplied fields, helpful-but-nonessential documents (`updated_insurance_card`), and evidence-supported appeals to continue normal routing without overriding `DETERMINISTIC_ONLY` vs. `AGENT_REQUIRED` selection.
+
+### Tool-less evidence verifier contract
+
+- The evidence verifier (`VerifierInput`, `VerifierReport`, `VerifierValidationResult`) has **no tool authority** (`authorized_tools` must be empty) and receives only a proposed `AgentDecision` plus the frozen same-run `EvidenceBundle` (providing `run_id`, `knowledge_snapshot_id`, `fingerprint()`, `passages`, and `check_citations()`).
+- Deterministic safety validation runs first and cannot be overridden: if `ValidationResult.outcome != ACCEPTED` or does not match the exact `proposed_decision`, verification fails closed to manual review.
+- Only a coherent `AGREE` report—with matching identities, resolved criterion IDs, resolved same-run citations, and empty `disputed_criterion_ids` and `unresolved_questions`—avoids escalation; `DISAGREE`, `UNCERTAIN`, `INVALID_OUTPUT`, `PROVIDER_FAILURE`, and `TIMEOUT` all require manual review.
 
 ## Requirements
 
@@ -764,7 +777,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 132 tests
+Ran 147 tests
 OK
 ```
 

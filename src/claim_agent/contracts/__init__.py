@@ -1,5 +1,3 @@
-"""Public contract types and constants shared across project components."""
-
 from .schema import (
     AgentDecision,
     AgentStatus,
@@ -49,6 +47,10 @@ from .schema import (
     ValidationOutcome,
     ValidationProblem,
     ValidationResult,
+    VerificationOutcome,
+    VerifierInput,
+    VerifierReport,
+    VerifierValidationResult,
 )
 from .evidence_bundle import (
     AvailableSource,
@@ -62,6 +64,8 @@ from .evidence_bundle import (
     PASSAGE_ID_PATTERN,
     RetrievalRecord,
 )
+
+VerifierInput.model_rebuild()
 
 __all__ = [
     "CONTRACT_VERSION",
@@ -77,6 +81,7 @@ __all__ = [
     "ValidationOutcome",
     "AgentStatus",
     "CriterionStatus",
+    "VerificationOutcome",
     "EvidencePassage",
     "CitationProblemCode",
     "CitationProblem",
@@ -95,6 +100,9 @@ __all__ = [
     "AgentDecision",
     "ValidationProblem",
     "ValidationResult",
+    "VerifierInput",
+    "VerifierReport",
+    "VerifierValidationResult",
     "OutputPackage",
     "PROBLEM_PROHIBITED_BILLING",
     "PROBLEM_UNAUTHORIZED_OVERRIDE",

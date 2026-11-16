@@ -669,9 +669,9 @@ def main():
             spec_cases.append((c, cid, d, claim))
     manifest = {
         "dataset": "H", "name": "Held-out final evaluation", "split": "held_out", "as_of": AS_OF,
-        "rubric_version": "0.1", "knowledge_snapshot_id": None,
+        "rubric_version": "0.1", "knowledge_snapshot_id": "knowledge-v2",
         "description": "Synthetic held-out cases for the final evaluation (#52). One case per denied service line. "
-                       "knowledge_snapshot_id is set when the corpus is frozen (#62). Never used for development checks.",
+                       "Evidence is in the frozen knowledge snapshot knowledge-v2 (#62). Never used for development checks.",
         "cases": manifest_cases,
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
