@@ -120,6 +120,8 @@ class StrictContract(BaseModel):
 
 # --- Contract v0.1: Tools ---
 class EvidencePassage(StrictContract):
+    model_config = ConfigDict(frozen=True)
+
     passage_id: str = Field(description="Unique ID for this specific passage")
     source_id: str = Field(description="The source document identifier")
     source_type: str = Field(description="The type of the source document")
