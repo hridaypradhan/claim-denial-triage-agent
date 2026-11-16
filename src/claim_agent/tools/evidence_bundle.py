@@ -14,6 +14,7 @@ from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 from claim_agent.contracts import ToolResult, ToolStatus
 from claim_agent.contracts.evidence_bundle import (  # noqa: F401  (re-exported)
     BUNDLE_VERSION,
+    ELIGIBILITY_SOURCE_TYPE,
     PASSAGE_ID_PATTERN,
     AvailableSource,
     BundledPassage,
@@ -75,6 +76,7 @@ class EvidenceBundleRecorder:
         call_index = len(self._retrievals) + 1
         ok = result.status is ToolStatus.OK
         formula = None
+        source_snapshot = None
         new_passages: Dict[str, BundledPassage] = {}
 
         if ok:
@@ -84,6 +86,9 @@ class EvidenceBundleRecorder:
             reported_snapshot = result.data.get("knowledge_snapshot_id")
             if reported_snapshot is not None and reported_snapshot != self._snapshot_id:
                 raise EvidenceBundleError(f"{tool_name} returned evidence from snapshot {reported_snapshot!r}.")
+            source_snapshot = result.data.get("eligibility_snapshot_id")
+            if any(p.source_type == ELIGIBILITY_SOURCE_TYPE for p in result.evidence_passages) and not source_snapshot:
+                raise EvidenceBundleError(f"{tool_name} returned eligibility evidence without its snapshot ID.")
             formula = result.data.get("criteria_formula")
             if formula is not None and self._policy_formula is not None and self._policy_formula != formula:
                 raise EvidenceBundleError("A run cannot contain conflicting policy formulas.")
@@ -119,6 +124,7 @@ class EvidenceBundleRecorder:
                 error_code=None if result.error_code is None else result.error_code.value,
                 source_ids=tuple(result.source_ids),
                 passage_ids=tuple(p.passage_id for p in result.evidence_passages) if ok else (),
+                source_snapshot_id=source_snapshot,
             )
         )
         if formula is not None:

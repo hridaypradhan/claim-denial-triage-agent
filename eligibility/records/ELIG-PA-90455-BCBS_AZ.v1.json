@@ -1,0 +1,27 @@
+{
+  "source_id": "ELIG-PA-90455-BCBS_AZ",
+  "source_type": "eligibility_record",
+  "version": "1",
+  "synthetic": true,
+  "patient_account": "PA-90455",
+  "payer": "BCBS_AZ",
+  "payer_name": "Blue Cross Blue Shield of Arizona",
+  "response_date": "2026-05-29",
+  "coverage_periods": [
+    {
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "status": "ACTIVE"
+    }
+  ],
+  "passages": [
+    {
+      "passage_id": "ELIG-PA-90455-BCBS_AZ@v1#E1",
+      "text": "Eligibility response for member account PA-90455 from BCBS_AZ, received 2026-05-29."
+    },
+    {
+      "passage_id": "ELIG-PA-90455-BCBS_AZ@v1#E2",
+      "text": "BCBS Arizona coverage is effective 2026-01-01 with no termination date on file."
+    }
+  ]
+}
