@@ -24,6 +24,7 @@ from claim_agent.agent.tool_result_adapter import (
     ToolResultDispatcherAdapter,
 )
 from claim_agent.contracts import BaselineFinding
+from claim_agent.tools.deadline_tool import DeadlineToolDispatcher
 
 
 @dataclass(frozen=True)
@@ -58,8 +59,17 @@ def build_production_runtime_boundaries(
         claim_context=claim_context,
     )
 
-    tool_dispatcher = ToolResultDispatcherAdapter(
+    # calculate_deadline answers from this run's trusted finding and never
+    # reaches the knowledge tools. The runtime still lets the model call it
+    # only when the route authorizes it.
+    deadline_dispatcher = DeadlineToolDispatcher(
         dispatcher=claim_bound_dispatcher,
+        finding=baseline_finding,
+        as_of=as_of,
+    )
+
+    tool_dispatcher = ToolResultDispatcherAdapter(
+        dispatcher=deadline_dispatcher,
         observation_consumer=evidence_store.record_observation,
     )
     decision_validator = DecisionValidationAdapter(
