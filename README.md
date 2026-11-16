@@ -415,6 +415,12 @@ validation.
 - Retrieved policy and clinical text is treated as untrusted data, not as instructions.
 - Illustrative payer rules must not be interpreted as verified contract terms.
 - Required-evidence safety evaluation (`src/claim_agent/safety/required_evidence.py`, documented in [`docs/contracts/required-evidence-safety.md`](docs/contracts/required-evidence-safety.md)) escalates missing decision-critical evidence (`ncci_edit_lookup`, `primary_eob`, `cob_confirmation`, and unrecognized tokens) to `MANUAL_REVIEW`, while allowing correction-supplied fields, helpful-but-nonessential documents (`updated_insurance_card`), and evidence-supported appeals to continue normal routing without overriding `DETERMINISTIC_ONLY` vs. `AGENT_REQUIRED` selection.
+- The router supplies only evidence explicitly recorded in trusted claim input:
+  attached document identifiers, a recorded eligibility verification, and an
+  affirmative primary-EOB flag. In the development pilot, this safety gate
+  changes only `CLM-2026-610101-L1` and `CLM-2026-610107-L1` from deterministic
+  actions to `MANUAL_REVIEW`; agent-routed and other deterministic cases retain
+  their prior route.
 
 ### Tool-less evidence verifier contract
 
@@ -959,6 +965,7 @@ These limitations define the work assigned to the agentic extension; they are no
 - [x] Connect typed routing, tool, validation, output, and canonical-trace adapters.
 - [x] Add criterion-level evidence assessment and resolvable citations.
 - [x] Add deterministic safety, citation, formula, and filing-deadline validation.
+- [x] Integrate required-evidence safety decisions into routing.
 - [x] Add the OpenAI-compatible hosted transport and strict action schemas.
 - [ ] Complete live hosted execution and freeze the selected model.
 - [x] Add standalone tool-less evidence-verification orchestration.
