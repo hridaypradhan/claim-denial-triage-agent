@@ -41,7 +41,7 @@ flowchart TD
 
     T <--> F[Common dispatcher for read-only tools]
     F --> G[(Policy and encounter evidence)]
-    F -. planned .-> I[(Eligibility evidence)]
+    F -. route authorization pending .-> I[(Eligibility evidence)]
 
     R --> S
     S -- Rule-only finding --> O{Outcome?}
@@ -140,7 +140,17 @@ tables. All four return the shared `ToolResult` contract. Policy and encounter
 retrieval are exercised by the integrated runtime; the new lookup tools remain
 outside the agent's route allowlist pending routing-owner approval. An unknown
 CARC or unlisted payer returns `NO_MATCH`, not the baseline's default profile.
-`calculate_deadline` and eligibility retrieval are not implemented yet.
+`calculate_deadline` is not implemented yet.
+
+`get_eligibility_evidence` (#56) returns a payer's eligibility response for the
+claim's own member account: coverage periods and citable passages such as
+`ELIG-PA-SYN-10104-UHC@v1#E2`. It reports evidence and never decides
+eligibility. Another payer may be queried, to check for other coverage. The
+synthetic records are in [`eligibility/`](eligibility/), a separate store
+frozen as `eligibility-v1` with its own lock, so the frozen `knowledge-v2`
+corpus is unchanged. Only development and demonstration claims have records
+(610104, 610105, 005097), and no held-out claim does. No route authorizes the
+tool yet (#55).
 
 To check the corpus, or to freeze it for the final evaluation:
 
@@ -375,14 +385,14 @@ explicitly tracked extension points:
   development validation is complete and ADR review remains pending.
 - [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
 - [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
-- [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (corpus v1 above; eligibility records not yet added).
+- [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (the frozen corpus above); [`eligibility/`](eligibility/) holds the separate eligibility records.
 - [`datasets/`](datasets/) — development, held-out, and labeling artifacts for
   Datasets A and B. Labels follow the frozen
   [annotation rubric](datasets/ANNOTATION_RUBRIC.md) (v0.1).
 - [`evaluation/`](evaluation/) — accepted trace examples plus the comparison
   harness.
 
-Eligibility retrieval, an agent-callable deadline wrapper, live hosted-model
+Route authorization for eligibility retrieval, an agent-callable deadline wrapper, live hosted-model
 execution, evidence verification, grounded drafting, and the full comparative
 evaluation remain incomplete rather than implied by directory names.
 
@@ -776,7 +786,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 147 tests
+Ran 160 tests
 OK
 ```
 
@@ -916,7 +926,7 @@ These limitations define the work assigned to the agentic extension; they are no
 - [x] Wrap deterministic baseline findings and routing behind typed interfaces.
 - [x] Implement a validated common tool dispatcher.
 - [x] Add versioned payer-policy and encounter-note retrieval.
-- [ ] Add eligibility retrieval if retained after the scope decision.
+- [x] Add eligibility retrieval (#56); route authorization is #55.
 - [x] Implement a bounded planning loop with structured model outputs behind scripted offline boundaries.
 - [x] Connect typed routing, tool, validation, output, and canonical-trace adapters.
 - [x] Add criterion-level evidence assessment and resolvable citations.

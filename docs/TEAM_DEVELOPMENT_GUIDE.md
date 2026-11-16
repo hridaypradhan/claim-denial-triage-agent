@@ -65,13 +65,12 @@ Primary ownership means coordinating design, implementation, tests, and document
 - Common tool dispatcher and argument validation at the tool boundary.
 - Fake dispatcher with scripted tool results for the offline vertical slice.
 - Denial-code and payer-profile lookup wrappers; payer profiles report their version and whether values are verified or illustrative.
-- Implemented policy and encounter-note retrieval, plus eligibility-record
-  retrieval if the team later retains that extension under #30. All tools are
-  read-only.
+- Implemented policy, encounter-note, and eligibility-record retrieval (#56).
+  All tools are read-only.
 - Policy matching that filters by payer, procedure, and service date before ranking, with no fallback to another payer's policy or a different effective date.
 - Encounter notes returned as numbered, citable passages, with unavailable documents reported explicitly.
-- Eligibility records, if implemented after #30, report evidence without
-  deciding eligibility.
+- Eligibility records (`eligibility/`, frozen as `eligibility-v1`) report
+  evidence without deciding eligibility.
 - Knowledge manifests, passage IDs, provenance, and no-match/error responses.
 - The optional `calculate_deadline` dispatcher wrapper tracked by #29; the
   frozen baseline currently supplies deterministic deadline arithmetic.
@@ -161,7 +160,7 @@ Primary ownership means coordinating design, implementation, tests, and document
 | Shared contracts v0.1 | Neha | All affected owners approve breaking fields |
 | Baseline adapter and deterministic router | Neha | Baseline regression tests |
 | Tool dispatcher and knowledge manifest | Silas | Contract approval from Neha; runtime review from Hriday |
-| Policy and encounter tools; optional eligibility tool under #30 | Silas | Evaluation provenance requirements from Sachin |
+| Policy, encounter, and eligibility tools (#56) | Silas | Evaluation provenance requirements from Sachin |
 | Fake dispatcher for the offline vertical slice | Silas | Tool contracts from Neha; consumer review from Hriday |
 | Policy corpus selection and source metadata | Silas | Payer/procedure coverage needs from Sachin |
 | Optional `calculate_deadline` tool wrapper under #29 | Silas | Scope decision and deadline arithmetic from Neha |

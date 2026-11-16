@@ -1,0 +1,27 @@
+{
+  "source_id": "ELIG-PA-SYN-10104-CIGNA",
+  "source_type": "eligibility_record",
+  "version": "1",
+  "synthetic": true,
+  "patient_account": "PA-SYN-10104",
+  "payer": "CIGNA",
+  "payer_name": "Cigna Healthcare",
+  "response_date": "2026-06-20",
+  "coverage_periods": [
+    {
+      "effective_from": "2026-06-11",
+      "effective_to": null,
+      "status": "ACTIVE"
+    }
+  ],
+  "passages": [
+    {
+      "passage_id": "ELIG-PA-SYN-10104-CIGNA@v1#E1",
+      "text": "Eligibility response for member account PA-SYN-10104 from Cigna, received 2026-06-20."
+    },
+    {
+      "passage_id": "ELIG-PA-SYN-10104-CIGNA@v1#E2",
+      "text": "Cigna coverage is effective 2026-06-11 with no termination date on file."
+    }
+  ]
+}

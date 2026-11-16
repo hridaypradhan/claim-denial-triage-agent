@@ -1,0 +1,31 @@
+{
+  "source_id": "ELIG-PA-SYN-10105-UHC",
+  "source_type": "eligibility_record",
+  "version": "1",
+  "synthetic": true,
+  "patient_account": "PA-SYN-10105",
+  "payer": "UHC",
+  "payer_name": "UnitedHealthcare Commercial",
+  "response_date": "2026-06-20",
+  "coverage_periods": [
+    {
+      "effective_from": "2025-01-01",
+      "effective_to": "2026-06-10",
+      "status": "TERMINATED"
+    }
+  ],
+  "passages": [
+    {
+      "passage_id": "ELIG-PA-SYN-10105-UHC@v1#E1",
+      "text": "Eligibility response for member account PA-SYN-10105 from UHC, received 2026-06-20."
+    },
+    {
+      "passage_id": "ELIG-PA-SYN-10105-UHC@v1#E2",
+      "text": "UHC commercial coverage was effective 2025-01-01 and terminated 2026-06-10."
+    },
+    {
+      "passage_id": "ELIG-PA-SYN-10105-UHC@v1#E3",
+      "text": "No UHC coverage is on file for dates after 2026-06-10."
+    }
+  ]
+}
