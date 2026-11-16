@@ -45,6 +45,11 @@ IDENTIFIER_KEYS = frozenset(
         "run_id",
         "experiment_id",
         "authorized_tools",
+        "provider_request_id",
+        "evidence_run_id",
+        "bundle_fingerprint",
+        "supported_criterion_ids",
+        "disputed_criterion_ids",
     }
 )
 
@@ -62,6 +67,7 @@ CONTROLLED_VALUE_KEYS = frozenset(
         "recommended_disposition",
         "final_disposition",
         "final_root_cause",
+        "model_role",
         "agent_status",
         "response_type",
         "rejection_code",
@@ -89,6 +95,7 @@ NUMERIC_AND_BOOLEAN_KEYS = frozenset(
         "elapsed_ms",
         "input_tokens",
         "output_tokens",
+        "requires_manual_review",
         "retryable",
         "is_repairable",
         "during_repair",
@@ -155,6 +162,7 @@ FREE_TEXT_KEYS = frozenset(
         "routing_reason",
         "query",
         "raw_output",
+        "unresolved_questions",
         "actions",
     }
 )

@@ -11,7 +11,9 @@ from claim_agent.agent.hosted.openai_chat import (
     OpenAIChatTransportSettings,
     OpenAICompatibleChatTransport,
 )
-
+from claim_agent.agent.hosted.verifier_client import (
+    HostedVerifierClient,
+)
 
 HOSTED_API_KEY_ENVIRONMENT_VARIABLE = "CLAIM_AGENT_LLM_API_KEY"
 VOYAGER_PROVIDER_NAME = "asu-rc-voyager"
@@ -46,15 +48,10 @@ class HostedModelProfile:
         }
         for field_name, value in non_blank_values.items():
             if not value.strip():
-                raise ValueError(
-                    f"{field_name} must contain a "
-                    "non-whitespace value"
-                )
+                raise ValueError(f"{field_name} must contain a " "non-whitespace value")
 
         if self.request_timeout_seconds <= 0:
-            raise ValueError(
-                "request_timeout_seconds must be greater than zero"
-            )
+            raise ValueError("request_timeout_seconds must be greater than zero")
 
         self.to_transport_settings()
 
@@ -90,7 +87,45 @@ def build_hosted_model_client(
     profile: HostedModelProfile = SELECTED_VOYAGER_PROFILE,
     environment: Mapping[str, str] | None = None,
 ) -> HostedModelClient:
-    """Build one hosted client from a profile and local key."""
+    """Build one planning client from a profile and local key."""
+
+    transport = _build_hosted_transport(
+        profile=profile,
+        environment=environment,
+    )
+
+    return HostedModelClient(
+        transport=transport,
+        model_name=profile.model_id,
+        timeout_seconds=profile.request_timeout_seconds,
+    )
+
+
+def build_hosted_verifier_client(
+    *,
+    profile: HostedModelProfile = SELECTED_VOYAGER_PROFILE,
+    environment: Mapping[str, str] | None = None,
+) -> HostedVerifierClient:
+    """Build a tool-less verifier using the selected hosted profile."""
+
+    transport = _build_hosted_transport(
+        profile=profile,
+        environment=environment,
+    )
+
+    return HostedVerifierClient(
+        transport=transport,
+        model_name=profile.model_id,
+        timeout_seconds=profile.request_timeout_seconds,
+    )
+
+
+def _build_hosted_transport(
+    *,
+    profile: HostedModelProfile,
+    environment: Mapping[str, str] | None,
+) -> OpenAICompatibleChatTransport:
+    """Build the shared transport without retaining the credential."""
 
     environment_values = os.environ if environment is None else environment
     api_key = environment_values.get(
@@ -105,13 +140,7 @@ def build_hosted_model_client(
             "environment variable."
         )
 
-    transport = OpenAICompatibleChatTransport.from_api_key(
+    return OpenAICompatibleChatTransport.from_api_key(
         api_key=api_key,
         settings=profile.to_transport_settings(),
-    )
-
-    return HostedModelClient(
-        transport=transport,
-        model_name=profile.model_id,
-        timeout_seconds=profile.request_timeout_seconds,
     )

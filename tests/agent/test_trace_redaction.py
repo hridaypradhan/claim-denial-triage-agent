@@ -16,6 +16,53 @@ from claim_agent.agent.trace_redaction import (
 class TraceRedactionTests(unittest.TestCase):
     """Verify that traces retain codes while excluding unrestricted text."""
 
+    def test_reviewed_verifier_metadata_is_preserved(self) -> None:
+        """Verifier audit fields should survive without exposing free text."""
+
+        payload = {
+            "model_role": "VERIFIER",
+            "provider_request_id": "provider-verifier-1",
+            "evidence_run_id": "run-verifier-1",
+            "bundle_fingerprint": "b" * 64,
+            "supported_criterion_ids": ["CRIT-A"],
+            "disputed_criterion_ids": [],
+            "requires_manual_review": False,
+            "unresolved_questions": ["Does the note establish conservative therapy?"],
+        }
+
+        redacted = redact_trace_payload(payload)
+
+        self.assertEqual("VERIFIER", redacted["model_role"])
+        self.assertEqual(
+            "provider-verifier-1",
+            redacted["provider_request_id"],
+        )
+        self.assertEqual(
+            "run-verifier-1",
+            redacted["evidence_run_id"],
+        )
+        self.assertEqual(
+            "b" * 64,
+            redacted["bundle_fingerprint"],
+        )
+        self.assertEqual(
+            ["CRIT-A"],
+            redacted["supported_criterion_ids"],
+        )
+        self.assertEqual(
+            [],
+            redacted["disputed_criterion_ids"],
+        )
+        self.assertFalse(redacted["requires_manual_review"])
+        self.assertEqual(
+            [REDACTED_VALUE],
+            redacted["unresolved_questions"],
+        )
+        self.assertNotIn(
+            "conservative therapy",
+            json.dumps(redacted),
+        )
+
     def test_allowed_identifiers_and_codes_are_preserved(self) -> None:
         """Evaluation identifiers and controlled outcomes must remain usable."""
 
@@ -109,9 +156,7 @@ class TraceRedactionTests(unittest.TestCase):
             "gateway_addons_enabled": False,
         }
 
-        redacted = redact_trace_payload(
-            {"provider_options": provider_options}
-        )
+        redacted = redact_trace_payload({"provider_options": provider_options})
 
         self.assertEqual(
             provider_options,
@@ -145,9 +190,7 @@ class TraceRedactionTests(unittest.TestCase):
             with self.subTest(unsafe_value=unsafe_value):
                 self.assertEqual(
                     REDACTED_VALUE,
-                    redact_trace_payload(
-                        {"tool_calls": unsafe_value}
-                    )["tool_calls"],
+                    redact_trace_payload({"tool_calls": unsafe_value})["tool_calls"],
                 )
 
     def test_only_valid_sha256_values_are_preserved(self) -> None:
@@ -161,7 +204,7 @@ class TraceRedactionTests(unittest.TestCase):
         )
         self.assertEqual(
             REDACTED_VALUE,
-            redact_trace_payload(
-                {"note_sha256": "Jane Doe, member ID 12345"}
-            )["note_sha256"],
+            redact_trace_payload({"note_sha256": "Jane Doe, member ID 12345"})[
+                "note_sha256"
+            ],
         )

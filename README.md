@@ -5,9 +5,10 @@ A hybrid agentic AI system for evidence-grounded triage of denied outpatient med
 > **Project status:** Active academic capstone. The deterministic baseline,
 > shared contracts, local retrieval tools, safety validator, bounded runtime,
 > an OpenAI-compatible hosted-model transport, and a production-shaped local
-> integration with durable canonical traces are runnable and tested. Live
-> hosted execution, model selection, final evaluation, and the final report
-> remain in progress.
+> integration with durable canonical traces are runnable and tested. A
+> tool-less, same-run evidence-verification orchestration boundary is also
+> implemented and tested; insertion into the full end-to-end runner, final
+> evaluation, and the final report remain in progress.
 
 ## Problem
 
@@ -397,9 +398,13 @@ explicitly tracked extension points:
 - [`evaluation/`](evaluation/) — accepted trace examples plus the comparison
   harness.
 
-Route authorization for the deadline and eligibility tools, live hosted-model
-execution, evidence verification, grounded drafting, and the full comparative
-evaluation remain incomplete rather than implied by directory names.
+Route authorization for the deadline and eligibility tools, end-to-end
+verifier and drafting integration, grounded drafting, and the full comparative
+evaluation remain incomplete rather than implied by directory names. The
+standalone hosted execution, tool-less verifier orchestration, deadline tool,
+and separate eligibility retrieval boundaries are implemented, but the
+current integrated runner does not yet invoke the verifier after deterministic
+validation.
 
 ## Safety boundaries
 
@@ -416,6 +421,23 @@ evaluation remain incomplete rather than implied by directory names.
 - The evidence verifier (`VerifierInput`, `VerifierReport`, `VerifierValidationResult`) has **no tool authority** (`authorized_tools` must be empty) and receives only a proposed `AgentDecision` plus the frozen same-run `EvidenceBundle` (providing `run_id`, `knowledge_snapshot_id`, `fingerprint()`, `passages`, and `check_citations()`).
 - Deterministic safety validation runs first and cannot be overridden: if `ValidationResult.outcome != ACCEPTED` or does not match the exact `proposed_decision`, verification fails closed to manual review.
 - Only a coherent `AGREE` report—with matching identities, resolved criterion IDs, resolved same-run citations, and empty `disputed_criterion_ids` and `unresolved_questions`—avoids escalation; `DISAGREE`, `UNCERTAIN`, `INVALID_OUTPUT`, `PROVIDER_FAILURE`, and `TIMEOUT` all require manual review.
+- The provider-independent verifier interface has no tool field. Its hosted
+  adapter always sends an empty tool allowlist and requests the strict
+  `VerifierReport` JSON schema through the same reusable OpenAI-compatible
+  transport used by planning.
+- Verifier prompts serialize only the validated proposed decision and its
+  frozen bundle, including the run ID, knowledge snapshot, and bundle
+  fingerprint. No prior conversation or free-form external evidence can be
+  added through the orchestration API.
+- Verifier requests, responses, sanitized failures, deterministic outcomes,
+  latency, token usage, prompt version, and evidence provenance are emitted
+  through the canonical trace adapter with `model_role=VERIFIER`.
+- Hosted verification uses the same local
+  `CLAIM_AGENT_LLM_API_KEY` setup documented below. There is no scripted-model
+  or alternate-model fallback: a timeout, provider failure, malformed output,
+  disagreement, or uncertainty produces an explicit manual-review result.
+- This component is reusable orchestration for the later end-to-end assembly;
+  the current integrated demonstration does not yet call it automatically.
 
 ## Requirements
 
@@ -939,7 +961,8 @@ These limitations define the work assigned to the agentic extension; they are no
 - [x] Add deterministic safety, citation, formula, and filing-deadline validation.
 - [x] Add the OpenAI-compatible hosted transport and strict action schemas.
 - [ ] Complete live hosted execution and freeze the selected model.
-- [ ] Add tool-less evidence verification and grounded drafting.
+- [x] Add standalone tool-less evidence-verification orchestration.
+- [ ] Integrate verification and grounded drafting into the end-to-end runner.
 - [ ] Build development and held-out synthetic datasets.
 - [ ] Compare the agentic system against the unchanged baseline.
 - [ ] Conduct stakeholder review of representative system reports.
