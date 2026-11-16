@@ -1,0 +1,12 @@
+{
+  "snapshot_id": "knowledge-v2",
+  "manifest_sha256": "4a2f61a303bfdd14ee99be13ea4403c2e3b3849410e5455a3f0fda4b3e75681e",
+  "source_count": 92,
+  "unavailable_evidence": [
+    {
+      "claim_id": "CLM-2026-710313",
+      "document_type": "clinical_note",
+      "reason": "Listed on the claim but intentionally absent from the corpus (held-out case design, #52)"
+    }
+  ]
+}

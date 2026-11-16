@@ -1,7 +1,7 @@
 {
   "bundle_version": "0.1",
   "run_id": "FIXTURE-NO-POLICY-620111",
-  "knowledge_snapshot_id": "knowledge-v2-draft",
+  "knowledge_snapshot_id": "knowledge-v2",
   "scope": {
     "claim_id": "CLM-2026-620111",
     "service_line_id": 1,

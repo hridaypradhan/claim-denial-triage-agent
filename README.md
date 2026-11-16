@@ -95,10 +95,13 @@ later corpus changes detectable. `knowledge-v1` adds the Dataset B encounter
 notes to `knowledge-v0` without changing any earlier file, so earlier passage
 IDs still resolve.
 
-The working snapshot is now `knowledge-v2-draft`: `knowledge-v1` plus the
-held-out evidence being added for the final evaluation. The Milestone 2
-results were produced on `knowledge-v1`, and none of the new sources changes
-their retrieval. The final identifier is assigned when the corpus is frozen.
+The final snapshot is **`knowledge-v2`**, frozen for the final evaluation
+(#62): `knowledge-v1` plus the held-out policies and evidence (#58), 92 sources
+in all. [`knowledge/SNAPSHOT_LOCK.json`](knowledge/SNAPSHOT_LOCK.json) records
+its manifest hash and the one document that is intentionally unavailable
+(`CLM-2026-710313`'s clinical note). Any change to the corpus now fails the
+tests and needs a new snapshot ID. The Milestone 2 results were produced on
+`knowledge-v1`, and none of the new sources changes their retrieval.
 
 It contains:
 
