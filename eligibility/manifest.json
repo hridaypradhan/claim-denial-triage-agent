@@ -1,0 +1,70 @@
+{
+  "snapshot_id": "eligibility-v1",
+  "description": "Synthetic payer eligibility responses for development and demonstration claims only (#56). Kept apart from the frozen knowledge-v2 corpus; no held-out claim has a record.",
+  "sources": [
+    {
+      "source_id": "ELIG-PA-SYN-10104-UHC",
+      "source_type": "eligibility_record",
+      "version": "1",
+      "path": "records/ELIG-PA-SYN-10104-UHC.v1.json",
+      "sha256": "569190007d8a0034a5072c045b7da2183b42b952db5668574a400e3f6a29a386",
+      "patient_account": "PA-SYN-10104",
+      "payer": "UHC",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic eligibility response; contains no real member information."
+      }
+    },
+    {
+      "source_id": "ELIG-PA-SYN-10104-CIGNA",
+      "source_type": "eligibility_record",
+      "version": "1",
+      "path": "records/ELIG-PA-SYN-10104-CIGNA.v1.json",
+      "sha256": "cc4154f00fce02c98a3c95759940665babf3f8445e8b8aff685a3a0fe0a8e1ee",
+      "patient_account": "PA-SYN-10104",
+      "payer": "CIGNA",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic eligibility response; contains no real member information."
+      }
+    },
+    {
+      "source_id": "ELIG-PA-SYN-10105-UHC",
+      "source_type": "eligibility_record",
+      "version": "1",
+      "path": "records/ELIG-PA-SYN-10105-UHC.v1.json",
+      "sha256": "22dffdc8877be64d2884bd509dccbc02b7062740a451647d4a9320bc3f370d0b",
+      "patient_account": "PA-SYN-10105",
+      "payer": "UHC",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic eligibility response; contains no real member information."
+      }
+    },
+    {
+      "source_id": "ELIG-PA-90455-BCBS_AZ",
+      "source_type": "eligibility_record",
+      "version": "1",
+      "path": "records/ELIG-PA-90455-BCBS_AZ.v1.json",
+      "sha256": "35aeb325848592e2e6fa707d7ae9a9aa03bb723c09558d4d83e4b72194b69751",
+      "patient_account": "PA-90455",
+      "payer": "BCBS_AZ",
+      "synthetic": true,
+      "origin": {
+        "url": null,
+        "access_date": null,
+        "terms_status": "synthetic",
+        "notes": "Synthetic eligibility response; contains no real member information."
+      }
+    }
+  ]
+}

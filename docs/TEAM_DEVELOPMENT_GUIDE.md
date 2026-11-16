@@ -65,16 +65,16 @@ Primary ownership means coordinating design, implementation, tests, and document
 - Common tool dispatcher and argument validation at the tool boundary.
 - Fake dispatcher with scripted tool results for the offline vertical slice.
 - Denial-code and payer-profile lookup wrappers; payer profiles report their version and whether values are verified or illustrative.
-- Implemented policy and encounter-note retrieval, plus eligibility-record
-  retrieval if the team later retains that extension under #30. All tools are
-  read-only.
+- Implemented policy, encounter-note, and eligibility-record retrieval (#56).
+  All tools are read-only.
 - Policy matching that filters by payer, procedure, and service date before ranking, with no fallback to another payer's policy or a different effective date.
 - Encounter notes returned as numbered, citable passages, with unavailable documents reported explicitly.
-- Eligibility records, if implemented after #30, report evidence without
-  deciding eligibility.
+- Eligibility records (`eligibility/`, frozen as `eligibility-v1`) report
+  evidence without deciding eligibility. The evidence bundle records the
+  eligibility snapshot on each retrieval that read it.
 - Knowledge manifests, passage IDs, provenance, and no-match/error responses.
-- The optional `calculate_deadline` dispatcher wrapper tracked by #29; the
-  frozen baseline currently supplies deterministic deadline arithmetic.
+- The optional `calculate_deadline` tool (#54), which reports the deadline the
+  frozen baseline computed for the run; route authorization is #55.
 - The per-claim document inventory, built from the knowledge manifest.
 - Policy corpus selection and source metadata: URL, access date, effective date, payer, procedure, section, and version. A policy is included only when its terms of use permit.
 - The retrieval-method architecture decision.
@@ -161,10 +161,10 @@ Primary ownership means coordinating design, implementation, tests, and document
 | Shared contracts v0.1 | Neha | All affected owners approve breaking fields |
 | Baseline adapter and deterministic router | Neha | Baseline regression tests |
 | Tool dispatcher and knowledge manifest | Silas | Contract approval from Neha; runtime review from Hriday |
-| Policy and encounter tools; optional eligibility tool under #30 | Silas | Evaluation provenance requirements from Sachin |
+| Policy, encounter, and eligibility tools (#56) | Silas | Evaluation provenance requirements from Sachin |
 | Fake dispatcher for the offline vertical slice | Silas | Tool contracts from Neha; consumer review from Hriday |
 | Policy corpus selection and source metadata | Silas | Payer/procedure coverage needs from Sachin |
-| Optional `calculate_deadline` tool wrapper under #29 | Silas | Scope decision and deadline arithmetic from Neha |
+| Optional `calculate_deadline` tool (#54) | Silas | Deadline from the frozen baseline finding; route authorization from Hriday (#55) |
 | Per-claim document inventory (*default*) | Silas | Built from the knowledge manifest; case fixtures from Sachin use the same document IDs |
 | Single bounded tool retry (*default*) | Hriday | Dispatcher reports `retryable`; each retry counts against the tool-call budget, not planning turns |
 | Untrusted-text handling (*default*) | Hriday | Tools return text unmodified; the runtime passes it to the model as labelled data |
