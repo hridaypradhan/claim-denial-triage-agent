@@ -11,6 +11,7 @@ from claim_agent.contracts import (
     DraftingOutcome,
     ValidationOutcome,
     ValidationProblem,
+    VerificationOutcome,
 )
 from claim_agent.safety.drafting import (
     DRAFTING_REASON_ACCEPTED,
@@ -21,7 +22,9 @@ from claim_agent.safety.drafting import (
     DRAFTING_REASON_PROVIDER_FAILURE,
     DRAFTING_REASON_TIMEOUT,
     DRAFTING_REASON_UNGROUNDED_CLAIM,
+    DRAFTING_REASON_VERIFIER_MISMATCH,
     check_drafting_authorization,
+    render_grounded_appeal_body,
     validate_appeal_draft,
 )
 
@@ -58,18 +61,63 @@ class TestDraftingAuthorizationAndGroundedness(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "evidence_bundle.scope"):
             DraftingInput.model_validate_json(json.dumps(raw))
 
-    def test_drafting_impossible_before_validation_and_verification_succeed(self):
+    def test_forged_or_mismatched_verifier_result_cannot_authorize_drafting(self):
         d_input = _load_input()
         self.assertIsNone(check_drafting_authorization(d_input))
 
-        # 1. Verification failed/disagreed -> unauthorized
-        unverified = d_input.model_copy(update={"verification_agreed": False})
-        res_unverified = validate_appeal_draft(unverified)
-        self.assertEqual(res_unverified.outcome, DraftingOutcome.REJECTED_UNAUTHORIZED)
-        self.assertTrue(res_unverified.requires_manual_review)
-        self.assertEqual(res_unverified.reason_code, DRAFTING_REASON_NOT_VERIFIED)
+        # 1. Forged boolean verification_agreed=True is rejected by strict schema
+        raw_bool = json.loads(
+            (FIXTURE_DIR / "valid_draft_input.json").read_text(encoding="utf-8")
+        )
+        raw_bool["verification_agreed"] = True
+        with self.assertRaises(ValidationError):
+            DraftingInput.model_validate_json(json.dumps(raw_bool))
 
-        # 2. Deterministic validation not ACCEPTED -> unauthorized
+        # 2. Non-AGREE verifier outcome (DISAGREE) -> unauthorized
+        disagreed_ver = d_input.verifier_result.model_copy(
+            update={
+                "outcome": VerificationOutcome.DISAGREE,
+                "requires_manual_review": True,
+                "reason_code": "VERIFIER_DISAGREED",
+            }
+        )
+        res_disagree = validate_appeal_draft(
+            d_input.model_copy(update={"verifier_result": disagreed_ver})
+        )
+        self.assertEqual(res_disagree.outcome, DraftingOutcome.REJECTED_UNAUTHORIZED)
+        self.assertTrue(res_disagree.requires_manual_review)
+        self.assertEqual(res_disagree.reason_code, DRAFTING_REASON_NOT_VERIFIED)
+
+        # 3. Verifier result from a different run / bundle fingerprint -> rejected
+        wrong_run_ver = d_input.verifier_result.model_copy(
+            update={
+                "run_id": "run-005097-99",
+                "bundle_fingerprint": "0" * 64,
+            }
+        )
+        res_wrong_bundle = validate_appeal_draft(
+            d_input.model_copy(update={"verifier_result": wrong_run_ver})
+        )
+        self.assertEqual(
+            res_wrong_bundle.outcome, DraftingOutcome.REJECTED_UNAUTHORIZED
+        )
+        self.assertEqual(
+            res_wrong_bundle.reason_code, DRAFTING_REASON_VERIFIER_MISMATCH
+        )
+
+        # 4. Verifier result for a different decision_id -> rejected
+        wrong_dec_ver = d_input.verifier_result.model_copy(
+            update={"decision_id": "dec-other-999"}
+        )
+        res_wrong_dec = validate_appeal_draft(
+            d_input.model_copy(update={"verifier_result": wrong_dec_ver})
+        )
+        self.assertEqual(res_wrong_dec.outcome, DraftingOutcome.REJECTED_UNAUTHORIZED)
+        self.assertEqual(res_wrong_dec.reason_code, DRAFTING_REASON_VERIFIER_MISMATCH)
+
+    def test_drafting_impossible_before_deterministic_validation_succeeds(self):
+        d_input = _load_input()
+
         rejected_val = d_input.validation_result.model_copy(
             update={
                 "outcome": ValidationOutcome.REJECTED_MANUAL_REVIEW,
@@ -85,12 +133,12 @@ class TestDraftingAuthorizationAndGroundedness(unittest.TestCase):
                 "manual_review_reasons": ["SAFETY_ESCALATION_DEADLINE_EXPIRED"],
             }
         )
-        not_validated = d_input.model_copy(update={"validation_result": rejected_val})
-        res_not_val = validate_appeal_draft(not_validated)
+        res_not_val = validate_appeal_draft(
+            d_input.model_copy(update={"validation_result": rejected_val})
+        )
         self.assertEqual(res_not_val.outcome, DraftingOutcome.REJECTED_UNAUTHORIZED)
         self.assertEqual(res_not_val.reason_code, DRAFTING_REASON_NOT_VALIDATED)
 
-        # 3. Disallowed disposition (e.g., BILL_PATIENT) -> unauthorized
         bad_disp_dec = d_input.validation_result.validated_decision.model_copy(
             update={"recommended_disposition": Disposition.BILL_PATIENT}
         )
@@ -118,14 +166,63 @@ class TestDraftingAuthorizationAndGroundedness(unittest.TestCase):
         self.assertIsNotNone(res.validated_draft)
         self.assertEqual(res.validated_draft.approval_state, "PENDING_REVIEW")
 
-        # Attempting to mark a draft APPROVED or SUBMITTED fails schema validation
+        # Deterministic rendering helper also produces a valid grounded body
+        rendered = render_grounded_appeal_body(res.validated_draft.grounded_claims)
+        rendered_payload = json.loads(raw_draft)
+        rendered_payload["body"] = rendered
+        res_rendered = validate_appeal_draft(
+            d_input, raw_output=json.dumps(rendered_payload)
+        )
+        self.assertEqual(res_rendered.outcome, DraftingOutcome.ACCEPTED)
+
         for forbidden_state in ("APPROVED", "SUBMITTED"):
             bad = json.loads(raw_draft)
             bad["approval_state"] = forbidden_state
             with self.assertRaises(ValidationError):
                 AppealDraft.model_validate_json(json.dumps(bad))
 
-    def test_unsupported_evidence_or_unresolved_citations_reject_draft(self):
+    def test_permitted_citation_attached_to_unsupported_claim_is_rejected(self):
+        d_input = _load_input()
+        draft_payload = json.loads(
+            (FIXTURE_DIR / "valid_draft_output.json").read_text(encoding="utf-8")
+        )
+        # Keep permitted same-run citation POL-UHC-72148@v1#p1, but replace content
+        # with an unsupported clinical assertion
+        draft_payload["body"] = (
+            "Per POL-UHC-72148@v1#p1, emergency inpatient surgery was pre-authorized "
+            "by the medical director."
+        )
+        draft_payload["grounded_claims"] = [
+            {
+                "statement": "Emergency inpatient surgery was pre-authorized by the medical director.",
+                "citation_ids": ["POL-UHC-72148@v1#p1"],
+            }
+        ]
+        draft_payload["citation_ids"] = ["POL-UHC-72148@v1#p1"]
+
+        res = validate_appeal_draft(d_input, raw_output=json.dumps(draft_payload))
+
+        self.assertEqual(res.outcome, DraftingOutcome.REJECTED_UNGROUNDED)
+        self.assertTrue(res.requires_manual_review)
+        self.assertEqual(res.reason_code, DRAFTING_REASON_UNGROUNDED_CLAIM)
+        self.assertIsNone(res.validated_draft)
+
+    def test_factual_body_assertion_omitted_from_grounded_claims_is_rejected(self):
+        d_input = _load_input()
+        draft_payload = json.loads(
+            (FIXTURE_DIR / "valid_draft_output.json").read_text(encoding="utf-8")
+        )
+        # Append an unrepresented factual assertion to body without adding it to grounded_claims
+        draft_payload["body"] += " The payer already approved this appeal."
+
+        res = validate_appeal_draft(d_input, raw_output=json.dumps(draft_payload))
+
+        self.assertEqual(res.outcome, DraftingOutcome.REJECTED_UNGROUNDED)
+        self.assertTrue(res.requires_manual_review)
+        self.assertEqual(res.reason_code, DRAFTING_REASON_UNGROUNDED_CLAIM)
+        self.assertIsNone(res.validated_draft)
+
+    def test_unresolved_citations_reject_draft(self):
         d_input = _load_input()
         draft_payload = json.loads(
             (FIXTURE_DIR / "valid_draft_output.json").read_text(encoding="utf-8")
@@ -133,7 +230,7 @@ class TestDraftingAuthorizationAndGroundedness(unittest.TestCase):
         draft_payload["citation_ids"].append("ENC-UNRETRIEVED-999@v1#p1")
         draft_payload["grounded_claims"].append(
             {
-                "statement": "Unsupported clinical claim.",
+                "statement": "Patient completed 6 weeks of physical therapy without relief.",
                 "citation_ids": ["ENC-UNRETRIEVED-999@v1#p1"],
             }
         )
