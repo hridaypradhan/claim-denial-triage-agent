@@ -1,12 +1,17 @@
 from .schema import (
     AgentDecision,
     AgentStatus,
+    AppealDraft,
     BaselineFinding,
     CONTRACT_VERSION,
     ClassifiedEvidenceRequirement,
     CriterionAssessment,
     CriterionStatus,
     Disposition,
+    DraftClaimStatement,
+    DraftingInput,
+    DraftingOutcome,
+    DraftingValidationResult,
     ErrorCode,
     ESCALATION_DEADLINE_EXPIRED,
     ESCALATION_FORMULA_NOT_SATISFIED,
@@ -64,8 +69,8 @@ from .evidence_bundle import (
     PASSAGE_ID_PATTERN,
     RetrievalRecord,
 )
-
 VerifierInput.model_rebuild()
+DraftingInput.model_rebuild()
 
 __all__ = [
     "CONTRACT_VERSION",
@@ -82,6 +87,7 @@ __all__ = [
     "AgentStatus",
     "CriterionStatus",
     "VerificationOutcome",
+    "DraftingOutcome",
     "EvidencePassage",
     "CitationProblemCode",
     "CitationProblem",
@@ -103,6 +109,10 @@ __all__ = [
     "VerifierInput",
     "VerifierReport",
     "VerifierValidationResult",
+    "DraftingInput",
+    "DraftClaimStatement",
+    "AppealDraft",
+    "DraftingValidationResult",
     "OutputPackage",
     "PROBLEM_PROHIBITED_BILLING",
     "PROBLEM_UNAUTHORIZED_OVERRIDE",

@@ -125,6 +125,15 @@ class VerificationOutcome(str, Enum):
     TIMEOUT = "TIMEOUT"
 
 
+class DraftingOutcome(str, Enum):
+    ACCEPTED = "ACCEPTED"
+    REJECTED_UNAUTHORIZED = "REJECTED_UNAUTHORIZED"
+    REJECTED_UNGROUNDED = "REJECTED_UNGROUNDED"
+    INVALID_OUTPUT = "INVALID_OUTPUT"
+    PROVIDER_FAILURE = "PROVIDER_FAILURE"
+    TIMEOUT = "TIMEOUT"
+
+
 # --- Shared Base Configuration ---
 class StrictContract(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
@@ -344,12 +353,7 @@ class ValidationResult(StrictContract):
 
 # --- Contract v0.1: Tool-less Evidence Verifier (#50) ---
 class VerifierInput(StrictContract):
-    """Frozen input for the tool-less verifier (#50).
-
-    Takes the proposed decision and the frozen same-run EvidenceBundle (#59).
-    The verifier has zero tool authority (`authorized_tools` must remain empty),
-    and the proposed decision must match the bundle's claim/service-line scope.
-    """
+    """Frozen input for the tool-less verifier (#50)."""
 
     contract_version: str = Field(default=CONTRACT_VERSION)
     proposed_decision: AgentDecision
@@ -440,6 +444,105 @@ class VerifierValidationResult(StrictContract):
             if not self.requires_manual_review:
                 raise ValueError(
                     f"Verifier outcome {self.outcome.value} must require manual review."
+                )
+        return self
+
+
+# --- Contract v0.1: Appeal Drafting (#51) ---
+class DraftingInput(StrictContract):
+    """Authorized drafting input bound to deterministic validation, typed verifier
+    agreement (#50), and the frozen same-run EvidenceBundle (#59).
+    """
+
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    validation_result: ValidationResult
+    verifier_result: VerifierValidationResult
+    evidence_bundle: "EvidenceBundle"
+
+    @property
+    def run_id(self) -> str:
+        return self.evidence_bundle.run_id
+
+    @property
+    def knowledge_snapshot_id(self) -> str:
+        return self.evidence_bundle.knowledge_snapshot_id
+
+    @property
+    def bundle_fingerprint(self) -> str:
+        return self.evidence_bundle.fingerprint()
+
+    @model_validator(mode="after")
+    def validate_bundle_scope(self):
+        if (
+            self.validation_result.claim_id != self.evidence_bundle.scope.claim_id
+            or self.validation_result.service_line_id
+            != self.evidence_bundle.scope.service_line_id
+        ):
+            raise ValueError(
+                "validation_result claim_id/service_line_id does not match "
+                "evidence_bundle.scope."
+            )
+        return self
+
+
+class DraftClaimStatement(StrictContract):
+    """One factual or clinical statement in an appeal draft bound to citations."""
+
+    statement: str = Field(min_length=1)
+    citation_ids: List[str] = Field(min_length=1)
+
+
+class AppealDraft(StrictContract):
+    """Structured appeal draft always held in PENDING_REVIEW."""
+
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    draft_id: str = Field(min_length=1)
+    decision_id: str
+    claim_id: str
+    service_line_id: int
+    disposition: Literal[Disposition.APPEAL_WITH_DOCUMENTATION] = (
+        Disposition.APPEAL_WITH_DOCUMENTATION
+    )
+    approval_state: Literal["PENDING_REVIEW"] = Field(default="PENDING_REVIEW")
+    subject: str = Field(min_length=1)
+    body: str = Field(min_length=1)
+    grounded_claims: List[DraftClaimStatement] = Field(min_length=1)
+    citation_ids: List[str] = Field(min_length=1)
+
+
+class DraftingValidationResult(StrictContract):
+    """Deterministic authorization & groundedness result for appeal drafting."""
+
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    decision_id: str
+    claim_id: str
+    service_line_id: int
+    outcome: DraftingOutcome
+    requires_manual_review: bool
+    approval_state: Literal["PENDING_REVIEW"] = Field(default="PENDING_REVIEW")
+    reason_code: str
+    validated_draft: Optional[AppealDraft] = Field(None)
+    validation_problems: List[ValidationProblem] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_draft_invariants(self):
+        if self.outcome == DraftingOutcome.ACCEPTED:
+            if self.requires_manual_review:
+                raise ValueError(
+                    "ACCEPTED draft must not set requires_manual_review=True."
+                )
+            if self.validated_draft is None:
+                raise ValueError("validated_draft is required when outcome is ACCEPTED.")
+            if self.validated_draft.approval_state != "PENDING_REVIEW":
+                raise ValueError("Accepted draft must remain in PENDING_REVIEW.")
+        else:
+            if not self.requires_manual_review:
+                raise ValueError(
+                    f"Drafting outcome {self.outcome.value} must require manual review."
+                )
+            if self.validated_draft is not None:
+                raise ValueError(
+                    "validated_draft must be omitted when drafting is rejected."
                 )
         return self
 

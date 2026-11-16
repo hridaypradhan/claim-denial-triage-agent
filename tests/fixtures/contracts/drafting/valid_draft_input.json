@@ -1,0 +1,171 @@
+{
+  "contract_version": "0.1",
+  "validation_result": {
+    "contract_version": "0.1",
+    "decision_id": "dec-005097-01",
+    "claim_id": "CLM-2026-005097",
+    "service_line_id": 1,
+    "outcome": "ACCEPTED",
+    "approval_state": "PENDING_REVIEW",
+    "validation_problems": [],
+    "validated_decision": {
+      "contract_version": "0.1",
+      "decision_id": "dec-005097-01",
+      "claim_id": "CLM-2026-005097",
+      "service_line_id": 1,
+      "root_cause": "MEDICAL_NECESSITY",
+      "recommended_disposition": "APPEAL_WITH_DOCUMENTATION",
+      "actions": [
+        "Submit clinical appeal with conservative therapy documentation."
+      ],
+      "criterion_assessments": [
+        {
+          "criterion_id": "CRIT-A",
+          "status": "SUPPORTED",
+          "explanation": "Encounter note documents 6 weeks of conservative therapy.",
+          "citation_ids": [
+            "ENC-CLM-2026-005097-CN@v1#p1"
+          ]
+        }
+      ],
+      "evidence_gaps": [],
+      "agent_status": "COMPLETED",
+      "manual_review_reasons": [],
+      "rationale": "Policy criteria satisfied by encounter note.",
+      "citation_ids": [
+        "POL-UHC-72148@v1#p1",
+        "ENC-CLM-2026-005097-CN@v1#p1"
+      ]
+    },
+    "manual_review_reasons": []
+  },
+  "verifier_result": {
+    "contract_version": "0.1",
+    "decision_id": "dec-005097-01",
+    "claim_id": "CLM-2026-005097",
+    "service_line_id": 1,
+    "run_id": "run-005097-01",
+    "knowledge_snapshot_id": "knowledge-v1",
+    "bundle_fingerprint": "5990eade7075d1cfcd0b6293dc6a5893287df611a039f160c1c15adccf11d9e2",
+    "outcome": "AGREE",
+    "requires_manual_review": false,
+    "reason_code": "VERIFIER_AGREED",
+    "validated_report": {
+      "contract_version": "0.1",
+      "decision_id": "dec-005097-01",
+      "claim_id": "CLM-2026-005097",
+      "service_line_id": 1,
+      "outcome": "AGREE",
+      "rationale": "Same-run policy and clinical note passages directly support CRIT-A.",
+      "supported_criterion_ids": [
+        "CRIT-A"
+      ],
+      "disputed_criterion_ids": [],
+      "unresolved_questions": [],
+      "citation_ids": [
+        "POL-UHC-72148@v1#p1",
+        "ENC-CLM-2026-005097-CN@v1#p1"
+      ]
+    },
+    "validation_problems": []
+  },
+  "evidence_bundle": {
+    "bundle_version": "0.1",
+    "run_id": "run-005097-01",
+    "knowledge_snapshot_id": "knowledge-v1",
+    "scope": {
+      "claim_id": "CLM-2026-005097",
+      "service_line_id": 1,
+      "payer": "UHC",
+      "procedure_code": "72148",
+      "service_date": "2026-02-15"
+    },
+    "policy_formula": "CRIT-A",
+    "passages": [
+      {
+        "passage": {
+          "passage_id": "POL-UHC-72148@v1#p1",
+          "source_id": "POL-UHC-72148",
+          "source_type": "medical_policy",
+          "version": "1",
+          "effective_from": "2026-01-01",
+          "effective_to": null,
+          "text": "CRIT-A requires at least 6 weeks of conservative therapy."
+        },
+        "source_type": "medical_policy",
+        "document_type": "medical_policy",
+        "claim_id": "CLM-2026-005097",
+        "payer": "UHC",
+        "procedure_code": "72148",
+        "service_date": "2026-02-15",
+        "tool_name": "retrieve_medical_policy",
+        "request_id": "req-1",
+        "call_index": 1
+      },
+      {
+        "passage": {
+          "passage_id": "ENC-CLM-2026-005097-CN@v1#p1",
+          "source_id": "ENC-CLM-2026-005097-CN",
+          "source_type": "encounter_note",
+          "version": "1",
+          "effective_from": null,
+          "effective_to": null,
+          "text": "Patient completed 6 weeks of physical therapy without relief."
+        },
+        "source_type": "encounter_note",
+        "document_type": "clinical_note",
+        "claim_id": "CLM-2026-005097",
+        "payer": "UHC",
+        "procedure_code": "72148",
+        "service_date": "2026-02-15",
+        "tool_name": "get_encounter_note",
+        "request_id": "req-2",
+        "call_index": 2
+      }
+    ],
+    "retrievals": [
+      {
+        "call_index": 1,
+        "request_id": "req-1",
+        "tool_name": "retrieve_medical_policy",
+        "status": "OK",
+        "error_code": null,
+        "source_ids": [
+          "POL-UHC-72148@v1"
+        ],
+        "passage_ids": [
+          "POL-UHC-72148@v1#p1"
+        ]
+      },
+      {
+        "call_index": 2,
+        "request_id": "req-2",
+        "tool_name": "get_encounter_note",
+        "status": "OK",
+        "error_code": null,
+        "source_ids": [
+          "ENC-CLM-2026-005097-CN@v1"
+        ],
+        "passage_ids": [
+          "ENC-CLM-2026-005097-CN@v1#p1"
+        ]
+      }
+    ],
+    "available_sources": [
+      {
+        "source_id": "POL-UHC-72148",
+        "version": "1",
+        "source_type": "medical_policy",
+        "document_type": "medical_policy",
+        "retrieved": true
+      },
+      {
+        "source_id": "ENC-CLM-2026-005097-CN",
+        "version": "1",
+        "source_type": "encounter_note",
+        "document_type": "clinical_note",
+        "retrieved": true
+      }
+    ]
+  }
+}
