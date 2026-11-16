@@ -16,6 +16,7 @@ from claim_agent.contracts import (
     VerifierReport,
     VerifierValidationResult,
 )
+from claim_agent.safety.formula_evaluator import evaluate_criteria_formula
 
 VERIFIER_REASON_AGREED = "VERIFIER_AGREED"
 VERIFIER_REASON_DISAGREED = "VERIFIER_DISAGREED"
@@ -26,6 +27,7 @@ VERIFIER_REASON_TIMEOUT = "VERIFIER_TIMEOUT"
 VERIFIER_REASON_DETERMINISTIC_REJECTED = "VERIFIER_BLOCKED_BY_DETERMINISTIC_REJECTION"
 VERIFIER_REASON_VALIDATION_MISMATCH = "VERIFIER_VALIDATION_DECISION_MISMATCH"
 VERIFIER_REASON_INCOHERENT_AGREE = "VERIFIER_INCOHERENT_AGREE_REPORT"
+VERIFIER_REASON_FORMULA_NOT_SATISFIED = "VERIFIER_FORMULA_NOT_SATISFIED"
 
 
 def validate_verifier_response(
@@ -44,7 +46,9 @@ def validate_verifier_response(
       decision_id, claim_id, service_line_id, and validated_decision as
       verifier_input.proposed_decision.
     - AGREE reports cannot contain disputed criteria or unresolved questions,
-      and all referenced criterion IDs must resolve against proposed_decision.
+      all referenced criterion IDs must resolve against proposed_decision, and
+      supported_criterion_ids must satisfy evidence_bundle.policy_formula when
+      a policy formula is applicable.
     - Citations must resolve cleanly via evidence_bundle.check_citations().
     - Timeouts, provider failures, malformed JSON/schema, unresolved citations,
       identity mismatches, DISAGREE, and UNCERTAIN all require manual review.
@@ -188,7 +192,7 @@ def validate_verifier_response(
             + "; ".join(p.message for p in citation_problems),
         )
 
-    # 6. Enforce outcome coherence on AGREE reports.
+    # 6. Enforce outcome coherence and policy_formula coverage on AGREE reports.
     if report.outcome == VerificationOutcome.AGREE:
         if report.disputed_criterion_ids or report.unresolved_questions:
             return VerifierValidationResult(
@@ -213,6 +217,30 @@ def validate_verifier_response(
                 base_kwargs,
                 "Verifier outcome AGREE requires at least one same-run citation.",
             )
+
+        policy_formula = verifier_input.evidence_bundle.policy_formula
+        if policy_formula is not None:
+            if not evaluate_criteria_formula(
+                policy_formula, set(report.supported_criterion_ids)
+            ):
+                return VerifierValidationResult(
+                    **base_kwargs,
+                    outcome=VerificationOutcome.INVALID_OUTPUT,
+                    requires_manual_review=True,
+                    reason_code=VERIFIER_REASON_FORMULA_NOT_SATISFIED,
+                    validation_problems=[
+                        ValidationProblem(
+                            code=VERIFIER_REASON_FORMULA_NOT_SATISFIED,
+                            field_path="supported_criterion_ids",
+                            message=(
+                                "Verifier AGREE supported_criterion_ids "
+                                f"{report.supported_criterion_ids} do not satisfy "
+                                f"policy formula '{policy_formula}'."
+                            ),
+                            is_repairable=False,
+                        )
+                    ],
+                )
 
     # 7. Map structured outcomes to deterministic manual-review requirements.
     if report.outcome == VerificationOutcome.DISAGREE:

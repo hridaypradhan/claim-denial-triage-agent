@@ -1,10 +1,12 @@
 import json
+import unittest
 from pathlib import Path
 
-import pytest
 from pydantic import ValidationError
 
 from claim_agent.contracts import (
+    CriterionAssessment,
+    CriterionStatus,
     ValidationOutcome,
     ValidationProblem,
     ValidationResult,
@@ -16,6 +18,7 @@ from claim_agent.safety.verifier import (
     VERIFIER_REASON_AGREED,
     VERIFIER_REASON_DETERMINISTIC_REJECTED,
     VERIFIER_REASON_DISAGREED,
+    VERIFIER_REASON_FORMULA_NOT_SATISFIED,
     VERIFIER_REASON_INCOHERENT_AGREE,
     VERIFIER_REASON_INVALID_OUTPUT,
     VERIFIER_REASON_PROVIDER_FAILURE,
@@ -44,219 +47,321 @@ def _accepted_deterministic(v_input: VerifierInput) -> ValidationResult:
     )
 
 
-def test_verifier_input_enforces_no_tools_and_delegates_bundle_provenance():
-    v_input = _load_input()
-    assert v_input.run_id == v_input.evidence_bundle.run_id
-    assert v_input.knowledge_snapshot_id == v_input.evidence_bundle.knowledge_snapshot_id
-    assert v_input.bundle_fingerprint == v_input.evidence_bundle.fingerprint()
-
-    raw_tools = json.loads((FIXTURE_DIR / "valid_agree_input.json").read_text(encoding="utf-8"))
-    raw_tools["authorized_tools"] = ["get_encounter_note"]
-    with pytest.raises(ValidationError, match="no tool authority"):
-        VerifierInput.model_validate_json(json.dumps(raw_tools))
-
-
-def test_verifier_input_rejects_mismatched_bundle_scope_and_tracks_run_snapshot_changes():
-    raw = json.loads((FIXTURE_DIR / "valid_agree_input.json").read_text(encoding="utf-8"))
-
-    # 1. Mismatched claim scope between proposed_decision and evidence_bundle
-    wrong_scope = json.loads(json.dumps(raw))
-    wrong_scope["evidence_bundle"]["scope"]["claim_id"] = "CLM-2026-OTHER"
-    for p in wrong_scope["evidence_bundle"]["passages"]:
-        p["claim_id"] = "CLM-2026-OTHER"
-    with pytest.raises(ValidationError, match="evidence_bundle.scope"):
-        VerifierInput.model_validate_json(json.dumps(wrong_scope))
-
-    # 2. Tampered passage provenance inside EvidenceBundle
-    tampered_passage = json.loads(json.dumps(raw))
-    tampered_passage["evidence_bundle"]["passages"][0]["claim_id"] = "CLM-2026-OTHER"
-    with pytest.raises(ValidationError, match="different claim scope"):
-        VerifierInput.model_validate_json(json.dumps(tampered_passage))
-
-    # 3. Changing run_id or knowledge_snapshot_id changes the canonical bundle fingerprint
-    v_orig = _load_input()
-    alt_run = json.loads(json.dumps(raw))
-    alt_run["evidence_bundle"]["run_id"] = "run-005097-02"
-    v_alt_run = VerifierInput.model_validate_json(json.dumps(alt_run))
-    assert v_alt_run.bundle_fingerprint != v_orig.bundle_fingerprint
-
-    alt_snap = json.loads(json.dumps(raw))
-    alt_snap["evidence_bundle"]["knowledge_snapshot_id"] = "knowledge-v2"
-    v_alt_snap = VerifierInput.model_validate_json(json.dumps(alt_snap))
-    assert v_alt_snap.bundle_fingerprint != v_orig.bundle_fingerprint
-
-
-def test_verifier_agree_with_valid_same_run_citations():
-    v_input = _load_input()
-    raw_out = (FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8")
-
-    res = validate_verifier_response(
-        v_input, _accepted_deterministic(v_input), raw_output=raw_out
-    )
-
-    assert res.outcome == VerificationOutcome.AGREE
-    assert res.requires_manual_review is False
-    assert res.reason_code == VERIFIER_REASON_AGREED
-    assert res.validated_report is not None
-
-
-def test_verifier_rejects_mismatched_deterministic_validation_identity_or_decision():
-    v_input = _load_input()
-    valid_agree_raw = (FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8")
-
-    other_decision = v_input.proposed_decision.model_copy(
-        update={
-            "decision_id": "dec-other-999",
-            "claim_id": "CLM-2026-999999",
-        }
-    )
-    mismatched_validation = ValidationResult(
-        decision_id="dec-other-999",
-        claim_id="CLM-2026-999999",
-        service_line_id=1,
-        outcome=ValidationOutcome.ACCEPTED,
-        validated_decision=other_decision,
-    )
-
-    res_mismatch = validate_verifier_response(
-        v_input, mismatched_validation, raw_output=valid_agree_raw
-    )
-    assert res_mismatch.outcome == VerificationOutcome.INVALID_OUTPUT
-    assert res_mismatch.requires_manual_review is True
-    assert res_mismatch.reason_code == VERIFIER_REASON_VALIDATION_MISMATCH
-
-    altered_decision = v_input.proposed_decision.model_copy(
-        update={"rationale": "Tampered rationale."}
-    )
-    altered_validation = ValidationResult(
-        decision_id=v_input.proposed_decision.decision_id,
-        claim_id=v_input.proposed_decision.claim_id,
-        service_line_id=v_input.proposed_decision.service_line_id,
-        outcome=ValidationOutcome.ACCEPTED,
-        validated_decision=altered_decision,
-    )
-    res_altered = validate_verifier_response(
-        v_input, altered_validation, raw_output=valid_agree_raw
-    )
-    assert res_altered.outcome == VerificationOutcome.INVALID_OUTPUT
-    assert res_altered.requires_manual_review is True
-    assert res_altered.reason_code == VERIFIER_REASON_VALIDATION_MISMATCH
-
-
-def test_verifier_rejects_incoherent_agree_and_unknown_criterion_ids():
-    v_input = _load_input()
-    det = _accepted_deterministic(v_input)
-
-    incoherent = json.loads((FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8"))
-    incoherent["disputed_criterion_ids"] = ["CRIT-A"]
-    incoherent["unresolved_questions"] = ["Evidence is contradictory"]
-    res_incoherent = validate_verifier_response(
-        v_input, det, raw_output=json.dumps(incoherent)
-    )
-    assert res_incoherent.outcome == VerificationOutcome.INVALID_OUTPUT
-    assert res_incoherent.requires_manual_review is True
-    assert res_incoherent.reason_code == VERIFIER_REASON_INCOHERENT_AGREE
-
-    unknown_crit = json.loads((FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8"))
-    unknown_crit["supported_criterion_ids"] = ["CRIT-DOES-NOT-EXIST"]
-    res_unknown = validate_verifier_response(
-        v_input, det, raw_output=json.dumps(unknown_crit)
-    )
-    assert res_unknown.outcome == VerificationOutcome.INVALID_OUTPUT
-    assert res_unknown.requires_manual_review is True
-    assert res_unknown.reason_code == VERIFIER_REASON_INVALID_OUTPUT
-
-
-def test_verifier_disagree_and_uncertain_require_manual_review():
-    v_input = _load_input()
-    disagree_raw = (FIXTURE_DIR / "disagree_output.json").read_text(encoding="utf-8")
-
-    res_disagree = validate_verifier_response(
-        v_input, _accepted_deterministic(v_input), raw_output=disagree_raw
-    )
-    assert res_disagree.outcome == VerificationOutcome.DISAGREE
-    assert res_disagree.requires_manual_review is True
-    assert res_disagree.reason_code == VERIFIER_REASON_DISAGREED
-
-    uncertain_raw = (FIXTURE_DIR / "uncertain_output.json").read_text(encoding="utf-8")
-    res_uncertain = validate_verifier_response(
-        v_input, _accepted_deterministic(v_input), raw_output=uncertain_raw
-    )
-    assert res_uncertain.outcome == VerificationOutcome.UNCERTAIN
-    assert res_uncertain.requires_manual_review is True
-    assert res_uncertain.reason_code == VERIFIER_REASON_UNCERTAIN
-
-
-def test_verifier_malformed_timeout_and_provider_failure_fail_closed():
-    v_input = _load_input()
-    det = _accepted_deterministic(v_input)
-
-    res_bad_json = validate_verifier_response(v_input, det, raw_output="{not-valid-json")
-    assert res_bad_json.outcome == VerificationOutcome.INVALID_OUTPUT
-    assert res_bad_json.requires_manual_review is True
-    assert res_bad_json.reason_code == VERIFIER_REASON_INVALID_OUTPUT
-
-    res_timeout = validate_verifier_response(v_input, det, timed_out=True)
-    assert res_timeout.outcome == VerificationOutcome.TIMEOUT
-    assert res_timeout.requires_manual_review is True
-    assert res_timeout.reason_code == VERIFIER_REASON_TIMEOUT
-
-    res_err = validate_verifier_response(
-        v_input, det, provider_error="beam-1-0 HTTP 503"
-    )
-    assert res_err.outcome == VerificationOutcome.PROVIDER_FAILURE
-    assert res_err.requires_manual_review is True
-    assert res_err.reason_code == VERIFIER_REASON_PROVIDER_FAILURE
-
-    for fixture_name in (
-        "invalid_output_result.json",
-        "provider_failure_result.json",
-        "timeout_result.json",
-    ):
-        parsed = VerifierValidationResult.model_validate_json(
-            (FIXTURE_DIR / fixture_name).read_text(encoding="utf-8")
+class TestVerifierContractAndValidation(unittest.TestCase):
+    def test_verifier_input_enforces_no_tools_and_freezes_nested_passages(self):
+        v_input = _load_input()
+        self.assertEqual(v_input.run_id, v_input.evidence_bundle.run_id)
+        self.assertEqual(
+            v_input.knowledge_snapshot_id,
+            v_input.evidence_bundle.knowledge_snapshot_id,
         )
-        assert parsed.requires_manual_review is True
+        self.assertEqual(
+            v_input.bundle_fingerprint, v_input.evidence_bundle.fingerprint()
+        )
 
+        # Nested passage inside VerifierInput.evidence_bundle must be immutable
+        with self.assertRaises(ValidationError):
+            v_input.evidence_bundle.passages[0].passage.text = "mutated"  # type: ignore[misc]
 
-def test_verifier_rejects_unretrieved_or_duplicate_citation_and_cannot_override_rejection():
-    v_input = _load_input()
-    det_accepted = _accepted_deterministic(v_input)
+        raw_tools = json.loads(
+            (FIXTURE_DIR / "valid_agree_input.json").read_text(encoding="utf-8")
+        )
+        raw_tools["authorized_tools"] = ["get_encounter_note"]
+        with self.assertRaises(ValidationError):
+            VerifierInput.model_validate_json(json.dumps(raw_tools))
 
-    bad_cite = json.loads((FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8"))
-    bad_cite["citation_ids"] = ["ENC-OTHER-CLAIM@v1#p1"]
-    res_cite = validate_verifier_response(
-        v_input, det_accepted, raw_output=json.dumps(bad_cite)
-    )
-    assert res_cite.outcome == VerificationOutcome.INVALID_OUTPUT
-    assert res_cite.requires_manual_review is True
+    def test_verifier_input_rejects_mismatched_bundle_scope_and_tracks_run_snapshot_changes(self):
+        raw = json.loads(
+            (FIXTURE_DIR / "valid_agree_input.json").read_text(encoding="utf-8")
+        )
 
-    dup_cite = json.loads((FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8"))
-    dup_cite["citation_ids"] = ["POL-UHC-72148@v1#p1", "POL-UHC-72148@v1#p1"]
-    res_dup = validate_verifier_response(
-        v_input, det_accepted, raw_output=json.dumps(dup_cite)
-    )
-    assert res_dup.outcome == VerificationOutcome.INVALID_OUTPUT
-    assert res_dup.requires_manual_review is True
+        # 1. Mismatched claim scope between proposed_decision and evidence_bundle
+        wrong_scope = json.loads(json.dumps(raw))
+        wrong_scope["evidence_bundle"]["scope"]["claim_id"] = "CLM-2026-OTHER"
+        for p in wrong_scope["evidence_bundle"]["passages"]:
+            p["claim_id"] = "CLM-2026-OTHER"
+        with self.assertRaises(ValidationError):
+            VerifierInput.model_validate_json(json.dumps(wrong_scope))
 
-    det_rejected = ValidationResult(
-        decision_id=v_input.proposed_decision.decision_id,
-        claim_id=v_input.proposed_decision.claim_id,
-        service_line_id=v_input.proposed_decision.service_line_id,
-        outcome=ValidationOutcome.REJECTED_MANUAL_REVIEW,
-        validation_problems=[
-            ValidationProblem(
-                code="PROHIBITED_PATIENT_BILLING",
-                field_path="recommended_disposition",
-                message="Rejected deterministically.",
-                is_repairable=False,
+        # 2. Tampered passage provenance inside EvidenceBundle
+        tampered_passage = json.loads(json.dumps(raw))
+        tampered_passage["evidence_bundle"]["passages"][0]["claim_id"] = "CLM-2026-OTHER"
+        with self.assertRaises(ValidationError):
+            VerifierInput.model_validate_json(json.dumps(tampered_passage))
+
+        # 3. Changing run_id or knowledge_snapshot_id changes the canonical bundle fingerprint
+        v_orig = _load_input()
+        alt_run = json.loads(json.dumps(raw))
+        alt_run["evidence_bundle"]["run_id"] = "run-005097-02"
+        v_alt_run = VerifierInput.model_validate_json(json.dumps(alt_run))
+        self.assertNotEqual(v_alt_run.bundle_fingerprint, v_orig.bundle_fingerprint)
+
+        alt_snap = json.loads(json.dumps(raw))
+        alt_snap["evidence_bundle"]["knowledge_snapshot_id"] = "knowledge-v2"
+        v_alt_snap = VerifierInput.model_validate_json(json.dumps(alt_snap))
+        self.assertNotEqual(v_alt_snap.bundle_fingerprint, v_orig.bundle_fingerprint)
+
+    def test_verifier_agree_with_valid_same_run_citations(self):
+        v_input = _load_input()
+        raw_out = (FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8")
+
+        res = validate_verifier_response(
+            v_input, _accepted_deterministic(v_input), raw_output=raw_out
+        )
+
+        self.assertEqual(res.outcome, VerificationOutcome.AGREE)
+        self.assertFalse(res.requires_manual_review)
+        self.assertEqual(res.reason_code, VERIFIER_REASON_AGREED)
+        self.assertIsNotNone(res.validated_report)
+
+    def test_verifier_agree_enforces_policy_formula_coverage_and_allows_valid_or_branches(self):
+        base_raw = json.loads(
+            (FIXTURE_DIR / "valid_agree_input.json").read_text(encoding="utf-8")
+        )
+        base_raw["proposed_decision"]["criterion_assessments"] = [
+            {
+                "criterion_id": "CRIT-A",
+                "status": CriterionStatus.SUPPORTED.value,
+                "explanation": "6 weeks PT documented.",
+                "citation_ids": ["ENC-CLM-2026-005097-CN@v1#p1"],
+            },
+            {
+                "criterion_id": "CRIT-B",
+                "status": CriterionStatus.SUPPORTED.value,
+                "explanation": "Neurologic deficit documented.",
+                "citation_ids": ["ENC-CLM-2026-005097-CN@v1#p1"],
+            },
+            {
+                "criterion_id": "CRIT-C",
+                "status": CriterionStatus.SUPPORTED.value,
+                "explanation": "Red flag myelopathy documented.",
+                "citation_ids": ["ENC-CLM-2026-005097-CN@v1#p1"],
+            },
+        ]
+
+        # 1. Formula requires CRIT-A AND CRIT-B, but verifier only supports CRIT-A -> fail closed
+        and_raw = json.loads(json.dumps(base_raw))
+        and_raw["evidence_bundle"]["policy_formula"] = "CRIT-A AND CRIT-B"
+        v_and = VerifierInput.model_validate_json(json.dumps(and_raw))
+
+        partial_agree = json.loads(
+            (FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8")
+        )
+        partial_agree["supported_criterion_ids"] = ["CRIT-A"]
+
+        res_partial = validate_verifier_response(
+            v_and,
+            _accepted_deterministic(v_and),
+            raw_output=json.dumps(partial_agree),
+        )
+        self.assertEqual(res_partial.outcome, VerificationOutcome.INVALID_OUTPUT)
+        self.assertTrue(res_partial.requires_manual_review)
+        self.assertEqual(
+            res_partial.reason_code, VERIFIER_REASON_FORMULA_NOT_SATISFIED
+        )
+
+        # 2. Formula allows (CRIT-A AND CRIT-B) OR CRIT-C, and verifier supports CRIT-C -> AGREE
+        or_raw = json.loads(json.dumps(base_raw))
+        or_raw["evidence_bundle"]["policy_formula"] = "(CRIT-A AND CRIT-B) OR CRIT-C"
+        v_or = VerifierInput.model_validate_json(json.dumps(or_raw))
+
+        alt_branch_agree = json.loads(
+            (FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8")
+        )
+        alt_branch_agree["supported_criterion_ids"] = ["CRIT-C"]
+
+        res_branch = validate_verifier_response(
+            v_or,
+            _accepted_deterministic(v_or),
+            raw_output=json.dumps(alt_branch_agree),
+        )
+        self.assertEqual(res_branch.outcome, VerificationOutcome.AGREE)
+        self.assertFalse(res_branch.requires_manual_review)
+        self.assertEqual(res_branch.reason_code, VERIFIER_REASON_AGREED)
+
+    def test_verifier_rejects_mismatched_deterministic_validation_identity_or_decision(self):
+        v_input = _load_input()
+        valid_agree_raw = (FIXTURE_DIR / "valid_agree_output.json").read_text(
+            encoding="utf-8"
+        )
+
+        other_decision = v_input.proposed_decision.model_copy(
+            update={
+                "decision_id": "dec-other-999",
+                "claim_id": "CLM-2026-999999",
+            }
+        )
+        mismatched_validation = ValidationResult(
+            decision_id="dec-other-999",
+            claim_id="CLM-2026-999999",
+            service_line_id=1,
+            outcome=ValidationOutcome.ACCEPTED,
+            validated_decision=other_decision,
+        )
+
+        res_mismatch = validate_verifier_response(
+            v_input, mismatched_validation, raw_output=valid_agree_raw
+        )
+        self.assertEqual(res_mismatch.outcome, VerificationOutcome.INVALID_OUTPUT)
+        self.assertTrue(res_mismatch.requires_manual_review)
+        self.assertEqual(
+            res_mismatch.reason_code, VERIFIER_REASON_VALIDATION_MISMATCH
+        )
+
+        altered_decision = v_input.proposed_decision.model_copy(
+            update={"rationale": "Tampered rationale."}
+        )
+        altered_validation = ValidationResult(
+            decision_id=v_input.proposed_decision.decision_id,
+            claim_id=v_input.proposed_decision.claim_id,
+            service_line_id=v_input.proposed_decision.service_line_id,
+            outcome=ValidationOutcome.ACCEPTED,
+            validated_decision=altered_decision,
+        )
+        res_altered = validate_verifier_response(
+            v_input, altered_validation, raw_output=valid_agree_raw
+        )
+        self.assertEqual(res_altered.outcome, VerificationOutcome.INVALID_OUTPUT)
+        self.assertTrue(res_altered.requires_manual_review)
+        self.assertEqual(
+            res_altered.reason_code, VERIFIER_REASON_VALIDATION_MISMATCH
+        )
+
+    def test_verifier_rejects_incoherent_agree_and_unknown_criterion_ids(self):
+        v_input = _load_input()
+        det = _accepted_deterministic(v_input)
+
+        incoherent = json.loads(
+            (FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8")
+        )
+        incoherent["disputed_criterion_ids"] = ["CRIT-A"]
+        incoherent["unresolved_questions"] = ["Evidence is contradictory"]
+        res_incoherent = validate_verifier_response(
+            v_input, det, raw_output=json.dumps(incoherent)
+        )
+        self.assertEqual(res_incoherent.outcome, VerificationOutcome.INVALID_OUTPUT)
+        self.assertTrue(res_incoherent.requires_manual_review)
+        self.assertEqual(
+            res_incoherent.reason_code, VERIFIER_REASON_INCOHERENT_AGREE
+        )
+
+        unknown_crit = json.loads(
+            (FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8")
+        )
+        unknown_crit["supported_criterion_ids"] = ["CRIT-DOES-NOT-EXIST"]
+        res_unknown = validate_verifier_response(
+            v_input, det, raw_output=json.dumps(unknown_crit)
+        )
+        self.assertEqual(res_unknown.outcome, VerificationOutcome.INVALID_OUTPUT)
+        self.assertTrue(res_unknown.requires_manual_review)
+        self.assertEqual(res_unknown.reason_code, VERIFIER_REASON_INVALID_OUTPUT)
+
+    def test_verifier_disagree_and_uncertain_require_manual_review(self):
+        v_input = _load_input()
+        disagree_raw = (FIXTURE_DIR / "disagree_output.json").read_text(
+            encoding="utf-8"
+        )
+
+        res_disagree = validate_verifier_response(
+            v_input, _accepted_deterministic(v_input), raw_output=disagree_raw
+        )
+        self.assertEqual(res_disagree.outcome, VerificationOutcome.DISAGREE)
+        self.assertTrue(res_disagree.requires_manual_review)
+        self.assertEqual(res_disagree.reason_code, VERIFIER_REASON_DISAGREED)
+
+        uncertain_raw = (FIXTURE_DIR / "uncertain_output.json").read_text(
+            encoding="utf-8"
+        )
+        res_uncertain = validate_verifier_response(
+            v_input, _accepted_deterministic(v_input), raw_output=uncertain_raw
+        )
+        self.assertEqual(res_uncertain.outcome, VerificationOutcome.UNCERTAIN)
+        self.assertTrue(res_uncertain.requires_manual_review)
+        self.assertEqual(res_uncertain.reason_code, VERIFIER_REASON_UNCERTAIN)
+
+    def test_verifier_malformed_timeout_and_provider_failure_fail_closed(self):
+        v_input = _load_input()
+        det = _accepted_deterministic(v_input)
+
+        res_bad_json = validate_verifier_response(
+            v_input, det, raw_output="{not-valid-json"
+        )
+        self.assertEqual(res_bad_json.outcome, VerificationOutcome.INVALID_OUTPUT)
+        self.assertTrue(res_bad_json.requires_manual_review)
+        self.assertEqual(res_bad_json.reason_code, VERIFIER_REASON_INVALID_OUTPUT)
+
+        res_timeout = validate_verifier_response(v_input, det, timed_out=True)
+        self.assertEqual(res_timeout.outcome, VerificationOutcome.TIMEOUT)
+        self.assertTrue(res_timeout.requires_manual_review)
+        self.assertEqual(res_timeout.reason_code, VERIFIER_REASON_TIMEOUT)
+
+        res_err = validate_verifier_response(
+            v_input, det, provider_error="beam-1-0 HTTP 503"
+        )
+        self.assertEqual(res_err.outcome, VerificationOutcome.PROVIDER_FAILURE)
+        self.assertTrue(res_err.requires_manual_review)
+        self.assertEqual(res_err.reason_code, VERIFIER_REASON_PROVIDER_FAILURE)
+
+        for fixture_name in (
+            "invalid_output_result.json",
+            "provider_failure_result.json",
+            "timeout_result.json",
+        ):
+            parsed = VerifierValidationResult.model_validate_json(
+                (FIXTURE_DIR / fixture_name).read_text(encoding="utf-8")
             )
-        ],
-        manual_review_reasons=["SAFETY_ESCALATION_PROHIBITED_BILLING"],
-    )
-    valid_agree_raw = (FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8")
-    res_override = validate_verifier_response(
-        v_input, det_rejected, raw_output=valid_agree_raw
-    )
-    assert res_override.requires_manual_review is True
-    assert res_override.reason_code == VERIFIER_REASON_DETERMINISTIC_REJECTED
+            self.assertTrue(parsed.requires_manual_review)
+
+    def test_verifier_rejects_unretrieved_or_duplicate_citation_and_cannot_override_rejection(self):
+        v_input = _load_input()
+        det_accepted = _accepted_deterministic(v_input)
+
+        bad_cite = json.loads(
+            (FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8")
+        )
+        bad_cite["citation_ids"] = ["ENC-OTHER-CLAIM@v1#p1"]
+        res_cite = validate_verifier_response(
+            v_input, det_accepted, raw_output=json.dumps(bad_cite)
+        )
+        self.assertEqual(res_cite.outcome, VerificationOutcome.INVALID_OUTPUT)
+        self.assertTrue(res_cite.requires_manual_review)
+
+        dup_cite = json.loads(
+            (FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8")
+        )
+        dup_cite["citation_ids"] = ["POL-UHC-72148@v1#p1", "POL-UHC-72148@v1#p1"]
+        res_dup = validate_verifier_response(
+            v_input, det_accepted, raw_output=json.dumps(dup_cite)
+        )
+        self.assertEqual(res_dup.outcome, VerificationOutcome.INVALID_OUTPUT)
+        self.assertTrue(res_dup.requires_manual_review)
+
+        det_rejected = ValidationResult(
+            decision_id=v_input.proposed_decision.decision_id,
+            claim_id=v_input.proposed_decision.claim_id,
+            service_line_id=v_input.proposed_decision.service_line_id,
+            outcome=ValidationOutcome.REJECTED_MANUAL_REVIEW,
+            validation_problems=[
+                ValidationProblem(
+                    code="PROHIBITED_PATIENT_BILLING",
+                    field_path="recommended_disposition",
+                    message="Rejected deterministically.",
+                    is_repairable=False,
+                )
+            ],
+            manual_review_reasons=["SAFETY_ESCALATION_PROHIBITED_BILLING"],
+        )
+        valid_agree_raw = (FIXTURE_DIR / "valid_agree_output.json").read_text(
+            encoding="utf-8"
+        )
+        res_override = validate_verifier_response(
+            v_input, det_rejected, raw_output=valid_agree_raw
+        )
+        self.assertTrue(res_override.requires_manual_review)
+        self.assertEqual(
+            res_override.reason_code, VERIFIER_REASON_DETERMINISTIC_REJECTED
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
