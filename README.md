@@ -140,7 +140,10 @@ tables. All four return the shared `ToolResult` contract. Policy and encounter
 retrieval are exercised by the integrated runtime; the new lookup tools remain
 outside the agent's route allowlist pending routing-owner approval. An unknown
 CARC or unlisted payer returns `NO_MATCH`, not the baseline's default profile.
-`calculate_deadline` and eligibility retrieval are not implemented yet.
+`calculate_deadline` reports the run's filing deadline, its status, and days
+remaining or overdue from the trusted baseline finding, without recomputing
+it. It is wired into every run but available to the agent only on routes that
+authorize it (none yet). Eligibility retrieval is not implemented yet.
 
 To check the corpus, or to freeze it for the final evaluation:
 
@@ -382,7 +385,7 @@ explicitly tracked extension points:
 - [`evaluation/`](evaluation/) — accepted trace examples plus the comparison
   harness.
 
-Eligibility retrieval, an agent-callable deadline wrapper, live hosted-model
+Eligibility retrieval, route authorization for the deadline tool, live hosted-model
 execution, evidence verification, grounded drafting, and the full comparative
 evaluation remain incomplete rather than implied by directory names.
 
@@ -777,7 +780,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 147 tests
+Ran 157 tests
 OK
 ```
 
