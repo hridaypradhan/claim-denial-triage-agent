@@ -68,6 +68,8 @@ from .evidence_bundle import (
     PASSAGE_ID_PATTERN,
     RetrievalRecord,
 )
+VerifierInput.model_rebuild()
+DraftingInput.model_rebuild()
 
 __all__ = [
     "CONTRACT_VERSION",
