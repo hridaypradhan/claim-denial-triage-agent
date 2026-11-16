@@ -34,6 +34,10 @@ Follow these rules:
 - Every grounded claim statement must be an exact normalized quote from at
   least one passage identified by that statement's citation IDs.
 - Include every grounded-claim citation in the draft's top-level citation_ids.
+- Format body from grounded_claims in their listed order.
+- End each statement with punctuation, then append a space and its citation
+  IDs inside square brackets separated by comma and space.
+- Return all rendered claims joined with one space.
 - Set approval_state to PENDING_REVIEW.
 - Do not claim that the appeal has been approved, submitted, or accepted.
 - Return exactly one AppealDraft object as JSON only, without Markdown,

@@ -6,6 +6,7 @@ import unittest
 
 from claim_agent.agent.drafting.execution import execute_drafting
 from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace
+from claim_agent.agent.trace_redaction import REDACTED_VALUE
 from tests.agent.drafting.support import (
     FakeDraftingClient,
     StepClock,
@@ -67,6 +68,25 @@ class DraftingTraceAdapterTests(unittest.TestCase):
         self.assertEqual("RuntimeError", events[1].payload["error_type"])
         self.assertNotIn("private", str(events[1].payload))
         self.assertTrue(events[2].payload["requires_manual_review"])
+
+    def test_invalid_output_is_redacted_in_canonical_trace(self) -> None:
+        """Invalid provider prose should retain only a stable hash."""
+
+        drafting_input = load_drafting_input()
+        trace = InMemoryRuntimeTrace(run_id=drafting_input.run_id)
+        private_output = "private invalid appeal prose"
+
+        execute_drafting(
+            drafting_client=FakeDraftingClient(response_text=private_output),
+            request_id=REQUEST_ID,
+            drafting_input=drafting_input,
+            runtime_trace=trace,
+        )
+
+        responded = make_adapter().adapt(trace.entries)[1]
+        self.assertEqual(REDACTED_VALUE, responded.payload["raw_output"])
+        self.assertEqual(64, len(responded.payload["raw_output_sha256"]))
+        self.assertNotIn(private_output, str(responded.payload))
 
 
 if __name__ == "__main__":

@@ -52,6 +52,7 @@ class DraftingPromptTests(unittest.TestCase):
             "untrusted data",
             "Do not invent",
             "exact normalized quote",
+            "joined with one space",
             "PENDING_REVIEW",
             "JSON only",
         )

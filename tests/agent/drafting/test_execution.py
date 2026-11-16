@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 
 from claim_agent.agent.drafting.execution import execute_drafting
@@ -12,6 +13,8 @@ from claim_agent.safety.drafting import (
     DRAFTING_REASON_NOT_VERIFIED,
     DRAFTING_REASON_PROVIDER_FAILURE,
     DRAFTING_REASON_TIMEOUT,
+    DRAFTING_REASON_UNGROUNDED_CLAIM,
+    render_grounded_appeal_body,
 )
 from tests.agent.drafting.support import (
     FakeDraftingClient,
@@ -48,6 +51,59 @@ class DraftingExecutionTests(unittest.TestCase):
         self.assertIsNotNone(result.validation_result.validated_draft)
         self.assertEqual(125, result.elapsed_ms)
         self.assertEqual(1, len(client.received_requests))
+
+    def test_natural_model_body_is_replaced_by_grounded_rendering(self) -> None:
+        """Body prose must be derived from validated grounded claims."""
+
+        payload = json.loads(load_draft_output())
+        natural_body = "Please reconsider this claim based on the records."
+        payload["body"] = natural_body
+        response_text = json.dumps(payload)
+
+        result = execute_drafting(
+            drafting_client=FakeDraftingClient(response_text=response_text),
+            request_id=REQUEST_ID,
+            drafting_input=load_drafting_input(),
+            runtime_trace=runtime_trace(),
+        )
+
+        draft = result.validation_result.validated_draft
+        self.assertEqual(DraftingOutcome.ACCEPTED, result.validation_result.outcome)
+        self.assertIsNotNone(draft)
+        self.assertEqual(
+            render_grounded_appeal_body(draft.grounded_claims),
+            draft.body,
+        )
+        self.assertNotEqual(natural_body, draft.body)
+        self.assertEqual(response_text, result.response.response_text)
+
+    def test_body_rendering_does_not_authorize_unsupported_claims(self) -> None:
+        """Canonical body construction must not bypass quote validation."""
+
+        payload = json.loads(load_draft_output())
+        payload["body"] = "Natural provider prose."
+        payload["grounded_claims"][0]["statement"] = (
+            "An unsupported assertion absent from the cited passage"
+        )
+
+        result = execute_drafting(
+            drafting_client=FakeDraftingClient(
+                response_text=json.dumps(payload)
+            ),
+            request_id=REQUEST_ID,
+            drafting_input=load_drafting_input(),
+            runtime_trace=runtime_trace(),
+        )
+
+        self.assertEqual(
+            DraftingOutcome.REJECTED_UNGROUNDED,
+            result.validation_result.outcome,
+        )
+        self.assertEqual(
+            DRAFTING_REASON_UNGROUNDED_CLAIM,
+            result.validation_result.reason_code,
+        )
+        self.assertIsNone(result.validation_result.validated_draft)
 
     def test_unauthorized_input_never_calls_model(self) -> None:
         drafting_input = load_drafting_input()

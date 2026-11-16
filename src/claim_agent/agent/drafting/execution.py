@@ -12,6 +12,8 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
+from pydantic import ValidationError
+
 from claim_agent.agent.drafting.interface import (
     DraftingClient,
     DraftingRequest,
@@ -26,11 +28,13 @@ from claim_agent.agent.drafting.trace import (
     record_drafting_result,
 )
 from claim_agent.contracts import (
+    AppealDraft,
     DraftingInput,
     DraftingValidationResult,
 )
 from claim_agent.safety.drafting import (
     check_drafting_authorization,
+    render_grounded_appeal_body,
     validate_appeal_draft,
 )
 
@@ -138,7 +142,9 @@ def execute_drafting(
         else:
             validation_result = validate_appeal_draft(
                 drafting_input,
-                raw_output=response.response_text,
+                raw_output=_replace_body_with_grounded_rendering(
+                    response.response_text
+                ),
             )
 
     record_drafting_result(
@@ -155,6 +161,28 @@ def execute_drafting(
         validation_result=validation_result,
         elapsed_ms=elapsed_ms,
     )
+
+
+def _replace_body_with_grounded_rendering(
+    raw_output: str,
+) -> str:
+    """Replace provider-written body prose with grounded claim rendering.
+
+    Parsing remains strict. Malformed output passes through unchanged so the
+    deterministic validator reports its existing INVALID_OUTPUT result.
+    Grounded claims, citations, identities, and every other contract field
+    remain subject to deterministic validation.
+    """
+
+    try:
+        draft = AppealDraft.model_validate_json(raw_output)
+    except ValidationError:
+        return raw_output
+
+    canonical_draft = draft.model_copy(
+        update={"body": render_grounded_appeal_body(draft.grounded_claims)}
+    )
+    return canonical_draft.model_dump_json()
 
 
 def _elapsed_milliseconds(

@@ -454,14 +454,18 @@ invoke verification and drafting after deterministic validation.
   is submitted, approved, or substituted with a scripted or alternate-model
   fallback.
 - Deterministic validation requires resolvable same-run citations, exact
-  normalized quotes for grounded claim statements, matching case identities,
-  and a body rendered from the validated claims. Malformed, unsupported,
-  timed-out, or failed drafts produce no validated draft and require manual
-  review.
+  normalized quotes for grounded claim statements, and matching case
+  identities. After structured output parsing, code replaces provider-written
+  body prose with the deterministic rendering of those claims and citations;
+  unsupported claims therefore cannot enter the final body. Malformed,
+  unsupported, timed-out, or failed drafts produce no validated draft and
+  require manual review.
 - Drafting requests, provider responses, sanitized failures, validation
   outcomes, latency, usage, prompt version, and bundle provenance enter the
   canonical trace with `model_role=DRAFTER`. Canonical response events retain
   audit identifiers and citations without storing appeal subject or body text.
+  Unparseable raw output is replaced by `[REDACTED]` plus a SHA-256 fingerprint
+  before durable trace persistence.
 - Normal tests use injected fake verifier and drafting clients and require no
   hosted credential or network access. The current integrated demonstration
   does not yet call this post-decision coordinator automatically.
