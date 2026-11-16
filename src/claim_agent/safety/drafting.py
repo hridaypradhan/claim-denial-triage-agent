@@ -375,7 +375,8 @@ def validate_appeal_draft(
 
 
 def _split_sentences(text: str) -> List[str]:
-    stripped_citations = _CITATION_ID_PATTERN.sub(" ", text)
+    without_brackets = re.sub(r"\[[^\]]*\]", " ", text)
+    stripped_citations = _CITATION_ID_PATTERN.sub(" ", without_brackets)
     parts = re.split(r"[.!?]+(?:\s+|$)", stripped_citations)
     return [part.strip() for part in parts if part.strip()]
 

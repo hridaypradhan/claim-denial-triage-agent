@@ -46,7 +46,7 @@
     "service_line_id": 1,
     "run_id": "run-005097-01",
     "knowledge_snapshot_id": "knowledge-v1",
-    "bundle_fingerprint": "REPLACE_WITH_EXACT_FINGERPRINT",
+    "bundle_fingerprint": "5990eade7075d1cfcd0b6293dc6a5893287df611a039f160c1c15adccf11d9e2",
     "outcome": "AGREE",
     "requires_manual_review": false,
     "reason_code": "VERIFIER_AGREED",
