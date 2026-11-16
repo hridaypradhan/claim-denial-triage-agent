@@ -70,7 +70,8 @@ Primary ownership means coordinating design, implementation, tests, and document
 - Policy matching that filters by payer, procedure, and service date before ranking, with no fallback to another payer's policy or a different effective date.
 - Encounter notes returned as numbered, citable passages, with unavailable documents reported explicitly.
 - Eligibility records (`eligibility/`, frozen as `eligibility-v1`) report
-  evidence without deciding eligibility.
+  evidence without deciding eligibility. The evidence bundle records the
+  eligibility snapshot on each retrieval that read it.
 - Knowledge manifests, passage IDs, provenance, and no-match/error responses.
 - The optional `calculate_deadline` dispatcher wrapper tracked by #29; the
   frozen baseline currently supplies deterministic deadline arithmetic.

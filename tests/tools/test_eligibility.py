@@ -3,6 +3,7 @@
 import glob
 import json
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -111,8 +112,21 @@ class EligibilityStoreTest(unittest.TestCase):
         self.assertEqual(KnowledgeStore(ELIGIBILITY_ROOT).snapshot_id, "eligibility-v1")
         self.assertEqual(check_lock(ELIGIBILITY_ROOT), [])
 
+    def test_store_files_check_out_with_lf_on_every_platform(self):
+        # A CRLF checkout (Windows, core.autocrlf=true) would change the hashes
+        # and fail check_lock, so every locked JSON file must be pinned to LF.
+        files = [str(p.relative_to(REPO)) for p in sorted(ELIGIBILITY_ROOT.rglob("*.json"))]
+        try:
+            out = subprocess.run(["git", "check-attr", "eol", "--", *files], cwd=REPO,
+                                 capture_output=True, text=True, check=True).stdout
+        except (OSError, subprocess.CalledProcessError):
+            self.skipTest("git is not available")
+        self.assertEqual(len(out.splitlines()), len(files))
+        for line in out.splitlines():
+            self.assertTrue(line.endswith(": eol: lf"), line)
+
     def test_no_held_out_claim_has_a_record(self):
-        held_out = {json.load(open(f))["patient_account"] for f in glob.glob(str(REPO / "datasets/held_out/claims/*.json"))}
+        held_out = {json.loads(Path(f).read_text())["patient_account"] for f in glob.glob(str(REPO / "datasets/held_out/claims/*.json"))}
         store = KnowledgeStore(ELIGIBILITY_ROOT)
         records = {e["patient_account"] for e in store.entries_of_type("eligibility_record")}
         self.assertEqual(held_out & records, set())

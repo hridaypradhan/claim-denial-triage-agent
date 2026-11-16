@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 from datetime import date
 from pathlib import Path
@@ -9,9 +10,10 @@ from pathlib import Path
 from claim_agent.agent.run_evidence import RunEvidenceStore
 from claim_agent.agent.tool_result_adapter import ToolResultDispatcherAdapter
 from claim_agent.contracts import ClaimEvidenceScope, CitationProblemCode
+from claim_agent.contracts.evidence_bundle import EvidenceBundle
 from claim_agent.tools.dispatcher import ToolDispatcher
 from claim_agent.tools.eligibility import ELIGIBILITY_ROOT, ELIGIBILITY_TOOL, EligibilityToolDispatcher
-from claim_agent.tools.evidence_bundle import EvidenceBundleRecorder
+from claim_agent.tools.evidence_bundle import EvidenceBundleError, EvidenceBundleRecorder
 from claim_agent.tools.knowledge_store import KnowledgeStore
 
 KNOWLEDGE = Path(__file__).resolve().parents[2] / "knowledge"
@@ -55,6 +57,38 @@ class EligibilityEvidenceFlowTest(unittest.TestCase):
             with self.subTest(citation=unretrieved):
                 problems = bundle.check_citations([unretrieved])
                 self.assertEqual([p.code for p in problems], [CitationProblemCode.UNRESOLVED_CITATION])
+
+    def test_the_bundle_records_the_eligibility_snapshot(self):
+        self.ask("UHC", "REQ-1")
+        bundle = self.recorder.freeze()
+
+        self.assertEqual(bundle.retrievals[0].source_snapshot_id, "eligibility-v1")
+        self.assertEqual(bundle.snapshot_ids, ("knowledge-v2", "eligibility-v1"))
+        self.assertIn('"source_snapshot_id":"eligibility-v1"', bundle.model_dump_json())
+
+    def test_a_bundle_cannot_hold_eligibility_evidence_without_its_snapshot(self):
+        self.ask("UHC", "REQ-1")
+        data = self.recorder.freeze().model_dump(mode="json")
+        data["retrievals"][0].pop("source_snapshot_id")
+
+        with self.assertRaisesRegex(ValueError, "no eligibility snapshot"):
+            EvidenceBundle.model_validate_json(json.dumps(data))
+
+    def test_the_recorder_rejects_eligibility_evidence_without_a_snapshot(self):
+        real = EligibilityToolDispatcher(
+            ToolDispatcher(KnowledgeStore(KNOWLEDGE)), KnowledgeStore(ELIGIBILITY_ROOT), "PA-SYN-10104",
+        )
+
+        class DropsSnapshot:
+            def dispatch(self, request_id, tool_name, tool_arguments):
+                result = real.dispatch(request_id=request_id, tool_name=tool_name, tool_arguments=tool_arguments)
+                data = {k: v for k, v in result.data.items() if k != "eligibility_snapshot_id"}
+                return result.model_copy(update={"data": data})
+
+        recorder = EvidenceBundleRecorder(DropsSnapshot(), "RUN-ELIG", "knowledge-v2", SCOPE)
+        with self.assertRaises(EvidenceBundleError):
+            recorder.dispatch("REQ-1", ELIGIBILITY_TOOL, {"patient_account": "PA-SYN-10104", "payer": "UHC"})
+        self.assertEqual(recorder.freeze().retrievals, ())
 
     def test_a_no_match_adds_nothing(self):
         self.assertFalse(self.ask("AETNA", "REQ-1").succeeded)

@@ -17,11 +17,14 @@ from datetime import date
 from enum import Enum
 from typing import List, Mapping, Optional, Sequence, Tuple
 
-from pydantic import Field, model_validator
+from pydantic import Field, model_serializer, model_validator
 
 from claim_agent.contracts.schema import EvidencePassage, StrictContract, ToolStatus
 
 BUNDLE_VERSION = "0.1"
+# Passages of this type come from the separate frozen eligibility store (#56),
+# so the call that returned them must record that store's snapshot.
+ELIGIBILITY_SOURCE_TYPE = "eligibility_record"
 PASSAGE_ID_PATTERN = re.compile(r"^(?P<source_id>[^@#\s]+)@v(?P<version>[^#\s]+)#(?P<anchor>[^#\s]+)$")
 
 
@@ -73,6 +76,16 @@ class RetrievalRecord(StrictContract):
     error_code: Optional[str] = None
     source_ids: Tuple[str, ...] = ()
     passage_ids: Tuple[str, ...] = ()
+    # Set only when the call read a frozen store other than the knowledge
+    # snapshot (eligibility). Omitted when unset so existing fingerprints hold.
+    source_snapshot_id: Optional[str] = Field(default=None, min_length=1)
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_snapshot(self, handler):
+        data = handler(self)
+        if data.get("source_snapshot_id") is None:
+            data.pop("source_snapshot_id", None)
+        return data
 
 
 class AvailableSource(StrictContract):
@@ -154,6 +167,8 @@ class EvidenceBundle(StrictContract):
                 raise ValueError(f"passage {pid} comes from a source call {item.call_index} did not report")
             if item.source_type != item.passage.source_type:
                 raise ValueError(f"passage {pid} has a source_type that differs from its passage")
+            if item.source_type == ELIGIBILITY_SOURCE_TYPE and call.source_snapshot_id is None:
+                raise ValueError(f"eligibility passage {pid} has no eligibility snapshot on call {item.call_index}")
         retrieved_sources = {(p.passage.source_id, p.passage.version) for p in self.passages}
         for source in self.available_sources:
             if source.retrieved != ((source.source_id, source.version) in retrieved_sources):
@@ -163,6 +178,13 @@ class EvidenceBundle(StrictContract):
     @property
     def passage_ids(self) -> Tuple[str, ...]:
         return tuple(item.passage.passage_id for item in self.passages)
+
+    @property
+    def snapshot_ids(self) -> Tuple[str, ...]:
+        """Every frozen snapshot the bundle's evidence came from, knowledge first."""
+
+        extra = sorted({r.source_snapshot_id for r in self.retrievals if r.source_snapshot_id})
+        return (self.knowledge_snapshot_id, *(s for s in extra if s != self.knowledge_snapshot_id))
 
     @property
     def unretrieved_sources(self) -> Tuple[AvailableSource, ...]:

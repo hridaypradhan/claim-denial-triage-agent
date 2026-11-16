@@ -148,7 +148,9 @@ claim's own member account: coverage periods and citable passages such as
 eligibility. Another payer may be queried, to check for other coverage. The
 synthetic records are in [`eligibility/`](eligibility/), a separate store
 frozen as `eligibility-v1` with its own lock, so the frozen `knowledge-v2`
-corpus is unchanged. Only development and demonstration claims have records
+corpus is unchanged. Each retrieval in the evidence bundle records the
+eligibility snapshot it read, so a bundle lists every frozen store behind its
+evidence (`bundle.snapshot_ids`). Only development and demonstration claims have records
 (610104, 610105, 005097), and no held-out claim does. No route authorizes the
 tool yet (#55).
 
@@ -786,7 +788,7 @@ py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
 Expected result:
 
 ```text
-Ran 160 tests
+Ran 161 tests
 OK
 ```
 

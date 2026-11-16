@@ -32,10 +32,10 @@ from pathlib import Path
 from typing import Mapping, Optional, Tuple
 
 from claim_agent.contracts import ErrorCode, EvidencePassage, ToolResult, ToolStatus
+from claim_agent.contracts.evidence_bundle import ELIGIBILITY_SOURCE_TYPE
 from claim_agent.tools.knowledge_store import KnowledgeStore, KnowledgeStoreError
 
 ELIGIBILITY_TOOL = "get_eligibility_evidence"
-ELIGIBILITY_SOURCE_TYPE = "eligibility_record"
 ELIGIBILITY_ARGUMENT_NAMES = {"patient_account", "payer"}
 ELIGIBILITY_ROOT = Path(__file__).resolve().parents[3] / "eligibility"
 
