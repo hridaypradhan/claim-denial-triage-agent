@@ -8,6 +8,7 @@ the bounded runtime depend directly on that provider.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Optional, Protocol, runtime_checkable
 
 from claim_agent.agent.model_interface import (
@@ -21,6 +22,13 @@ class HostedModelTimeoutError(TimeoutError):
     """Raised when a hosted model call exceeds its configured timeout."""
 
 
+class HostedResponseSchema(str, Enum):
+    """Strict structured-output contract expected from a hosted call."""
+
+    RUNTIME_ACTION = "runtime_action"
+    VERIFIER_REPORT = "verifier_report"
+
+
 @dataclass(frozen=True)
 class HostedModelTransportRequest:
     """Provider-neutral information required for one hosted model call."""
@@ -31,6 +39,7 @@ class HostedModelTransportRequest:
     task_context: str
     allowed_tool_names: tuple[str, ...]
     timeout_seconds: float
+    response_schema: HostedResponseSchema = HostedResponseSchema.RUNTIME_ACTION
 
 
 @dataclass(frozen=True)

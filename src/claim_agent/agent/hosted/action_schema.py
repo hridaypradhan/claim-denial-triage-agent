@@ -18,6 +18,9 @@ from claim_agent.tools.dispatcher import (
     MEDICAL_POLICY_TOOL,
     PAYER_PROFILE_TOOL,
 )
+from claim_agent.agent.hosted.schema_support import (
+    require_and_close_all_objects,
+)
 
 
 def _text_schema() -> dict[str, object]:
@@ -72,15 +75,12 @@ def build_runtime_action_json_schema(
     """Return a closed JSON Schema for one permitted runtime action."""
 
     normalized_tool_names = _normalize_allowed_tool_names(allowed_tool_names)
-    decision_schema = deepcopy(
-        AgentDecision.model_json_schema(mode="validation")
-    )
-    _require_and_close_all_objects(decision_schema)
+    decision_schema = deepcopy(AgentDecision.model_json_schema(mode="validation"))
+    require_and_close_all_objects(decision_schema)
     definitions = decision_schema.pop("$defs", {})
 
     action_schemas = [
-        _build_tool_action_schema(tool_name)
-        for tool_name in normalized_tool_names
+        _build_tool_action_schema(tool_name) for tool_name in normalized_tool_names
     ]
     action_schemas.extend(
         [
@@ -115,9 +115,7 @@ def _normalize_allowed_tool_names(
     if len(set(allowed_tool_names)) != len(allowed_tool_names):
         raise ValueError("allowed_tool_names must not contain duplicates")
 
-    unknown_tool_names = sorted(
-        set(allowed_tool_names) - set(_TOOL_ARGUMENT_SCHEMAS)
-    )
+    unknown_tool_names = sorted(set(allowed_tool_names) - set(_TOOL_ARGUMENT_SCHEMAS))
     if unknown_tool_names:
         raise ValueError(
             "No runtime-action schema exists for tools: "
@@ -170,22 +168,3 @@ def _build_manual_review_action_schema() -> dict[str, object]:
         "required": ["action", "reason"],
         "additionalProperties": False,
     }
-
-
-def _require_and_close_all_objects(value: object) -> None:
-    """Make every generated decision object closed and fully required."""
-
-    if isinstance(value, dict):
-        if value.get("type") == "object":
-            properties = value.get("properties")
-            if isinstance(properties, dict):
-                value["required"] = list(properties)
-            value["additionalProperties"] = False
-
-        for nested_value in value.values():
-            _require_and_close_all_objects(nested_value)
-        return
-
-    if isinstance(value, list):
-        for nested_value in value:
-            _require_and_close_all_objects(nested_value)

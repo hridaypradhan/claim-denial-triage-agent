@@ -30,6 +30,10 @@ from claim_agent.agent.trace_adapter_helpers import (
     latest_validated_decision,
     next_model_call_index,
 )
+from claim_agent.agent.trace_adapter_verifier import (
+    adapt_verifier_response,
+    build_verification_payload,
+)
 from claim_agent.agent.trace_redaction import redact_trace_payload
 from claim_agent.contracts import RouteDecision
 
@@ -125,21 +129,40 @@ class CanonicalTraceAdapter:
         common = self._common_event_values(runtime_entry, sequence_number)
 
         if name == "MODEL_REQUESTED":
+            request_payload: dict[str, object] = {
+                "call_index": next_model_call_index(prior_entries),
+                "prompt_sha256": details["prompt_sha256"],
+                "passage_ids": collected_passage_ids(prior_entries),
+                "repair_attempt": details.get(
+                    "repair_attempt",
+                    0,
+                ),
+            }
+
+            if "model_role" in details:
+                request_payload["model_role"] = details["model_role"]
+
+            for provenance_field in (
+                "bundle_fingerprint",
+                "evidence_run_id",
+                "knowledge_snapshot_id",
+            ):
+                if provenance_field in details:
+                    request_payload[provenance_field] = details[provenance_field]
+
             return TraceEvent(
                 **common,
                 event_type=TraceEventType.MODEL_REQUESTED,
                 component=TraceComponent.MODEL_CLIENT,
                 request_id=str(details["request_id"]),
                 model_id=self._run_configuration.model_id,
-                prompt_version=self._run_configuration.prompt_version,
-                payload=redact_trace_payload(
-                    {
-                        "call_index": next_model_call_index(prior_entries),
-                        "prompt_sha256": details["prompt_sha256"],
-                        "passage_ids": collected_passage_ids(prior_entries),
-                        "repair_attempt": details.get("repair_attempt", 0),
-                    }
+                prompt_version=str(
+                    details.get(
+                        "prompt_version",
+                        self._run_configuration.prompt_version,
+                    )
                 ),
+                payload=redact_trace_payload(request_payload),
             )
 
         if name == "MODEL_RESPONDED":
@@ -160,20 +183,25 @@ class CanonicalTraceAdapter:
             )
 
         if name == "MODEL_FAILED":
+            failure_payload: dict[str, object] = {
+                "failure_class": details["failure_class"],
+                "error_type": details["error_type"],
+                "retryable": details["retryable"],
+                "repair_attempt": details.get(
+                    "repair_attempt",
+                    0,
+                ),
+            }
+            if "model_role" in details:
+                failure_payload["model_role"] = details["model_role"]
+
             return TraceEvent(
                 **common,
                 event_type=TraceEventType.MODEL_FAILED,
                 component=TraceComponent.MODEL_CLIENT,
                 request_id=str(details["request_id"]),
                 elapsed_ms=int(details.get("elapsed_ms", 0)),
-                payload=redact_trace_payload(
-                    {
-                        "failure_class": details["failure_class"],
-                        "error_type": details["error_type"],
-                        "retryable": details["retryable"],
-                        "repair_attempt": details.get("repair_attempt", 0),
-                    }
-                ),
+                payload=redact_trace_payload(failure_payload),
             )
 
         if name == "REPAIR_ATTEMPTED":
@@ -232,14 +260,22 @@ class CanonicalTraceAdapter:
                 payload=redact_trace_payload(dict(details["decision"])),
             )
 
-        if name == "VALIDATION_RETURNED":
+        if name == "VERIFICATION_RETURNED":
             return TraceEvent(
                 **common,
                 event_type=TraceEventType.VALIDATION_RETURNED,
                 component=TraceComponent.SAFETY_VALIDATOR,
                 payload=redact_trace_payload(
-                    build_validation_payload(details)
+                    build_verification_payload(details)
                 ),
+            )
+
+        if name == "VALIDATION_RETURNED":
+            return TraceEvent(
+                **common,
+                event_type=TraceEventType.VALIDATION_RETURNED,
+                component=TraceComponent.SAFETY_VALIDATOR,
+                payload=redact_trace_payload(build_validation_payload(details)),
             )
 
         if name == "VALIDATION_FAILED":
@@ -303,33 +339,15 @@ class CanonicalTraceAdapter:
         """Describe one model result while redacting unrestricted text."""
 
         response_text = str(details["response_text"])
-        try:
-            action = parse_model_action(response_text)
-            if action.action_type is RuntimeActionType.CALL_TOOL:
-                response_payload: dict[str, object] = {
-                    "response_type": "TOOL_CALLS",
-                    "tool_calls": [
-                        {
-                            "tool_name": action.tool_name,
-                            "tool_args": dict(action.tool_arguments),
-                        }
-                    ],
-                }
-            elif action.action_type is RuntimeActionType.PROPOSE_DECISION:
-                response_payload = {
-                    "response_type": "DECISION",
-                    "decision": dict(action.decision_payload),
-                }
-            else:
-                response_payload = {
-                    "response_type": "MANUAL_REVIEW_REQUEST",
-                    "manual_review_reasons": [action.manual_review_reason],
-                }
-        except ModelOutputParseError:
-            response_payload = {
-                "response_type": "INVALID",
-                "raw_output": response_text,
-            }
+        model_role = str(details.get("model_role", "PLANNER"))
+
+        if model_role == "VERIFIER":
+            response_payload = adapt_verifier_response(
+                response_text=response_text,
+                provider_request_id=str(details.get("provider_request_id", "")),
+            )
+        else:
+            response_payload = self._adapt_planning_response(response_text)
 
         input_tokens = details.get("input_tokens")
         output_tokens = details.get("output_tokens")
@@ -352,6 +370,41 @@ class CanonicalTraceAdapter:
             usage_status=usage_status,
             payload=redact_trace_payload(response_payload),
         )
+
+    @staticmethod
+    def _adapt_planning_response(
+        response_text: str,
+    ) -> dict[str, object]:
+        """Return the existing structured planning-response payload."""
+
+        try:
+            action = parse_model_action(response_text)
+            if action.action_type is RuntimeActionType.CALL_TOOL:
+                return {
+                    "response_type": "TOOL_CALLS",
+                    "tool_calls": [
+                        {
+                            "tool_name": action.tool_name,
+                            "tool_args": dict(action.tool_arguments),
+                        }
+                    ],
+                }
+
+            if action.action_type is RuntimeActionType.PROPOSE_DECISION:
+                return {
+                    "response_type": "DECISION",
+                    "decision": dict(action.decision_payload),
+                }
+
+            return {
+                "response_type": "MANUAL_REVIEW_REQUEST",
+                "manual_review_reasons": [action.manual_review_reason],
+            }
+        except ModelOutputParseError:
+            return {
+                "response_type": "INVALID",
+                "raw_output": response_text,
+            }
 
     def _adapt_tool_requested(
         self,
@@ -422,9 +475,7 @@ class CanonicalTraceAdapter:
                 else TraceEventType.MANUAL_REVIEW
             ),
             component=TraceComponent.AGENT_RUNTIME,
-            elapsed_ms=int(
-                details.get("elapsed_ms", runtime_entry.elapsed_ms)
-            ),
+            elapsed_ms=int(details.get("elapsed_ms", runtime_entry.elapsed_ms)),
             terminal_reason=terminal_reason,
             payload=redact_trace_payload(payload),
         )

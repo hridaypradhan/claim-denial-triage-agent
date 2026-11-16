@@ -14,14 +14,63 @@ from claim_agent.agent.hosted.factory import (
     HostedModelConfigurationError,
     HostedModelProfile,
     build_hosted_model_client,
+    build_hosted_verifier_client,
 )
 from claim_agent.agent.hosted.openai_chat import (
     OpenAICompatibleChatTransport,
+)
+from claim_agent.agent.hosted.verifier_client import (
+    HostedVerifierClient,
 )
 
 
 class HostedModelFactoryTests(unittest.TestCase):
     """Verify frozen settings and local credential handling."""
+
+    def test_valid_key_builds_toolless_verifier_client(
+        self,
+    ) -> None:
+        """The shared credential path should construct a verifier."""
+
+        fake_transport = object()
+
+        with patch.object(
+            OpenAICompatibleChatTransport,
+            "from_api_key",
+            return_value=fake_transport,
+        ) as transport_factory:
+            client = build_hosted_verifier_client(
+                environment={
+                    HOSTED_API_KEY_ENVIRONMENT_VARIABLE: ("synthetic-voyager-key"),
+                }
+            )
+
+        self.assertIsInstance(client, HostedVerifierClient)
+        transport_factory.assert_called_once()
+
+        call_arguments = transport_factory.call_args
+        self.assertEqual(
+            "synthetic-voyager-key",
+            call_arguments.kwargs["api_key"],
+        )
+        self.assertEqual(
+            VOYAGER_BASE_URL,
+            call_arguments.kwargs["settings"].base_url,
+        )
+
+    def test_verifier_rejects_missing_key_before_sdk_creation(
+        self,
+    ) -> None:
+        """Verifier construction should share fail-fast key handling."""
+
+        with patch.object(
+            OpenAICompatibleChatTransport,
+            "from_api_key",
+        ) as transport_factory:
+            with self.assertRaises(HostedModelConfigurationError):
+                build_hosted_verifier_client(environment={})
+
+        transport_factory.assert_not_called()
 
     def test_selected_profile_records_voyager_settings(
         self,
@@ -117,9 +166,7 @@ class HostedModelFactoryTests(unittest.TestCase):
         ) as transport_factory:
             client = build_hosted_model_client(
                 environment={
-                    HOSTED_API_KEY_ENVIRONMENT_VARIABLE: (
-                        "synthetic-voyager-key"
-                    ),
+                    HOSTED_API_KEY_ENVIRONMENT_VARIABLE: ("synthetic-voyager-key"),
                 }
             )
 

@@ -16,9 +16,13 @@ from openai import APITimeoutError, OpenAI
 from claim_agent.agent.hosted.client import (
     HostedModelTransportRequest,
     HostedModelTransportResponse,
+    HostedResponseSchema,
 )
 from claim_agent.agent.hosted.action_schema import (
     build_runtime_action_response_format,
+)
+from claim_agent.agent.hosted.verifier_schema import (
+    build_verifier_report_response_format,
 )
 
 
@@ -50,9 +54,7 @@ class OpenAIChatTransportSettings:
             raise ValueError("base_url must contain a non-whitespace value")
 
         if self.max_completion_tokens <= 0:
-            raise ValueError(
-                "max_completion_tokens must be greater than zero"
-            )
+            raise ValueError("max_completion_tokens must be greater than zero")
 
         allowed_reasoning_efforts = {
             "none",
@@ -62,21 +64,16 @@ class OpenAIChatTransportSettings:
         }
         if self.reasoning_effort not in allowed_reasoning_efforts:
             raise ValueError(
-                "reasoning_effort must be one of: "
-                "none, low, medium, high"
+                "reasoning_effort must be one of: " "none, low, medium, high"
             )
 
         allowed_response_format_modes = {
             "json_schema",
             "json_object",
         }
-        if (
-            self.response_format_mode
-            not in allowed_response_format_modes
-        ):
+        if self.response_format_mode not in allowed_response_format_modes:
             raise ValueError(
-                "response_format_mode must be one of: "
-                "json_schema, json_object"
+                "response_format_mode must be one of: " "json_schema, json_object"
             )
 
         if self.temperature < 0:
@@ -105,9 +102,7 @@ class OpenAICompatibleChatTransport:
         """Create the production SDK client without retaining the API key."""
 
         if not api_key.strip():
-            raise ValueError(
-                "api_key must contain a non-whitespace value"
-            )
+            raise ValueError("api_key must contain a non-whitespace value")
 
         client = OpenAI(
             api_key=api_key,
@@ -128,39 +123,28 @@ class OpenAICompatibleChatTransport:
         request_arguments: dict[str, object] = {
             "model": request.model_name,
             "messages": self._build_messages(request),
-            "max_completion_tokens": (
-                self._settings.max_completion_tokens
-            ),
+            "max_completion_tokens": (self._settings.max_completion_tokens),
             "reasoning_effort": self._settings.reasoning_effort,
             "temperature": self._settings.temperature,
-            "response_format": self._build_response_format(
-                request
-            ),
+            "response_format": self._build_response_format(request),
             "timeout": request.timeout_seconds,
             "extra_headers": self._build_headers(request),
         }
 
         try:
-            response = self._client.chat.completions.create(
-                **request_arguments
-            )
+            response = self._client.chat.completions.create(**request_arguments)
         except APITimeoutError as error:
-            raise TimeoutError(
-                "The OpenAI-compatible provider timed out."
-            ) from error
+            raise TimeoutError("The OpenAI-compatible provider timed out.") from error
         except TimeoutError:
             raise
         except Exception as error:
             raise OpenAICompatibleProviderError(
-                "The OpenAI-compatible provider raised "
-                f"{type(error).__name__}."
+                "The OpenAI-compatible provider raised " f"{type(error).__name__}."
             ) from error
 
         response_text = self._extract_response_text(response)
         provider_request_id = self._extract_request_id(response)
-        input_token_count, output_token_count = (
-            self._extract_token_usage(response)
-        )
+        input_token_count, output_token_count = self._extract_token_usage(response)
 
         return HostedModelTransportResponse(
             response_text=response_text,
@@ -176,9 +160,10 @@ class OpenAICompatibleChatTransport:
         """Select the frozen structured-output mode."""
 
         if self._settings.response_format_mode == "json_schema":
-            return build_runtime_action_response_format(
-                request.allowed_tool_names
-            )
+            if request.response_schema == HostedResponseSchema.VERIFIER_REPORT:
+                return build_verifier_report_response_format()
+
+            return build_runtime_action_response_format(request.allowed_tool_names)
 
         return {
             "type": "json_object",

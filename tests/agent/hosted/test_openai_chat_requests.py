@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import unittest
 
+from claim_agent.agent.hosted.client import HostedResponseSchema
 from claim_agent.agent.hosted.openai_chat import OpenAICompatibleChatTransport
 from claim_agent.tools.dispatcher import ENCOUNTER_NOTE_TOOL, MEDICAL_POLICY_TOOL
+from dataclasses import replace
 from tests.agent.hosted.openai_chat_test_support import (
     BASE_URL,
     MODEL_NAME,
@@ -102,6 +104,39 @@ class OpenAIChatRequestTests(unittest.TestCase):
         self.assertEqual({MEDICAL_POLICY_TOOL}, tool_names)
         self.assertIs(True, response_format["json_schema"]["strict"])
 
+    def test_verifier_request_uses_toolless_report_schema(self) -> None:
+        """Verification should expose only the frozen VerifierReport shape."""
+
+        completions = RecordingCompletions(response=manual_review_response())
+        transport = OpenAICompatibleChatTransport(
+            client=FakeOpenAIClient(completions),
+            settings=make_settings(),
+        )
+        verifier_request = replace(
+            make_transport_request(allowed_tool_names=(MEDICAL_POLICY_TOOL,)),
+            allowed_tool_names=(),
+            response_schema=HostedResponseSchema.VERIFIER_REPORT,
+        )
+
+        transport.generate(verifier_request)
+
+        arguments = completions.received_arguments[0]
+        response_format = arguments["response_format"]
+        schema = response_format["json_schema"]["schema"]
+        properties = schema["properties"]
+
+        self.assertNotIn("tools", arguments)
+        self.assertEqual(
+            "verifier_report",
+            response_format["json_schema"]["name"],
+        )
+        self.assertIs(True, response_format["json_schema"]["strict"])
+        self.assertEqual("VerifierReport", schema["title"])
+        self.assertNotIn("action", properties)
+        self.assertNotIn("tool_name", properties)
+        self.assertNotIn("tool_arguments", properties)
+        self.assertNotIn("authorized_tools", properties)
+
     def test_json_object_mode_omits_strict_schema(self) -> None:
         """A model without Schema support should receive JSON mode."""
 
@@ -126,9 +161,9 @@ class OpenAIChatRequestTests(unittest.TestCase):
         )
         transport.generate(make_transport_request(allowed_tool_names=()))
 
-        schema = completions.received_arguments[0]["response_format"][
-            "json_schema"
-        ]["schema"]
+        schema = completions.received_arguments[0]["response_format"]["json_schema"][
+            "schema"
+        ]
         tool_actions = [
             action_schema
             for action_schema in schema["anyOf"]
