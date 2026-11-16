@@ -398,6 +398,7 @@ verifier after deterministic validation.
 - Missing, conflicting, unsupported, or unavailable evidence must lead to manual review.
 - Retrieved policy and clinical text is treated as untrusted data, not as instructions.
 - Illustrative payer rules must not be interpreted as verified contract terms.
+- Required-evidence safety evaluation (`src/claim_agent/safety/required_evidence.py`, documented in [`docs/contracts/required-evidence-safety.md`](docs/contracts/required-evidence-safety.md)) escalates missing decision-critical evidence (`ncci_edit_lookup`, `primary_eob`, `cob_confirmation`, and unrecognized tokens) to `MANUAL_REVIEW`, while allowing correction-supplied fields, helpful-but-nonessential documents (`updated_insurance_card`), and evidence-supported appeals to continue normal routing without overriding `DETERMINISTIC_ONLY` vs. `AGENT_REQUIRED` selection.
 
 ### Tool-less evidence verifier contract
 
@@ -944,7 +945,8 @@ These limitations define the work assigned to the agentic extension; they are no
 - [x] Add deterministic safety, citation, formula, and filing-deadline validation.
 - [x] Add the OpenAI-compatible hosted transport and strict action schemas.
 - [ ] Complete live hosted execution and freeze the selected model.
-- [ ] Add tool-less evidence verification and grounded drafting.
+- [x] Add standalone tool-less evidence-verification orchestration.
+- [ ] Integrate verification and grounded drafting into the end-to-end runner.
 - [ ] Build development and held-out synthetic datasets.
 - [ ] Compare the agentic system against the unchanged baseline.
 - [ ] Conduct stakeholder review of representative system reports.
