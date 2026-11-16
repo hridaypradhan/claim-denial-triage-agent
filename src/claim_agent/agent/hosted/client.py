@@ -27,6 +27,7 @@ class HostedResponseSchema(str, Enum):
 
     RUNTIME_ACTION = "runtime_action"
     VERIFIER_REPORT = "verifier_report"
+    APPEAL_DRAFT = "appeal_draft"
 
 
 @dataclass(frozen=True)

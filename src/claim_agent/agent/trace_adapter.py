@@ -34,6 +34,10 @@ from claim_agent.agent.trace_adapter_verifier import (
     adapt_verifier_response,
     build_verification_payload,
 )
+from claim_agent.agent.drafting.trace_adapter import (
+    adapt_drafting_response,
+    build_drafting_payload,
+)
 from claim_agent.agent.trace_redaction import redact_trace_payload
 from claim_agent.contracts import RouteDecision
 
@@ -259,15 +263,19 @@ class CanonicalTraceAdapter:
                 component=TraceComponent.AGENT_RUNTIME,
                 payload=redact_trace_payload(dict(details["decision"])),
             )
-
+        if name == "DRAFTING_RETURNED":
+            return TraceEvent(
+                **common,
+                event_type=TraceEventType.VALIDATION_RETURNED,
+                component=TraceComponent.SAFETY_VALIDATOR,
+                payload=redact_trace_payload(build_drafting_payload(details)),
+            )
         if name == "VERIFICATION_RETURNED":
             return TraceEvent(
                 **common,
                 event_type=TraceEventType.VALIDATION_RETURNED,
                 component=TraceComponent.SAFETY_VALIDATOR,
-                payload=redact_trace_payload(
-                    build_verification_payload(details)
-                ),
+                payload=redact_trace_payload(build_verification_payload(details)),
             )
 
         if name == "VALIDATION_RETURNED":
@@ -343,6 +351,11 @@ class CanonicalTraceAdapter:
 
         if model_role == "VERIFIER":
             response_payload = adapt_verifier_response(
+                response_text=response_text,
+                provider_request_id=str(details.get("provider_request_id", "")),
+            )
+        elif model_role == "DRAFTER":
+            response_payload = adapt_drafting_response(
                 response_text=response_text,
                 provider_request_id=str(details.get("provider_request_id", "")),
             )

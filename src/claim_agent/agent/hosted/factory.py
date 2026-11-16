@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from typing import Mapping
 
 from claim_agent.agent.hosted.client import HostedModelClient
+from claim_agent.agent.hosted.drafting_client import (
+    HostedDraftingClient,
+)
 from claim_agent.agent.hosted.openai_chat import (
     OpenAIChatTransportSettings,
     OpenAICompatibleChatTransport,
@@ -80,6 +83,25 @@ SELECTED_VOYAGER_PROFILE = HostedModelProfile(
     response_format_mode="json_schema",
     request_timeout_seconds=60.0,
 )
+
+
+def build_hosted_drafting_client(
+    *,
+    profile: HostedModelProfile = SELECTED_VOYAGER_PROFILE,
+    environment: Mapping[str, str] | None = None,
+) -> HostedDraftingClient:
+    """Build a tool-less drafter using the selected hosted profile."""
+
+    transport = _build_hosted_transport(
+        profile=profile,
+        environment=environment,
+    )
+
+    return HostedDraftingClient(
+        transport=transport,
+        model_name=profile.model_id,
+        timeout_seconds=profile.request_timeout_seconds,
+    )
 
 
 def build_hosted_model_client(

@@ -21,6 +21,9 @@ from claim_agent.agent.hosted.client import (
 from claim_agent.agent.hosted.action_schema import (
     build_runtime_action_response_format,
 )
+from claim_agent.agent.hosted.drafting_schema import (
+    build_appeal_draft_response_format,
+)
 from claim_agent.agent.hosted.verifier_schema import (
     build_verifier_report_response_format,
 )
@@ -162,6 +165,9 @@ class OpenAICompatibleChatTransport:
         if self._settings.response_format_mode == "json_schema":
             if request.response_schema == HostedResponseSchema.VERIFIER_REPORT:
                 return build_verifier_report_response_format()
+
+            if request.response_schema == HostedResponseSchema.APPEAL_DRAFT:
+                return build_appeal_draft_response_format()
 
             return build_runtime_action_response_format(request.allowed_tool_names)
 

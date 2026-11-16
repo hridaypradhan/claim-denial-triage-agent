@@ -137,6 +137,34 @@ class OpenAIChatRequestTests(unittest.TestCase):
         self.assertNotIn("tool_arguments", properties)
         self.assertNotIn("authorized_tools", properties)
 
+    def test_drafting_request_uses_toolless_appeal_draft_schema(self) -> None:
+        """Drafting should expose only the frozen AppealDraft shape."""
+
+        completions = RecordingCompletions(response=manual_review_response())
+        transport = OpenAICompatibleChatTransport(
+            client=FakeOpenAIClient(completions),
+            settings=make_settings(),
+        )
+        drafting_request = replace(
+            make_transport_request(allowed_tool_names=(MEDICAL_POLICY_TOOL,)),
+            allowed_tool_names=(),
+            response_schema=HostedResponseSchema.APPEAL_DRAFT,
+        )
+
+        transport.generate(drafting_request)
+
+        arguments = completions.received_arguments[0]
+        response_format = arguments["response_format"]
+        schema = response_format["json_schema"]["schema"]
+
+        self.assertNotIn("tools", arguments)
+        self.assertEqual(
+            "appeal_draft",
+            response_format["json_schema"]["name"],
+        )
+        self.assertIs(True, response_format["json_schema"]["strict"])
+        self.assertEqual("AppealDraft", schema["title"])
+
     def test_json_object_mode_omits_strict_schema(self) -> None:
         """A model without Schema support should receive JSON mode."""
 
