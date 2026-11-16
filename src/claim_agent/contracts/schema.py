@@ -72,6 +72,12 @@ class EvidenceStatus(str, Enum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
+class EvidenceRequirementCategory(str, Enum):
+    DECISION_CRITICAL = "DECISION_CRITICAL"
+    CORRECTION_INPUT = "CORRECTION_INPUT"
+    HELPFUL_NONESSENTIAL = "HELPFUL_NONESSENTIAL"
+
+
 class RouteOutcome(str, Enum):
     DETERMINISTIC_ONLY = "DETERMINISTIC_ONLY"
     AGENT_REQUIRED = "AGENT_REQUIRED"
@@ -212,6 +218,55 @@ class RouteDecision(StrictContract):
     reason_code: str
     routing_reason: str
     authorized_tools: List[str] = Field(default_factory=list)
+
+
+# --- Contract v0.1: Required-Evidence Safety Decisions (#49) ---
+class ClassifiedEvidenceRequirement(StrictContract):
+    requirement: str
+    category: EvidenceRequirementCategory
+    satisfied: bool
+    supplied: bool = False
+    reason: str
+
+
+class RequiredEvidenceSafetyDecision(StrictContract):
+    """Safety gate output deciding whether evidence gaps force MANUAL_REVIEW.
+
+    When ``requires_manual_review`` is True, ``recommended_outcome`` is
+    ``RouteOutcome.MANUAL_REVIEW``. When safe to proceed, ``recommended_outcome``
+    is ``None`` so routing (#57) preserves normal deterministic vs. agent route
+    selection.
+    """
+
+    contract_version: str = Field(default=CONTRACT_VERSION)
+    claim_id: str
+    service_line_id: int
+    requires_manual_review: bool
+    recommended_outcome: Optional[RouteOutcome] = None
+    reason_code: str
+    rationale: str
+    classified_requirements: List[ClassifiedEvidenceRequirement] = Field(
+        default_factory=list
+    )
+    missing_critical_evidence: List[str] = Field(default_factory=list)
+    expected_correction_inputs: List[str] = Field(default_factory=list)
+    supplied_correction_inputs: List[str] = Field(default_factory=list)
+    nonessential_evidence: List[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_outcome_invariant(self):
+        if self.requires_manual_review:
+            if self.recommended_outcome != RouteOutcome.MANUAL_REVIEW:
+                raise ValueError(
+                    "recommended_outcome must be MANUAL_REVIEW when "
+                    "requires_manual_review is True."
+                )
+        elif self.recommended_outcome is not None:
+            raise ValueError(
+                "recommended_outcome must be None when requires_manual_review is "
+                "False so normal routing is not overridden."
+            )
+        return self
 
 
 # --- Contract v0.1: Agent Decisions ---
