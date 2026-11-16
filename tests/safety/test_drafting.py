@@ -151,7 +151,7 @@ class TestDraftingAuthorizationAndGroundedness(unittest.TestCase):
         self.assertEqual(res_disp.outcome, DraftingOutcome.REJECTED_UNAUTHORIZED)
         self.assertEqual(res_disp.reason_code, DRAFTING_REASON_DISALLOWED_DISPOSITION)
 
-    def test_accepted_draft_always_remains_pending_review(self):
+    def test_accepted_draft_always_remains_pending_review_and_allows_case_whitespace_quote(self):
         d_input = _load_input()
         raw_draft = (FIXTURE_DIR / "valid_draft_output.json").read_text(
             encoding="utf-8"
@@ -165,15 +165,31 @@ class TestDraftingAuthorizationAndGroundedness(unittest.TestCase):
         self.assertEqual(res.approval_state, "PENDING_REVIEW")
         self.assertIsNotNone(res.validated_draft)
         self.assertEqual(res.validated_draft.approval_state, "PENDING_REVIEW")
-
-        # Deterministic rendering helper also produces a valid grounded body
-        rendered = render_grounded_appeal_body(res.validated_draft.grounded_claims)
-        rendered_payload = json.loads(raw_draft)
-        rendered_payload["body"] = rendered
-        res_rendered = validate_appeal_draft(
-            d_input, raw_output=json.dumps(rendered_payload)
+        self.assertEqual(
+            res.validated_draft.body,
+            render_grounded_appeal_body(res.validated_draft.grounded_claims),
         )
-        self.assertEqual(res_rendered.outcome, DraftingOutcome.ACCEPTED)
+
+        # Case and whitespace normalization on cited passage quotes is accepted
+        normalized_payload = json.loads(raw_draft)
+        normalized_payload["grounded_claims"][1]["statement"] = (
+            "  patient   completed 6 weeks of physical therapy without relief.  "
+        )
+        parsed_norm = AppealDraft.model_validate_json(
+            json.dumps(
+                {
+                    **normalized_payload,
+                    "body": "placeholder",
+                }
+            )
+        )
+        normalized_payload["body"] = render_grounded_appeal_body(
+            parsed_norm.grounded_claims
+        )
+        res_norm = validate_appeal_draft(
+            d_input, raw_output=json.dumps(normalized_payload)
+        )
+        self.assertEqual(res_norm.outcome, DraftingOutcome.ACCEPTED)
 
         for forbidden_state in ("APPROVED", "SUBMITTED"):
             bad = json.loads(raw_draft)
@@ -181,16 +197,63 @@ class TestDraftingAuthorizationAndGroundedness(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 AppealDraft.model_validate_json(json.dumps(bad))
 
+    def test_negated_or_reversed_claims_and_body_are_rejected(self):
+        d_input = _load_input()
+        base_payload = json.loads(
+            (FIXTURE_DIR / "valid_draft_output.json").read_text(encoding="utf-8")
+        )
+
+        # 1. Claim reversing evidence with "never":
+        # Passage: "Patient completed 6 weeks of physical therapy without relief."
+        never_claim = json.loads(json.dumps(base_payload))
+        never_claim["grounded_claims"][1]["statement"] = (
+            "Patient never completed 6 weeks of physical therapy."
+        )
+        parsed_never = AppealDraft.model_validate_json(json.dumps(never_claim))
+        never_claim["body"] = render_grounded_appeal_body(parsed_never.grounded_claims)
+        res_never = validate_appeal_draft(
+            d_input, raw_output=json.dumps(never_claim)
+        )
+        self.assertEqual(res_never.outcome, DraftingOutcome.REJECTED_UNGROUNDED)
+        self.assertTrue(res_never.requires_manual_review)
+        self.assertEqual(res_never.reason_code, DRAFTING_REASON_UNGROUNDED_CLAIM)
+
+        # 2. Claim reversing "without relief" to "with relief":
+        with_relief_claim = json.loads(json.dumps(base_payload))
+        with_relief_claim["grounded_claims"][1]["statement"] = (
+            "Patient completed 6 weeks of physical therapy with relief."
+        )
+        parsed_relief = AppealDraft.model_validate_json(
+            json.dumps(with_relief_claim)
+        )
+        with_relief_claim["body"] = render_grounded_appeal_body(
+            parsed_relief.grounded_claims
+        )
+        res_relief = validate_appeal_draft(
+            d_input, raw_output=json.dumps(with_relief_claim)
+        )
+        self.assertEqual(res_relief.outcome, DraftingOutcome.REJECTED_UNGROUNDED)
+        self.assertTrue(res_relief.requires_manual_review)
+        self.assertEqual(res_relief.reason_code, DRAFTING_REASON_UNGROUNDED_CLAIM)
+
+        # 3. Body reversing policy requirement ("not required") despite valid claims:
+        reversed_body = json.loads(json.dumps(base_payload))
+        reversed_body["body"] = (
+            "Conservative therapy of at least 6 weeks is not required. "
+            "[POL-UHC-72148@v1#p1] Patient completed 6 weeks of physical therapy "
+            "without relief. [ENC-CLM-2026-005097-CN@v1#p1]"
+        )
+        res_rev_body = validate_appeal_draft(
+            d_input, raw_output=json.dumps(reversed_body)
+        )
+        self.assertEqual(res_rev_body.outcome, DraftingOutcome.REJECTED_UNGROUNDED)
+        self.assertTrue(res_rev_body.requires_manual_review)
+        self.assertEqual(res_rev_body.reason_code, DRAFTING_REASON_UNGROUNDED_CLAIM)
+
     def test_permitted_citation_attached_to_unsupported_claim_is_rejected(self):
         d_input = _load_input()
         draft_payload = json.loads(
             (FIXTURE_DIR / "valid_draft_output.json").read_text(encoding="utf-8")
-        )
-        # Keep permitted same-run citation POL-UHC-72148@v1#p1, but replace content
-        # with an unsupported clinical assertion
-        draft_payload["body"] = (
-            "Per POL-UHC-72148@v1#p1, emergency inpatient surgery was pre-authorized "
-            "by the medical director."
         )
         draft_payload["grounded_claims"] = [
             {
@@ -199,6 +262,8 @@ class TestDraftingAuthorizationAndGroundedness(unittest.TestCase):
             }
         ]
         draft_payload["citation_ids"] = ["POL-UHC-72148@v1#p1"]
+        parsed = AppealDraft.model_validate_json(json.dumps(draft_payload))
+        draft_payload["body"] = render_grounded_appeal_body(parsed.grounded_claims)
 
         res = validate_appeal_draft(d_input, raw_output=json.dumps(draft_payload))
 
@@ -212,7 +277,6 @@ class TestDraftingAuthorizationAndGroundedness(unittest.TestCase):
         draft_payload = json.loads(
             (FIXTURE_DIR / "valid_draft_output.json").read_text(encoding="utf-8")
         )
-        # Append an unrepresented factual assertion to body without adding it to grounded_claims
         draft_payload["body"] += " The payer already approved this appeal."
 
         res = validate_appeal_draft(d_input, raw_output=json.dumps(draft_payload))
@@ -234,6 +298,8 @@ class TestDraftingAuthorizationAndGroundedness(unittest.TestCase):
                 "citation_ids": ["ENC-UNRETRIEVED-999@v1#p1"],
             }
         )
+        parsed = AppealDraft.model_validate_json(json.dumps(draft_payload))
+        draft_payload["body"] = render_grounded_appeal_body(parsed.grounded_claims)
 
         res = validate_appeal_draft(d_input, raw_output=json.dumps(draft_payload))
 

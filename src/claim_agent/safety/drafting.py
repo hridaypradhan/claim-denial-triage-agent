@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Iterable, List, Mapping, Optional, Sequence, Set, Union
+from typing import Iterable, List, Mapping, Optional, Sequence, Union
 
 from pydantic import ValidationError
 
@@ -33,38 +33,7 @@ DRAFTING_REASON_INVALID_OUTPUT = "DRAFTING_INVALID_OUTPUT"
 DRAFTING_REASON_PROVIDER_FAILURE = "DRAFTING_PROVIDER_FAILURE"
 DRAFTING_REASON_TIMEOUT = "DRAFTING_TIMEOUT"
 
-_STOPWORDS = frozenset(
-    {
-        "a",
-        "an",
-        "and",
-        "are",
-        "as",
-        "at",
-        "be",
-        "by",
-        "for",
-        "from",
-        "has",
-        "have",
-        "in",
-        "is",
-        "it",
-        "of",
-        "on",
-        "or",
-        "per",
-        "that",
-        "the",
-        "this",
-        "to",
-        "was",
-        "were",
-        "with",
-    }
-)
-_CITATION_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]+@v[A-Za-z0-9._-]+#[A-Za-z0-9_-]+")
-_WORD_PATTERN = re.compile(r"[a-z0-9]+")
+_WHITESPACE_PATTERN = re.compile(r"\s+")
 
 
 def render_grounded_appeal_body(
@@ -301,58 +270,40 @@ def validate_appeal_draft(
                     )
                 )
 
-        # Verify that the asserted claim content is actually supported by the
-        # text of its cited same-run passages (not merely accompanied by a valid ID).
+        # Require each claim statement to be an exact case- and whitespace-normalized
+        # quote of at least one cited same-run passage in evidence_bundle.
         cited_texts = [
             passage_text_by_id[cid]
             for cid in claim_stmt.citation_ids
             if cid in passage_text_by_id
         ]
-        if cited_texts and not _is_supported_by_texts(
-            claim_stmt.statement, cited_texts
-        ):
+        if cited_texts and not _is_normalized_quote(claim_stmt.statement, cited_texts):
             problems.append(
                 ValidationProblem(
                     code=DRAFTING_REASON_UNGROUNDED_CLAIM,
                     field_path=f"grounded_claims[{idx}].statement",
                     message=(
-                        f"Claim statement '{claim_stmt.statement}' is not factually "
-                        "supported by its cited passage text(s)."
+                        f"Claim statement '{claim_stmt.statement}' is not an exact "
+                        "normalized quote of its cited passage text(s)."
                     ),
                     is_repairable=False,
                 )
             )
 
-    # Verify that every sentence/assertion in draft.body is represented by the
-    # structured grounded_claims (and cites only allowed draft citations).
-    body_citations = _CITATION_ID_PATTERN.findall(draft.body)
-    for cid in body_citations:
-        if cid not in top_level_citations:
-            problems.append(
-                ValidationProblem(
-                    code=DRAFTING_REASON_UNGROUNDED_BODY,
-                    field_path="body",
-                    message=(
-                        f"Body cites '{cid}' which is absent from draft citation_ids."
-                    ),
-                    is_repairable=False,
-                )
+    # Require draft.body to equal the deterministic rendering of grounded_claims
+    expected_body = render_grounded_appeal_body(draft.grounded_claims)
+    if draft.body != expected_body:
+        problems.append(
+            ValidationProblem(
+                code=DRAFTING_REASON_UNGROUNDED_BODY,
+                field_path="body",
+                message=(
+                    "Appeal draft body must exactly match the deterministic rendering "
+                    "of validated grounded_claims."
+                ),
+                is_repairable=False,
             )
-
-    claim_texts = [c.statement for c in draft.grounded_claims]
-    for s_idx, sentence in enumerate(_split_sentences(draft.body)):
-        if not _is_supported_by_texts(sentence, claim_texts):
-            problems.append(
-                ValidationProblem(
-                    code=DRAFTING_REASON_UNGROUNDED_BODY,
-                    field_path=f"body.sentence[{s_idx}]",
-                    message=(
-                        f"Body assertion '{sentence}' is not represented in "
-                        "grounded_claims."
-                    ),
-                    is_repairable=False,
-                )
-            )
+        )
 
     if problems:
         return DraftingValidationResult(
@@ -374,40 +325,19 @@ def validate_appeal_draft(
     )
 
 
-def _split_sentences(text: str) -> List[str]:
-    without_brackets = re.sub(r"\[[^\]]*\]", " ", text)
-    stripped_citations = _CITATION_ID_PATTERN.sub(" ", without_brackets)
-    parts = re.split(r"[.!?]+(?:\s+|$)", stripped_citations)
-    return [part.strip() for part in parts if part.strip()]
+def _normalize_quote_text(text: str) -> str:
+    collapsed = _WHITESPACE_PATTERN.sub(" ", text.strip().lower())
+    return collapsed.rstrip(".!?")
 
 
-def _content_tokens(text: str) -> Set[str]:
-    cleaned = _CITATION_ID_PATTERN.sub(" ", text.lower())
-    return {
-        tok
-        for tok in _WORD_PATTERN.findall(cleaned)
-        if tok not in _STOPWORDS and (len(tok) > 2 or tok.isdigit())
-    }
-
-
-def _is_supported_by_texts(assertion: str, source_texts: Iterable[str]) -> bool:
-    assertion_tokens = _content_tokens(assertion)
-    if not assertion_tokens:
+def _is_normalized_quote(statement: str, source_texts: Iterable[str]) -> bool:
+    normalized_stmt = _normalize_quote_text(statement)
+    if not normalized_stmt:
         return False
-    source_tokens: Set[str] = set()
-    for text in source_texts:
-        source_tokens |= _content_tokens(text)
-    if not source_tokens:
-        return False
-
-    # Every numeric quantity (e.g., "6" weeks) in the assertion must appear in
-    # the supporting source text(s).
-    assertion_numbers = {tok for tok in assertion_tokens if tok.isdigit()}
-    if not assertion_numbers.issubset(source_tokens):
-        return False
-
-    overlap = assertion_tokens & source_tokens
-    return (len(overlap) / len(assertion_tokens)) >= 0.6
+    return any(
+        normalized_stmt in _normalize_quote_text(src)
+        for src in source_texts
+    )
 
 
 def _reject(
