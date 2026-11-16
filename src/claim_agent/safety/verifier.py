@@ -41,6 +41,10 @@ def validate_verifier_response(
     """Validate tool-less verifier output and enforce fail-safe escalation rules.
 
     Invariants:
+    - Every returned VerifierValidationResult binds decision identity plus the
+      originating canonical evidence bundle provenance (run_id,
+      knowledge_snapshot_id, bundle_fingerprint) so results from one run or
+      snapshot cannot be replayed against another bundle.
     - No verifier outcome can approve a case after deterministic rejection.
     - deterministic_validation must be ACCEPTED and belong to the exact same
       decision_id, claim_id, service_line_id, and validated_decision as
@@ -59,6 +63,9 @@ def validate_verifier_response(
         "decision_id": decision.decision_id,
         "claim_id": decision.claim_id,
         "service_line_id": decision.service_line_id,
+        "run_id": verifier_input.run_id,
+        "knowledge_snapshot_id": verifier_input.knowledge_snapshot_id,
+        "bundle_fingerprint": verifier_input.bundle_fingerprint,
     }
 
     # 1. Deterministic rejection is final and cannot be overridden by verification.

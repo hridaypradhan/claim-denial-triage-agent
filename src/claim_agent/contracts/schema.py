@@ -355,12 +355,15 @@ class VerifierReport(StrictContract):
 
 
 class VerifierValidationResult(StrictContract):
-    """Deterministic fail-safe result after validating verifier execution/output."""
+    """Deterministic fail-safe result bound to the originating canonical bundle."""
 
     contract_version: str = Field(default=CONTRACT_VERSION)
     decision_id: str
     claim_id: str
     service_line_id: int
+    run_id: str = Field(min_length=1)
+    knowledge_snapshot_id: str = Field(min_length=1)
+    bundle_fingerprint: str = Field(min_length=1)
     outcome: VerificationOutcome
     requires_manual_review: bool
     reason_code: str

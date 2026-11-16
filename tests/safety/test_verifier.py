@@ -75,7 +75,6 @@ class TestVerifierContractAndValidation(unittest.TestCase):
             (FIXTURE_DIR / "valid_agree_input.json").read_text(encoding="utf-8")
         )
 
-        # 1. Mismatched claim scope between proposed_decision and evidence_bundle
         wrong_scope = json.loads(json.dumps(raw))
         wrong_scope["evidence_bundle"]["scope"]["claim_id"] = "CLM-2026-OTHER"
         for p in wrong_scope["evidence_bundle"]["passages"]:
@@ -83,13 +82,11 @@ class TestVerifierContractAndValidation(unittest.TestCase):
         with self.assertRaises(ValidationError):
             VerifierInput.model_validate_json(json.dumps(wrong_scope))
 
-        # 2. Tampered passage provenance inside EvidenceBundle
         tampered_passage = json.loads(json.dumps(raw))
         tampered_passage["evidence_bundle"]["passages"][0]["claim_id"] = "CLM-2026-OTHER"
         with self.assertRaises(ValidationError):
             VerifierInput.model_validate_json(json.dumps(tampered_passage))
 
-        # 3. Changing run_id or knowledge_snapshot_id changes the canonical bundle fingerprint
         v_orig = _load_input()
         alt_run = json.loads(json.dumps(raw))
         alt_run["evidence_bundle"]["run_id"] = "run-005097-02"
@@ -112,7 +109,58 @@ class TestVerifierContractAndValidation(unittest.TestCase):
         self.assertEqual(res.outcome, VerificationOutcome.AGREE)
         self.assertFalse(res.requires_manual_review)
         self.assertEqual(res.reason_code, VERIFIER_REASON_AGREED)
+        self.assertEqual(res.run_id, v_input.run_id)
+        self.assertEqual(res.knowledge_snapshot_id, v_input.knowledge_snapshot_id)
+        self.assertEqual(res.bundle_fingerprint, v_input.bundle_fingerprint)
         self.assertIsNotNone(res.validated_report)
+
+    def test_verifier_result_preserves_bundle_provenance_across_runs_snapshots_and_outcomes(self):
+        raw = json.loads(
+            (FIXTURE_DIR / "valid_agree_input.json").read_text(encoding="utf-8")
+        )
+        v_orig = _load_input()
+        det_orig = _accepted_deterministic(v_orig)
+
+        alt_run_raw = json.loads(json.dumps(raw))
+        alt_run_raw["evidence_bundle"]["run_id"] = "run-005097-99"
+        v_alt_run = VerifierInput.model_validate_json(json.dumps(alt_run_raw))
+
+        alt_snap_raw = json.loads(json.dumps(raw))
+        alt_snap_raw["evidence_bundle"]["knowledge_snapshot_id"] = "knowledge-v9"
+        v_alt_snap = VerifierInput.model_validate_json(json.dumps(alt_snap_raw))
+
+        agree_raw = (FIXTURE_DIR / "valid_agree_output.json").read_text(encoding="utf-8")
+        res_orig = validate_verifier_response(v_orig, det_orig, raw_output=agree_raw)
+        res_alt_run = validate_verifier_response(
+            v_alt_run, _accepted_deterministic(v_alt_run), raw_output=agree_raw
+        )
+        res_alt_snap = validate_verifier_response(
+            v_alt_snap, _accepted_deterministic(v_alt_snap), raw_output=agree_raw
+        )
+
+        # Results from different runs or knowledge snapshots must carry distinct provenance
+        self.assertEqual(res_alt_run.run_id, "run-005097-99")
+        self.assertNotEqual(res_alt_run.bundle_fingerprint, res_orig.bundle_fingerprint)
+        self.assertEqual(res_alt_snap.knowledge_snapshot_id, "knowledge-v9")
+        self.assertNotEqual(res_alt_snap.bundle_fingerprint, res_orig.bundle_fingerprint)
+
+        # Non-AGREE outcomes also preserve originating bundle provenance
+        disagree_raw = (FIXTURE_DIR / "disagree_output.json").read_text(encoding="utf-8")
+        uncertain_raw = (FIXTURE_DIR / "uncertain_output.json").read_text(encoding="utf-8")
+        for non_agree_res in (
+            validate_verifier_response(v_orig, det_orig, raw_output=disagree_raw),
+            validate_verifier_response(v_orig, det_orig, raw_output=uncertain_raw),
+            validate_verifier_response(v_orig, det_orig, raw_output="{bad-json"),
+            validate_verifier_response(v_orig, det_orig, provider_error="HTTP 503"),
+            validate_verifier_response(v_orig, det_orig, timed_out=True),
+        ):
+            self.assertEqual(non_agree_res.run_id, v_orig.run_id)
+            self.assertEqual(
+                non_agree_res.knowledge_snapshot_id, v_orig.knowledge_snapshot_id
+            )
+            self.assertEqual(
+                non_agree_res.bundle_fingerprint, v_orig.bundle_fingerprint
+            )
 
     def test_verifier_agree_enforces_policy_formula_coverage_and_allows_valid_or_branches(self):
         base_raw = json.loads(
@@ -139,7 +187,6 @@ class TestVerifierContractAndValidation(unittest.TestCase):
             },
         ]
 
-        # 1. Formula requires CRIT-A AND CRIT-B, but verifier only supports CRIT-A -> fail closed
         and_raw = json.loads(json.dumps(base_raw))
         and_raw["evidence_bundle"]["policy_formula"] = "CRIT-A AND CRIT-B"
         v_and = VerifierInput.model_validate_json(json.dumps(and_raw))
@@ -160,7 +207,6 @@ class TestVerifierContractAndValidation(unittest.TestCase):
             res_partial.reason_code, VERIFIER_REASON_FORMULA_NOT_SATISFIED
         )
 
-        # 2. Formula allows (CRIT-A AND CRIT-B) OR CRIT-C, and verifier supports CRIT-C -> AGREE
         or_raw = json.loads(json.dumps(base_raw))
         or_raw["evidence_bundle"]["policy_formula"] = "(CRIT-A AND CRIT-B) OR CRIT-C"
         v_or = VerifierInput.model_validate_json(json.dumps(or_raw))
@@ -311,6 +357,11 @@ class TestVerifierContractAndValidation(unittest.TestCase):
                 (FIXTURE_DIR / fixture_name).read_text(encoding="utf-8")
             )
             self.assertTrue(parsed.requires_manual_review)
+            self.assertEqual(parsed.run_id, v_input.run_id)
+            self.assertEqual(
+                parsed.knowledge_snapshot_id, v_input.knowledge_snapshot_id
+            )
+            self.assertEqual(parsed.bundle_fingerprint, v_input.bundle_fingerprint)
 
     def test_verifier_rejects_unretrieved_or_duplicate_citation_and_cannot_override_rejection(self):
         v_input = _load_input()
