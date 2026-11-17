@@ -11,6 +11,9 @@ from claim_agent.contracts import (
     RouteDecision,
     RouteOutcome,
 )
+from claim_agent.safety.required_evidence import (
+    evaluate_required_evidence_safety,
+)
 
 
 EVIDENCE_INTERPRETATION_ROOT_CAUSES = frozenset(
@@ -27,6 +30,25 @@ AGENT_EVIDENCE_TOOLS = (
 )
 
 
+def _available_evidence_from_claim(claim: Claim) -> tuple[str, ...]:
+    """Return only evidence explicitly recorded in the trusted claim input."""
+
+    encounter = claim.encounter
+    available_evidence = {
+        str(document).strip().lower()
+        for document in encounter.get("documentation_attached", [])
+        if str(document).strip()
+    }
+
+    if encounter.get("eligibility_verified_on"):
+        available_evidence.add("eligibility_response")
+
+    if encounter.get("primary_eob_on_file") is True:
+        available_evidence.add("primary_eob")
+
+    return tuple(sorted(available_evidence))
+
+
 def analyze_and_route_claim(
     claim: Claim,
     as_of: date,
@@ -41,6 +63,7 @@ def analyze_and_route_claim(
     triage_result = triage_claim(claim, as_of)
     routing_results: list[tuple[BaselineFinding, RouteDecision]] = []
     baseline_warnings = triage_result.get("warnings", [])
+    available_evidence = _available_evidence_from_claim(claim)
 
     # Evaluate every finding independently so multi-denial claims preserve
     # their service-line identities throughout routing.
@@ -80,6 +103,11 @@ def analyze_and_route_claim(
             deadline_status=deadline_status,
         )
 
+        evidence_safety = evaluate_required_evidence_safety(
+            finding,
+            available_evidence=available_evidence,
+        )
+
         if disposition is Disposition.MANUAL_REVIEW:
             route = RouteDecision(
                 contract_version="0.1",
@@ -116,6 +144,16 @@ def analyze_and_route_claim(
                     "Agent must interpret evidence for this root cause."
                 ),
                 authorized_tools=list(AGENT_EVIDENCE_TOOLS),
+            )
+        elif evidence_safety.requires_manual_review:
+            route = RouteDecision(
+                contract_version="0.1",
+                claim_id=finding.claim_id,
+                service_line_id=finding.service_line_id,
+                outcome=RouteOutcome.MANUAL_REVIEW,
+                reason_code=evidence_safety.reason_code,
+                routing_reason=evidence_safety.rationale,
+                authorized_tools=[],
             )
         else:
             route = RouteDecision(

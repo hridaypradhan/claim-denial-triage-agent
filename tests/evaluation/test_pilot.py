@@ -240,6 +240,24 @@ class SetADatasetTest(unittest.TestCase):
                 {prediction["system"] for prediction in predictions},
                 {"scripted-agent"},
             )
+            predictions_by_case = {
+                prediction["case_id"]: prediction
+                for prediction in predictions
+            }
+            for case_id in (
+                "CLM-2026-610101-L1",
+                "CLM-2026-610107-L1",
+            ):
+                with self.subTest(case_id=case_id):
+                    prediction = predictions_by_case[case_id]
+                    self.assertEqual(
+                        prediction["disposition"],
+                        "MANUAL_REVIEW",
+                    )
+                    self.assertEqual(
+                        prediction["details"]["route_outcome"],
+                        "MANUAL_REVIEW",
+                    )
 
             run_manifest = json.loads(
                 (output_directory / "run_manifest.json").read_text(
@@ -269,7 +287,7 @@ class SetADatasetTest(unittest.TestCase):
             )
             self.assertEqual(
                 scores["rates"]["joint"],
-                {"hits": 22, "total": 23},
+                {"hits": 20, "total": 23},
             )
             unknown_payer_result = next(
                 result
