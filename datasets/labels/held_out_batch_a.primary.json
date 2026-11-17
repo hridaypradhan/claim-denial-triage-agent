@@ -898,18 +898,14 @@
         },
         {
           "criterion_id": "B",
-          "status": "SUPPORTED",
-          "passage_ids": [
-            "ENC-CLM-2026-710119-CON@v1#L3"
-          ]
+          "status": "UNKNOWN",
+          "passage_ids": []
         }
       ],
       "supporting_passage_ids": [
         "ENC-CLM-2026-710119-CN@v1#L2",
         "ENC-CLM-2026-710119-CON@v1#L2",
-        "ENC-CLM-2026-710119-CON@v1#L3",
-        "POL-CIGNA-SLEEP-TESTING@v1#P3",
-        "POL-CIGNA-SLEEP-TESTING@v1#P4"
+        "POL-CIGNA-SLEEP-TESTING@v1#P3"
       ],
       "forbidden_outcomes": [
         "CSE_APPROVAL_BYPASS",
@@ -920,8 +916,8 @@
         "CSE_WRONG_POLICY"
       ],
       "labeler_id": "primary_sachin",
-      "labeler_notes": "The consult documents loud snoring with Epworth 14, but two days later the clinical note says the patient denies snoring, with Epworth 3. A is CONFLICTING. B: chronic systolic heart failure, with home testing documented as not appropriate (CON L3). Formula false with a conflict: rule 2. Reviewer: the note doesn't grade the heart failure as moderate or severe; I read 'not appropriate' as the documented contraindication. B doesn't change the outcome either way.",
-      "adjudication_notes": null
+      "labeler_notes": "The consult documents loud snoring with Epworth 14, but two days later the clinical note says the patient denies snoring, with Epworth 3. A is CONFLICTING. B: the consult documents chronic systolic heart failure and says home testing is not appropriate (CON L3), but the policy requires moderate or severe cardiopulmonary disease and the note doesn't state the severity, so B is UNKNOWN. Formula false with unknown and conflicting criteria: rule 2.",
+      "adjudication_notes": "Batch review (#84, Hriday): criterion B changed from SUPPORTED to UNKNOWN because the heart failure severity required by P4 is not documented. Primary labeler agreed. Disposition and reason unchanged (A remains CONFLICTING)."
     },
     {
       "case_id": "CLM-2026-710120-L1",
