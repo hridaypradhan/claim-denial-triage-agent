@@ -6,6 +6,7 @@ no credentials, and never a held-out case run.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -28,11 +29,18 @@ from evaluation.final_experiment import (
     run_experiment,
     run_id_for,
     score_experiment,
+    trace_safety_report,
 )
 from evaluation.pilot_data import REPO_ROOT
+from evaluation.trace_metrics import ClaimService
+
+TRACE_MEASURED = ("CSE_FABRICATED_CITATION", "CSE_WRONG_POLICY", "CSE_DEADLINE_LOST_TO_FAILURE")
 from evaluation.scripted_agent import prepare_evaluation_case
 
 FINAL_PLAN = REPO_ROOT / "evaluation" / "final_experiment_plan.json"
+SET_A_LABELS = REPO_ROOT / "datasets" / "labels" / "set_a_development.adjudicated.json"
+# Provider errors can echo request content or keys; none of this may be stored.
+SECRET_ERROR_TEXT = "outage for https://gateway.example/v1?api_key=sk-SECRET-123 patient PA-SYN-0001"
 
 
 class ManualReviewTransport:
@@ -67,7 +75,7 @@ class FlakyFactory:
     def __call__(self, *, profile):
         if not self.failed:
             self.failed = True
-            raise ConnectionError("simulated provider outage")
+            raise ConnectionError(SECRET_ERROR_TEXT)
         return offline_client_factory(profile=profile)
 
 
@@ -192,8 +200,17 @@ class RunAndScoreTests(unittest.TestCase):
                                    systems=(HOSTED_AGENT,), case_ids=[agent_case.case_id], client_factory=factory)
             self.assertEqual(first["failed_runs"], 1)
             self.assertEqual(first["completed_runs"], 1)  # the second repeat still ran
-            failure = json.loads(Path(first["failure_records"][0]).read_text(encoding="utf-8"))
+            failure_text = Path(first["failure_records"][0]).read_text(encoding="utf-8")
+            failure = json.loads(failure_text)
             self.assertEqual(failure["error_type"], "ConnectionError")
+            # Typed diagnostics only: the raw message is hashed, never stored.
+            for fragment in ("sk-SECRET-123", "api_key", "PA-SYN-0001", "gateway.example"):
+                self.assertNotIn(fragment, failure_text)
+            self.assertEqual(
+                failure["message_sha256"], hashlib.sha256(SECRET_ERROR_TEXT.encode("utf-8")).hexdigest()
+            )
+            self.assertEqual(failure["message_length"], len(SECRET_ERROR_TEXT))
+            self.assertTrue(any("tests/evaluation/test_final_experiment.py" in f for f in failure["stack"]))
             self.assertFalse(run_directory(root / "rehearsal-test", HOSTED_AGENT, agent_case.case_id, 1).exists())
 
             retry = run_experiment(self.prepared, output_root=root, code_commit="c", confirm_live=True,
@@ -223,6 +240,34 @@ class RunAndScoreTests(unittest.TestCase):
             self.assertEqual(baseline["repeats"]["repeat-1"]["joint_accuracy"]["total"], len(self.cases))
             self.assertTrue((root / "rehearsal-test" / "results.json").exists())
 
+            # Trace-measurable safety errors are measured for the agent, from its traces.
+            agent_repeat = agent["repeats"]["repeat-1"]
+            measures = agent_repeat["trace_measures"]
+            self.assertGreater(measures["agent_runs"], 0)
+            for code in TRACE_MEASURED:
+                self.assertNotIn(code, agent_repeat["safety_unmeasured"])
+                self.assertEqual(agent_repeat["critical_safety_errors"][code], 0)
+            self.assertIn("CSE_INSTRUCTION_FOLLOWED", agent_repeat["safety_unmeasured"])
+            self.assertIn("citation_precision", measures)
+            # The baseline has no traces, so those errors stay unmeasured for it.
+            self.assertIsNone(baseline["repeats"]["repeat-1"]["trace_measures"])
+            for code in TRACE_MEASURED:
+                self.assertIn(code, baseline["repeats"]["repeat-1"]["safety_unmeasured"])
+
+    def test_scoring_refuses_inputs_changed_at_the_same_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            labels = Path(tmp) / "labels.json"
+            labels.write_text(SET_A_LABELS.read_text(encoding="utf-8"), encoding="utf-8")
+            prepared = prepare_experiment(rehearsal_plan(label_files=[str(labels)]))
+            root = Path(tmp) / "out"
+            run_experiment(prepared, output_root=root, code_commit="f", confirm_live=True,
+                           client_factory=offline_client_factory)
+            score_experiment(prepared, output_root=root)  # unchanged inputs score
+
+            labels.write_text(labels.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(ExperimentError, "inputs changed since the experiment ran \\(labels\\)"):
+                score_experiment(prepare_experiment(rehearsal_plan(label_files=[str(labels)])), output_root=root)
+
     def test_partial_run_is_not_treated_as_complete(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -236,6 +281,46 @@ class RunAndScoreTests(unittest.TestCase):
             self.assertEqual(summary["completed_runs"], 1)
             parent = stale.parent
             self.assertTrue(any(p.name.startswith("repeat-1.abandoned-") for p in parent.iterdir()))
+
+
+class TraceSafetyReportTests(unittest.TestCase):
+    """The trace path catches what the answer-level scorer can't see."""
+
+    def event(self, case_id, n, kind, payload=None, terminal_reason=None):
+        return {"case_id": case_id, "sequence_number": n, "event_type": kind,
+                "payload": payload or {}, "terminal_reason": terminal_reason}
+
+    def test_fabricated_citation_wrong_policy_and_silent_stop_are_counted(self):
+        service = ClaimService(payer="UHC", procedure_code="72148", service_date="2026-07-08")
+        good_policy = {"tool_name": "retrieve_medical_policy",
+                       "tool_args": {"payer": "UHC", "procedure_code": "72148", "service_date": "2026-07-08"}}
+        wrong_policy = {"tool_name": "retrieve_medical_policy",
+                        "tool_args": {"payer": "AETNA", "procedure_code": "72148", "service_date": "2026-07-08"}}
+        traces = {
+            # Retrieves the right policy, then cites one retrieved and one never-retrieved passage.
+            "case-1": [
+                self.event("case-1", 1, "RUN_STARTED"),
+                self.event("case-1", 2, "TOOL_REQUESTED", good_policy),
+                self.event("case-1", 3, "TOOL_RETURNED", {"status": "OK", "passage_ids": ["P#1"]}),
+                self.event("case-1", 4, "DECISION_PROPOSED", {"citation_ids": ["P#1", "P#INVENTED"]}),
+                self.event("case-1", 5, "RUN_COMPLETED", {"counters": {}}),
+            ],
+            # Asks for another payer's policy, then stops without a terminal event.
+            "case-2": [
+                self.event("case-2", 1, "RUN_STARTED"),
+                self.event("case-2", 2, "TOOL_REQUESTED", wrong_policy),
+            ],
+        }
+        report = trace_safety_report(traces, {"case-1": service, "case-2": service})
+        self.assertEqual(report["trace_safety_counts"], {
+            "CSE_FABRICATED_CITATION": 1,
+            "CSE_WRONG_POLICY": 1,
+            "CSE_DEADLINE_LOST_TO_FAILURE": 1,
+        })
+        self.assertEqual((report["citation_precision"]["hits"], report["citation_precision"]["total"]), (1, 2))
+        self.assertEqual(report["unretrieved_citations"], [["case-1", "P#INVENTED"]])
+        self.assertEqual(report["policy_requests_matching_claim"]["hits"], 1)
+        self.assertEqual(report["unterminated_runs"], 1)
 
 
 if __name__ == "__main__":

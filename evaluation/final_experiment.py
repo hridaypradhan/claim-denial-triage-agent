@@ -22,9 +22,14 @@ Completed runs are never rerun or overwritten. A failed run is recorded under
 retries only runs that have no ``complete.json``, and keeps every failure
 record. Changing any input requires a new experiment ID.
 
-``score_experiment`` refuses to score until every planned run is complete, then
-scores each system and repeat against the labels and reports stability and
-operational measurements. Normal tests use fake hosted responses and need no
+Failure records keep typed diagnostics only (exception class, a hash and the
+length of the message, and code locations), never raw exception text.
+
+``score_experiment`` re-hashes the dataset, label, and knowledge files and
+refuses if any differs from ``experiment.json``, or if any planned run is
+incomplete. It then scores each system and repeat against the labels, adds the
+trace-measured safety errors and citation precision for the agent, and reports
+stability and operational measurements. Normal tests use fake hosted responses and need no
 network or credentials.
 """
 
@@ -51,7 +56,9 @@ from claim_agent.tools.knowledge_store import KnowledgeStore
 from claim_agent.tools.snapshot_freeze import check_lock
 from evaluation.hosted_comparison import HostedCandidate, HostedComparisonBudgets
 from evaluation.hosted_execution import execute_hosted_case
-from evaluation.metrics import ALL_SAFETY_ERRORS, score_system
+from baseline.triage.claim import load_claim
+from evaluation.metrics import ALL_SAFETY_ERRORS, Rate, score_system
+from evaluation.trace_metrics import ClaimService, measure_traces, trace_safety_counts
 from evaluation.pilot_data import REPO_ROOT, Case, Dataset, Label, load_dataset, load_labels
 from evaluation.run_pilot import case_facts
 from evaluation.scripted_agent import build_non_agent_output_package, prepare_evaluation_case
@@ -253,18 +260,25 @@ def experiment_record(prepared: PreparedExperiment, code_commit: str) -> dict:
     }
 
 
+RECORDED_INPUTS = ("plan_sha256", "code_commit", "dataset", "labels", "knowledge")
+
+
+def _changed_inputs(recorded: Mapping[str, object], current: Mapping[str, object]) -> List[str]:
+    return [key for key in RECORDED_INPUTS if recorded.get(key) != current.get(key)]
+
+
 def _ensure_experiment_record(experiment_root: Path, record: dict) -> None:
     """Write the record once; refuse to resume an experiment whose inputs changed."""
 
     path = experiment_root / "experiment.json"
     if path.exists():
         existing = json.loads(path.read_text(encoding="utf-8"))
-        for key in ("plan_sha256", "code_commit", "dataset", "labels", "knowledge"):
-            if existing.get(key) != record.get(key):
-                raise ExperimentError(
-                    f"experiment {record['experiment_id']!r} already exists with a different {key}; "
-                    "use a new experiment_id"
-                )
+        changed = _changed_inputs(existing, record)
+        if changed:
+            raise ExperimentError(
+                f"experiment {record['experiment_id']!r} already exists with a different {changed[0]}; "
+                "use a new experiment_id"
+            )
         return
     experiment_root.mkdir(parents=True, exist_ok=True)
     _write_json(path, {**record, "created_at": _now()})
@@ -399,6 +413,42 @@ def _write_run(final_dir: Path, prediction: Prediction, measurements: dict, run_
     partial.rename(final_dir)
 
 
+def _code_location(filename: str) -> str:
+    """A repository-relative path for project code, or only the file name otherwise."""
+
+    path = Path(filename)
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.name
+
+
+def safe_failure_diagnostics(error: BaseException) -> dict:
+    """Typed diagnostics with no unrestricted exception text.
+
+    Exception messages can echo provider responses, request content, or
+    credentials, so they are default-denied: only their SHA-256 and length are
+    kept, which still lets identical failures be grouped. The stack keeps code
+    locations (file, line, function) and never local values or source text.
+    """
+
+    message = str(error)
+    chain = []
+    current: Optional[BaseException] = error
+    while current is not None and len(chain) < 5:
+        chain.append(f"{type(current).__module__}.{type(current).__qualname__}")
+        current = current.__cause__ or current.__context__
+    frames = traceback.extract_tb(error.__traceback__)
+    return {
+        "error_type": type(error).__name__,
+        "error_class": f"{type(error).__module__}.{type(error).__qualname__}",
+        "exception_chain": chain,
+        "message_sha256": hashlib.sha256(message.encode("utf-8", "replace")).hexdigest(),
+        "message_length": len(message),
+        "stack": [f"{_code_location(f.filename)}:{f.lineno} in {f.name}" for f in frames][-15:],
+    }
+
+
 def _record_failure(experiment_root: Path, system: str, case_id: str, repeat_index: int, run_id: str, error: BaseException) -> Path:
     directory = experiment_root / "failures" / system / case_id / f"repeat-{repeat_index}"
     directory.mkdir(parents=True, exist_ok=True)
@@ -411,9 +461,7 @@ def _record_failure(experiment_root: Path, system: str, case_id: str, repeat_ind
         "repeat_index": repeat_index,
         "attempt": attempt,
         "failed_at": _now(),
-        "error_type": type(error).__name__,
-        "error": str(error),
-        "traceback": traceback.format_exception(type(error), error, error.__traceback__),
+        **safe_failure_diagnostics(error),
     })
     return path
 
@@ -507,6 +555,49 @@ def _rate(rate) -> dict:
     return {"hits": rate.hits, "total": rate.total, "value": rate.value, "wilson_95": rate.wilson()}
 
 
+def _read_run_trace(directory: Path) -> List[Mapping[str, object]]:
+    """The canonical trace events of one run, in order (empty for non-agent runs)."""
+
+    events: List[Mapping[str, object]] = []
+    for path in sorted((directory / "trace").glob("*.jsonl")) if (directory / "trace").exists() else []:
+        events.extend(json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
+    return sorted(events, key=lambda event: event.get("sequence_number", 0))
+
+
+def claim_services(dataset: Dataset) -> Dict[str, ClaimService]:
+    """The payer, procedure, and service date each case's policy requests must use."""
+
+    services = {}
+    for case in dataset.cases:
+        claim = load_claim(case.claim_path)
+        line = next(s for s in claim.service_lines if s["line"] == case.service_line_id)
+        services[case.case_id] = ClaimService(
+            payer=claim.payer, procedure_code=line["cpt"], service_date=claim.date_of_service.isoformat()
+        )
+    return services
+
+
+def trace_safety_report(
+    traces: Mapping[str, Sequence[Mapping[str, object]]], services: Mapping[str, ClaimService]
+) -> dict:
+    """Citation precision, policy-request accuracy, and trace-measurable safety errors."""
+
+    behaviour = measure_traces(traces, services)
+    return {
+        "trace_safety_counts": trace_safety_counts(behaviour),
+        "citation_precision": _rate(Rate(behaviour.citations_retrieved, behaviour.citations)),
+        "policy_requests_matching_claim": _rate(
+            Rate(behaviour.policy_requests_matching_claim, behaviour.policy_requests)
+        ),
+        "unretrieved_citations": [list(item) for item in behaviour.unretrieved_citations],
+        "agent_runs": behaviour.agent_runs,
+        "decisions_proposed": behaviour.decisions_proposed,
+        "decisions_accepted": behaviour.decisions_accepted,
+        "budget_overruns": behaviour.budget_overruns,
+        "unterminated_runs": behaviour.unterminated_runs,
+    }
+
+
 def _percentile(values: List[float], fraction: float) -> Optional[float]:
     if not values:
         return None
@@ -523,8 +614,15 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
     if not record_path.exists():
         raise ExperimentError(f"no experiment at {experiment_root}")
     record = json.loads(record_path.read_text(encoding="utf-8"))
-    if record["plan_sha256"] != _plan_hash(plan):
-        raise ExperimentError("the plan changed after the experiment ran")
+    # Re-hash every input now: a file changed at the same path must not be
+    # scored as if it were the one the runs used.
+    current = experiment_record(prepared, record["code_commit"])
+    changed = [key for key in _changed_inputs(record, current) if key != "code_commit"]
+    if changed:
+        raise ExperimentError(
+            f"inputs changed since the experiment ran ({', '.join(changed)}); "
+            "score only against the recorded inputs, or run a new experiment_id"
+        )
 
     incomplete = [
         f"{system}/{case.case_id}/repeat-{n}"
@@ -538,6 +636,7 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
 
     as_of = date.fromisoformat(prepared.dataset.as_of)
     facts = case_facts(prepared.dataset)
+    services = claim_services(prepared.dataset)
     results: dict = {"experiment_id": plan.experiment_id, "plan_sha256": record["plan_sha256"],
                      "code_commit": record["code_commit"], "cases": len(prepared.dataset.cases), "systems": {}}
 
@@ -549,9 +648,13 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
         costs: List[Optional[float]] = []
         for n in plan.repeats(system):
             predictions = {}
+            traces: Dict[str, List[Mapping[str, object]]] = {}
             for case in prepared.dataset.cases:
                 directory = run_directory(experiment_root, system, case.case_id, n)
                 predictions[case.case_id] = _load_prediction(directory)
+                events = _read_run_trace(directory)
+                if events:
+                    traces[case.case_id] = events
                 answers.setdefault(case.case_id, set()).add(
                     (predictions[case.case_id].disposition, predictions[case.case_id].root_cause)
                 )
@@ -562,6 +665,16 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
                 if measured.get("model_responses"):
                     costs.append(measured.get("cost"))
             score = score_system(system, predictions, prepared.labels, facts, as_of, has_traces=system == HOSTED_AGENT)
+            safety_counts = {code: score.safety_counts.get(code, 0) for code in ALL_SAFETY_ERRORS}
+            unmeasured = list(score.safety_unmeasured)
+            trace_report = None
+            if system == HOSTED_AGENT:
+                # The answer-level scorer can't see citations, policy requests,
+                # or silent stops; the canonical traces can.
+                trace_report = trace_safety_report(traces, services)
+                for code, count in trace_report["trace_safety_counts"].items():
+                    safety_counts[code] += count
+                unmeasured = [code for code in unmeasured if code not in trace_report["trace_safety_counts"]]
             repeats[f"repeat-{n}"] = {
                 "joint_accuracy": _rate(score.joint),
                 "disposition_accuracy": _rate(score.disposition),
@@ -571,8 +684,9 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
                 "unnecessary_manual_review": _rate(score.unnecessary_manual_review),
                 "deadline_accuracy": _rate(score.deadline),
                 "manual_review_rate": _rate(score.manual_review_rate),
-                "critical_safety_errors": {code: score.safety_counts.get(code, 0) for code in ALL_SAFETY_ERRORS},
-                "safety_unmeasured": list(score.safety_unmeasured),
+                "critical_safety_errors": safety_counts,
+                "safety_unmeasured": unmeasured,
+                "trace_measures": trace_report,
                 "per_case": score.per_case,
             }
         stable = sum(len(v) == 1 for v in answers.values())

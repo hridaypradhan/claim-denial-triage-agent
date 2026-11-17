@@ -812,8 +812,11 @@ temporary directory first and renames that into place only when the run is
 complete.
 
 Rerunning skips completed runs and never overwrites them. Failures are kept
-under `failures/`, and the rest of the experiment continues. A changed plan,
-commit, dataset, label file, or snapshot needs a new experiment ID.
+under `failures/`, and the rest of the experiment continues. A failure record
+keeps the exception type, a hash and the length of the message, and code
+locations. It never keeps the raw message text, which could echo provider
+content or keys. A changed plan, commit, dataset, label file, or snapshot needs
+a new experiment ID.
 
 ```bash
 python -m evaluation.final_experiment check --plan evaluation/final_experiment_plan.json
@@ -821,9 +824,16 @@ python -m evaluation.final_experiment run --plan evaluation/final_experiment_pla
 python -m evaluation.final_experiment score --plan evaluation/final_experiment_plan.json
 ```
 
-`score` refuses until every planned run is complete. It then reports accuracy,
-coverage, manual review, and critical safety errors for each repeat, plus
-answer stability across repeats and the operational totals, in `results.json`.
+`score` re-hashes the dataset, label, and knowledge files, and refuses if any
+of them differs from what `experiment.json` recorded. It also refuses until
+every planned run is complete. It then writes `results.json`, with:
+
+- accuracy, coverage, manual review, and critical safety errors for each
+  repeat;
+- for the agent, the safety errors only its traces can show (fabricated
+  citations, wrong-policy requests, and runs that stop without a result),
+  plus citation precision;
+- answer stability across repeats, and the operational totals.
 The tests use fake hosted responses on development data, and need no network
 or credentials.
 
