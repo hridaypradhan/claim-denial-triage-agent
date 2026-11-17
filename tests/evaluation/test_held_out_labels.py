@@ -19,6 +19,7 @@ KNOWLEDGE = REPO_ROOT / "knowledge"
 LABEL_FILES = {
     "A": REPO_ROOT / "datasets" / "labels" / "held_out_batch_a.primary.json",
     "B": REPO_ROOT / "datasets" / "labels" / "held_out_batch_b.primary.json",
+    "C": REPO_ROOT / "datasets" / "labels" / "held_out_batch_c.primary.json",
 }
 
 
