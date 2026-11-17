@@ -794,6 +794,39 @@ breakers. Only a complete report can support the model decision. The V10
 report selected Beam with zero critical safety and provider failures, while
 also recording its 75% joint accuracy and conservative write-off limitations.
 
+## Run the final repeated-run experiment
+
+[`evaluation/final_experiment.py`](evaluation/final_experiment.py) (#53) runs
+the baseline once and the hosted agent three times on every case of one frozen
+plan, [`evaluation/final_experiment_plan.json`](evaluation/final_experiment_plan.json).
+Before any run, it checks that:
+
+- the knowledge snapshot matches the plan and its lock;
+- the labels cover every case exactly once;
+- for held-out cases, every label file is frozen.
+
+Each run writes its prediction, output package, trace, and measurements
+(latency, model and tool calls, tokens, and cost when prices are set) to its
+own directory under `.local-output/final-experiment/`. It writes them to a
+temporary directory first and renames that into place only when the run is
+complete.
+
+Rerunning skips completed runs and never overwrites them. Failures are kept
+under `failures/`, and the rest of the experiment continues. A changed plan,
+commit, dataset, label file, or snapshot needs a new experiment ID.
+
+```bash
+python -m evaluation.final_experiment check --plan evaluation/final_experiment_plan.json
+python -m evaluation.final_experiment run --plan evaluation/final_experiment_plan.json --code-commit "$(git rev-parse HEAD)" --confirm-live
+python -m evaluation.final_experiment score --plan evaluation/final_experiment_plan.json
+```
+
+`score` refuses until every planned run is complete. It then reports accuracy,
+coverage, manual review, and critical safety errors for each repeat, plus
+answer stability across repeats and the operational totals, in `results.json`.
+The tests use fake hosted responses on development data, and need no network
+or credentials.
+
 ## Run the knowledge and retrieval tests
 
 These check that the manifest, source files, passage IDs, criteria, and per-procedure formulas in [`knowledge/`](knowledge/) are consistent, that policy matching and ranking behave as decision 0001 requires, and that the dispatcher validates requests and returns `ToolResult` records. The dispatcher tests need the agent dependencies in [`requirements.txt`](requirements.txt):
