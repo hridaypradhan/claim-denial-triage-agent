@@ -16,7 +16,10 @@ from evaluation.pilot_data import load_dataset, load_labels
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = REPO_ROOT / "datasets" / "held_out" / "manifest.json"
 KNOWLEDGE = REPO_ROOT / "knowledge"
-LABEL_FILES = {"A": REPO_ROOT / "datasets" / "labels" / "held_out_batch_a.primary.json"}
+LABEL_FILES = {
+    "A": REPO_ROOT / "datasets" / "labels" / "held_out_batch_a.primary.json",
+    "B": REPO_ROOT / "datasets" / "labels" / "held_out_batch_b.primary.json",
+}
 
 
 def read_json(path: Path) -> dict:
