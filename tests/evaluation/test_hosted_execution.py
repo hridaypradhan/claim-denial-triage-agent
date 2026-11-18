@@ -87,6 +87,19 @@ class HostedCaseExecutionTests(unittest.TestCase):
             ],
             tool_context["get_encounter_note"]["available_document_ids"],
         )
+        self.assertEqual(
+            {
+                "purpose": (
+                    "Look up the active denial code without guessing "
+                    "unknown values."
+                ),
+                "carc": "50",
+                "rarc": ["M127"],
+                "group_code": "CO",
+            },
+            tool_context["lookup_denial_code"],
+        )
+        self.assertNotIn("get_payer_profile", tool_context)
 
     def test_case_produces_package_and_complete_hosted_trace(
         self,

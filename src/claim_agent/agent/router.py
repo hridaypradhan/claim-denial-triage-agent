@@ -14,6 +14,10 @@ from claim_agent.contracts import (
 from claim_agent.safety.required_evidence import (
     evaluate_required_evidence_safety,
 )
+from claim_agent.tools.dispatcher import (
+    DENIAL_CODE_TOOL,
+    PAYER_PROFILE_TOOL,
+)
 
 
 EVIDENCE_INTERPRETATION_ROOT_CAUSES = frozenset(
@@ -28,6 +32,15 @@ AGENT_EVIDENCE_TOOLS = (
     "retrieve_medical_policy",
     "get_encounter_note",
 )
+
+AGENT_REFERENCE_TOOLS_BY_ROOT_CAUSE = {
+    RootCause.MEDICAL_NECESSITY: (DENIAL_CODE_TOOL,),
+    RootCause.BUNDLING_NCCI: (DENIAL_CODE_TOOL,),
+    RootCause.AUTHORIZATION: (
+        DENIAL_CODE_TOOL,
+        PAYER_PROFILE_TOOL,
+    ),
+}
 
 
 def _available_evidence_from_claim(claim: Claim) -> tuple[str, ...]:
@@ -143,7 +156,10 @@ def analyze_and_route_claim(
                 routing_reason=(
                     "Agent must interpret evidence for this root cause."
                 ),
-                authorized_tools=list(AGENT_EVIDENCE_TOOLS),
+                authorized_tools=list(
+                    AGENT_EVIDENCE_TOOLS
+                    + AGENT_REFERENCE_TOOLS_BY_ROOT_CAUSE[root_cause]
+                ),
             )
         elif evidence_safety.requires_manual_review:
             route = RouteDecision(

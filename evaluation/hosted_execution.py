@@ -18,7 +18,13 @@ from claim_agent.agent.planning_prompt import (
 from claim_agent.agent.run_configuration import AllowedTool
 from claim_agent.agent.trace_adapter import CanonicalTraceAdapter
 from claim_agent.contracts import OutputPackage
-from claim_agent.tools.dispatcher import ToolDispatcher
+from claim_agent.tools.dispatcher import (
+    DENIAL_CODE_TOOL,
+    ENCOUNTER_NOTE_TOOL,
+    MEDICAL_POLICY_TOOL,
+    PAYER_PROFILE_TOOL,
+    ToolDispatcher,
+)
 from claim_agent.tools.encounter_notes import claim_document_inventory
 from claim_agent.tools.knowledge_store import KnowledgeStore
 from evaluation.hosted_comparison import HostedComparisonBudgets
@@ -50,13 +56,11 @@ def build_hosted_tool_context(
             "claim context."
         )
 
-    encounter_documents = claim_document_inventory(
-        knowledge_store,
-        claim_context.claim_id,
-    )
+    authorized_tools = set(prepared_case.route_decision.authorized_tools)
+    tool_context: dict[str, object] = {}
 
-    return {
-        "retrieve_medical_policy": {
+    if MEDICAL_POLICY_TOOL in authorized_tools:
+        tool_context[MEDICAL_POLICY_TOOL] = {
             "purpose": "Retrieve the applicable policy and its criteria.",
             "payer": claim_context.payer,
             "procedure_code": claim_context.procedure_code,
@@ -64,17 +68,53 @@ def build_hosted_tool_context(
             "query_guidance": (
                 "Use a short clinical query relevant to the denial."
             ),
-        },
-        "get_encounter_note": {
+        }
+
+    if ENCOUNTER_NOTE_TOOL in authorized_tools:
+        encounter_documents = claim_document_inventory(
+            knowledge_store,
+            claim_context.claim_id,
+        )
+        tool_context[ENCOUNTER_NOTE_TOOL] = {
             "purpose": (
-                "Retrieve one encounter document belonging to the active claim."
+                "Retrieve one encounter document belonging to the "
+                "active claim."
             ),
             "claim_id": claim_context.claim_id,
             "available_document_ids": [
                 document.document_id for document in encounter_documents
             ],
-        },
-    }
+        }
+
+    if DENIAL_CODE_TOOL in authorized_tools:
+        if (
+            claim_context.denial_carc is None
+            or claim_context.denial_group_code is None
+        ):
+            raise EvaluationCasePreparationError(
+                "Authorized denial-code lookup lacks trusted denial fields."
+            )
+
+        tool_context[DENIAL_CODE_TOOL] = {
+            "purpose": (
+                "Look up the active denial code without guessing "
+                "unknown values."
+            ),
+            "carc": claim_context.denial_carc,
+            "rarc": list(claim_context.denial_rarc),
+            "group_code": claim_context.denial_group_code,
+        }
+
+    if PAYER_PROFILE_TOOL in authorized_tools:
+        tool_context[PAYER_PROFILE_TOOL] = {
+            "purpose": (
+                "Look up the active payer's explicit profile without "
+                "using a default."
+            ),
+            "payer_id": claim_context.payer,
+        }
+
+    return tool_context
 
 
 def execute_hosted_case(

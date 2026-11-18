@@ -6,7 +6,7 @@ import unittest
 from datetime import date
 from typing import Mapping
 
-from baseline.triage.claim import Claim
+from baseline.triage.claim import Claim, Denial
 
 from claim_agent.agent.tool_request_guard import (
     ClaimBoundToolDispatcher,
@@ -18,8 +18,10 @@ from claim_agent.agent.tool_request_guard import (
 )
 from claim_agent.contracts import ToolResult, ToolStatus
 from claim_agent.tools.dispatcher import (
+    DENIAL_CODE_TOOL,
     ENCOUNTER_NOTE_TOOL,
     MEDICAL_POLICY_TOOL,
+    PAYER_PROFILE_TOOL,
 )
 
 CLAIM_ID = "CLM-2026-005097"
@@ -38,7 +40,15 @@ def make_claim() -> Claim:
         remit_date=date(2026, 7, 11),
         billed_amount=1450.00,
         paid_amount=0.00,
-        denials=[],
+        denials=[
+            Denial(
+                group_code="CO",
+                carc="50",
+                rarc=["M127"],
+                amount=1450.00,
+                service_line=1,
+            )
+        ],
         service_lines=[
             {
                 "line": 1,
@@ -109,6 +119,110 @@ def make_policy_arguments() -> dict[str, object]:
 
 class ClaimBoundToolDispatcherTests(unittest.TestCase):
     """Verify that tools cannot retrieve evidence for another claim."""
+
+    def test_context_includes_active_denial_identity(self) -> None:
+        """Reference lookups should be bound to the active denied line."""
+
+        context = build_claim_tool_context(
+            claim=make_claim(),
+            service_line_id=1,
+        )
+
+        self.assertEqual("50", context.denial_carc)
+        self.assertEqual(("M127",), context.denial_rarc)
+        self.assertEqual("CO", context.denial_group_code)
+
+    def test_matching_denial_lookup_reaches_dispatcher(self) -> None:
+        """The exact denial on the active line may be looked up."""
+
+        dispatcher = RecordingDispatcher()
+        guard = ClaimBoundToolDispatcher(
+            dispatcher=dispatcher,
+            claim_context=build_claim_tool_context(
+                claim=make_claim(),
+                service_line_id=1,
+            ),
+        )
+        arguments = {
+            "carc": "50",
+            "rarc": ["M127"],
+            "group_code": "CO",
+        }
+
+        guard.dispatch(
+            request_id="run-1:tool:2",
+            tool_name=DENIAL_CODE_TOOL,
+            tool_arguments=arguments,
+        )
+
+        self.assertEqual(
+            [("run-1:tool:2", DENIAL_CODE_TOOL, arguments)],
+            dispatcher.received_requests,
+        )
+
+    def test_different_denial_code_is_rejected(self) -> None:
+        """The model cannot inspect a denial outside the active line."""
+
+        dispatcher = RecordingDispatcher()
+        guard = ClaimBoundToolDispatcher(
+            dispatcher=dispatcher,
+            claim_context=build_claim_tool_context(
+                claim=make_claim(),
+                service_line_id=1,
+            ),
+        )
+
+        with self.assertRaisesRegex(
+            ToolArgumentMismatchError,
+            "carc",
+        ):
+            guard.dispatch(
+                request_id="run-1:tool:2",
+                tool_name=DENIAL_CODE_TOOL,
+                tool_arguments={
+                    "carc": "16",
+                    "rarc": ["M127"],
+                    "group_code": "CO",
+                },
+            )
+
+        self.assertEqual([], dispatcher.received_requests)
+
+    def test_matching_payer_profile_lookup_reaches_dispatcher(self) -> None:
+        """The active claim payer may be looked up without a guessed default."""
+
+        dispatcher = RecordingDispatcher()
+        guard = make_guard(dispatcher)
+        arguments = {"payer_id": PAYER}
+
+        guard.dispatch(
+            request_id="run-1:tool:3",
+            tool_name=PAYER_PROFILE_TOOL,
+            tool_arguments=arguments,
+        )
+
+        self.assertEqual(
+            [("run-1:tool:3", PAYER_PROFILE_TOOL, arguments)],
+            dispatcher.received_requests,
+        )
+
+    def test_different_payer_profile_is_rejected(self) -> None:
+        """The model cannot request another payer's profile."""
+
+        dispatcher = RecordingDispatcher()
+        guard = make_guard(dispatcher)
+
+        with self.assertRaisesRegex(
+            ToolArgumentMismatchError,
+            "payer_id",
+        ):
+            guard.dispatch(
+                request_id="run-1:tool:3",
+                tool_name=PAYER_PROFILE_TOOL,
+                tool_arguments={"payer_id": "AETNA"},
+            )
+
+        self.assertEqual([], dispatcher.received_requests)
 
     def test_context_is_built_from_claim_service_line(self) -> None:
         """Trusted retrieval fields should come from the selected claim line."""
