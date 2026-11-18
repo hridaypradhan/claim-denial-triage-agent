@@ -28,6 +28,7 @@ CLAIM_ID = "CLM-2026-005097"
 PAYER = "BCBS_AZ"
 PROCEDURE_CODE = "70553"
 SERVICE_DATE = date(2026, 6, 2)
+PATIENT_ACCOUNT = "PA-SYN-005097"
 
 
 def make_claim() -> Claim:
@@ -36,6 +37,7 @@ def make_claim() -> Claim:
     return Claim(
         claim_id=CLAIM_ID,
         payer=PAYER,
+        patient_account=PATIENT_ACCOUNT,
         date_of_service=SERVICE_DATE,
         remit_date=date(2026, 7, 11),
         billed_amount=1450.00,
@@ -55,7 +57,9 @@ def make_claim() -> Claim:
                 "cpt": PROCEDURE_CODE,
             }
         ],
-        encounter={},
+        encounter={
+            "alternate_coverage": "CIGNA",
+        },
     )
 
 
@@ -119,6 +123,19 @@ def make_policy_arguments() -> dict[str, object]:
 
 class ClaimBoundToolDispatcherTests(unittest.TestCase):
     """Verify that tools cannot retrieve evidence for another claim."""
+
+    def test_context_includes_only_explicit_eligibility_payers(self) -> None:
+        """Eligibility searches should use claim-recorded payer identities."""
+
+        context = build_claim_tool_context(
+            claim=make_claim(),
+            service_line_id=1,
+        )
+
+        self.assertEqual(
+            (PAYER, "CIGNA"),
+            context.eligibility_payers,
+        )
 
     def test_context_includes_active_denial_identity(self) -> None:
         """Reference lookups should be bound to the active denied line."""
@@ -374,6 +391,16 @@ class ClaimBoundToolDispatcherTests(unittest.TestCase):
             )
 
         self.assertEqual([], dispatcher.received_requests)
+
+    def test_context_includes_active_member_account(self) -> None:
+        """Eligibility retrieval should be bound to the active member."""
+
+        context = build_claim_tool_context(
+            claim=make_claim(),
+            service_line_id=1,
+        )
+
+        self.assertEqual(PATIENT_ACCOUNT, context.patient_account)
 
 
 if __name__ == "__main__":

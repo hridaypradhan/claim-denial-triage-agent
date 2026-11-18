@@ -33,6 +33,7 @@ from claim_agent.contracts import (
     ValidationResult,
 )
 from claim_agent.output.package import create_output_package
+from claim_agent.tools.knowledge_store import KnowledgeStore
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,7 @@ def run_integrated_case(
     as_of: date,
     package_version: str,
     knowledge_snapshot_id: str,
+    eligibility_store: KnowledgeStore | None = None,
     tool_context: Mapping[str, object] | None = None,
     required_evidence_source_ids: Sequence[str] = (),
     monotonic_clock: Callable[[], float] = time.monotonic,
@@ -79,6 +81,7 @@ def run_integrated_case(
         baseline_finding=baseline_finding,
         claim_context=claim_context,
         as_of=as_of,
+        eligibility_store=eligibility_store,
         required_evidence_source_ids=required_evidence_source_ids,
     )
 

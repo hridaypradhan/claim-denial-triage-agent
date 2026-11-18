@@ -18,6 +18,12 @@ from claim_agent.contracts import (
     ToolResult,
     ToolStatus,
 )
+from claim_agent.tools.eligibility import (
+    ELIGIBILITY_ROOT,
+    ELIGIBILITY_TOOL,
+    EligibilityArgumentMismatchError,
+)
+from claim_agent.tools.knowledge_store import KnowledgeStore
 from claim_agent.agent.tool_request_guard import ClaimToolContext
 
 CLAIM_ID = "CLM-BOUNDARY-001"
@@ -72,6 +78,8 @@ def make_baseline_finding() -> BaselineFinding:
 
 def make_claim_tool_context(
     claim_id: str = CLAIM_ID,
+    patient_account: str | None = "PA-SYN-10104",
+    eligibility_payers: tuple[str, ...] = ("BCBS_AZ", "UHC"),
 ) -> ClaimToolContext:
     """Create trusted retrieval fields for the synthetic claim."""
 
@@ -80,6 +88,8 @@ def make_claim_tool_context(
         payer="BCBS_AZ",
         procedure_code="70553",
         service_date=date(2026, 6, 2),
+        patient_account=patient_account,
+        eligibility_payers=eligibility_payers,
     )
 
 
@@ -136,6 +146,27 @@ class ProductionRuntimeBoundariesTests(unittest.TestCase):
             ),
         )
 
+    def test_unapproved_eligibility_payer_is_rejected(self) -> None:
+        """The production boundary must reject an unrecorded payer."""
+
+        boundaries = build_production_runtime_boundaries(
+            dispatcher=SyntheticEncounterDispatcher(),
+            baseline_finding=make_baseline_finding(),
+            claim_context=make_claim_tool_context(),
+            as_of=date(2026, 11, 6),
+            eligibility_store=KnowledgeStore(ELIGIBILITY_ROOT),
+        )
+
+        with self.assertRaises(EligibilityArgumentMismatchError):
+            boundaries.tool_dispatcher.dispatch(
+                request_id="run-1:tool:1",
+                tool_name=ELIGIBILITY_TOOL,
+                tool_arguments={
+                    "patient_account": "PA-SYN-10104",
+                    "payer": "AETNA",
+                },
+            )
+
     def test_separate_boundary_sets_do_not_share_evidence(self) -> None:
         """Evidence from one claim run must not leak into another run."""
 
@@ -185,6 +216,73 @@ class ProductionRuntimeBoundariesTests(unittest.TestCase):
                     claim_id="CLM-ANOTHER-PATIENT",
                 ),
                 as_of=date(2026, 11, 6),
+            )
+
+    def test_eligibility_evidence_uses_active_member_account(self) -> None:
+        """Eligibility evidence should enter only the active run's store."""
+
+        boundaries = build_production_runtime_boundaries(
+            dispatcher=SyntheticEncounterDispatcher(),
+            baseline_finding=make_baseline_finding(),
+            claim_context=make_claim_tool_context(),
+            as_of=date(2026, 11, 6),
+            eligibility_store=KnowledgeStore(ELIGIBILITY_ROOT),
+        )
+
+        observation = boundaries.tool_dispatcher.dispatch(
+            request_id="run-1:tool:1",
+            tool_name=ELIGIBILITY_TOOL,
+            tool_arguments={
+                "patient_account": "PA-SYN-10104",
+                "payer": "UHC",
+            },
+        )
+
+        self.assertTrue(observation.succeeded)
+        self.assertTrue(boundaries.evidence_store.evidence_passages)
+        self.assertTrue(
+            all(
+                passage.source_type == "eligibility_record"
+                for passage in boundaries.evidence_store.evidence_passages
+            )
+        )
+
+    def test_eligibility_request_for_another_member_is_rejected(self) -> None:
+        """The eligibility wrapper must not expose another member's record."""
+
+        boundaries = build_production_runtime_boundaries(
+            dispatcher=SyntheticEncounterDispatcher(),
+            baseline_finding=make_baseline_finding(),
+            claim_context=make_claim_tool_context(),
+            as_of=date(2026, 11, 6),
+            eligibility_store=KnowledgeStore(ELIGIBILITY_ROOT),
+        )
+
+        with self.assertRaises(EligibilityArgumentMismatchError):
+            boundaries.tool_dispatcher.dispatch(
+                request_id="run-1:tool:1",
+                tool_name=ELIGIBILITY_TOOL,
+                tool_arguments={
+                    "patient_account": "PA-SYN-ANOTHER",
+                    "payer": "UHC",
+                },
+            )
+
+    def test_eligibility_store_requires_a_trusted_member_account(self) -> None:
+        """The boundary should fail closed without a member identity."""
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "patient_account",
+        ):
+            build_production_runtime_boundaries(
+                dispatcher=SyntheticEncounterDispatcher(),
+                baseline_finding=make_baseline_finding(),
+                claim_context=make_claim_tool_context(
+                    patient_account=None,
+                ),
+                as_of=date(2026, 11, 6),
+                eligibility_store=KnowledgeStore(ELIGIBILITY_ROOT),
             )
 
 

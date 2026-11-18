@@ -18,7 +18,8 @@ from claim_agent.tools.dispatcher import (
     DENIAL_CODE_TOOL,
     PAYER_PROFILE_TOOL,
 )
-
+from claim_agent.tools.deadline_tool import DEADLINE_TOOL
+from claim_agent.tools.eligibility import ELIGIBILITY_TOOL
 
 EVIDENCE_INTERPRETATION_ROOT_CAUSES = frozenset(
     {
@@ -153,13 +154,32 @@ def analyze_and_route_claim(
                 service_line_id=finding_data["service_line"],
                 outcome=RouteOutcome.AGENT_REQUIRED,
                 reason_code="EVIDENCE_EVALUATION_REQUIRED",
-                routing_reason=(
-                    "Agent must interpret evidence for this root cause."
-                ),
+                routing_reason=("Agent must interpret evidence for this root cause."),
                 authorized_tools=list(
                     AGENT_EVIDENCE_TOOLS
                     + AGENT_REFERENCE_TOOLS_BY_ROOT_CAUSE[root_cause]
+                    + ((DEADLINE_TOOL,) if finding.filing_deadline is not None else ())
                 ),
+            )
+        elif (
+            root_cause is RootCause.REGISTRATION_ELIGIBILITY
+            and "eligibility_response" in finding.required_evidence
+            and "eligibility_response" not in available_evidence
+            and claim.patient_account.strip()
+        ):
+            # Eligibility retrieval is allowed only when the baseline requires
+            # that evidence and the claim supplies a trusted member identity.
+            route = RouteDecision(
+                contract_version="0.1",
+                claim_id=finding.claim_id,
+                service_line_id=finding.service_line_id,
+                outcome=RouteOutcome.AGENT_REQUIRED,
+                reason_code="ELIGIBILITY_EVIDENCE_REQUIRED",
+                routing_reason=(
+                    "Agent must retrieve the missing eligibility response "
+                    "before recommending patient responsibility."
+                ),
+                authorized_tools=[ELIGIBILITY_TOOL],
             )
         elif evidence_safety.requires_manual_review:
             route = RouteDecision(

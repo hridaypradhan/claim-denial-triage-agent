@@ -11,16 +11,18 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Mapping
 
+from claim_agent.agent.hosted.schema_support import (
+    require_and_close_all_objects,
+)
 from claim_agent.contracts import AgentDecision
+from claim_agent.tools.deadline_tool import DEADLINE_TOOL
 from claim_agent.tools.dispatcher import (
     DENIAL_CODE_TOOL,
     ENCOUNTER_NOTE_TOOL,
     MEDICAL_POLICY_TOOL,
     PAYER_PROFILE_TOOL,
 )
-from claim_agent.agent.hosted.schema_support import (
-    require_and_close_all_objects,
-)
+from claim_agent.tools.eligibility import ELIGIBILITY_TOOL
 
 
 def _text_schema() -> dict[str, object]:
@@ -64,6 +66,27 @@ _TOOL_ARGUMENT_SCHEMAS: Mapping[str, dict[str, object]] = {
         "type": "object",
         "properties": {"payer_id": _text_schema()},
         "required": ["payer_id"],
+        "additionalProperties": False,
+    },
+    DEADLINE_TOOL: {
+        "type": "object",
+        "properties": {
+            "claim_id": _text_schema(),
+            "service_line_id": {
+                "type": "integer",
+                "minimum": 1,
+            },
+        },
+        "required": ["claim_id", "service_line_id"],
+        "additionalProperties": False,
+    },
+    ELIGIBILITY_TOOL: {
+        "type": "object",
+        "properties": {
+            "patient_account": _text_schema(),
+            "payer": _text_schema(),
+        },
+        "required": ["patient_account", "payer"],
         "additionalProperties": False,
     },
 }

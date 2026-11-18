@@ -1,4 +1,4 @@
-"""Eligibility evidence retrieval (#56).
+"""Eligibility evidence retrieval.
 
 ``get_eligibility_evidence`` returns what a payer's eligibility response says
 about one member account: its coverage periods and citable passages. It
@@ -31,7 +31,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Optional, Tuple
 
-from claim_agent.contracts import ErrorCode, EvidencePassage, ToolResult, ToolStatus
+from claim_agent.contracts import (
+    ErrorCode,
+    EvidencePassage,
+    ToolResult,
+    ToolStatus,
+)
 from claim_agent.contracts.evidence_bundle import ELIGIBILITY_SOURCE_TYPE
 from claim_agent.tools.knowledge_store import KnowledgeStore, KnowledgeStoreError
 
@@ -55,7 +60,11 @@ class EligibilityRecord:
     passages: Tuple[EvidencePassage, ...]
 
 
-def find_eligibility_record(store: KnowledgeStore, patient_account: str, payer: str) -> Optional[EligibilityRecord]:
+def find_eligibility_record(
+    store: KnowledgeStore,
+    patient_account: str,
+    payer: str,
+) -> Optional[EligibilityRecord]:
     """Return the one record for the account and payer, or None if there is none.
 
     Raises ``KnowledgeStoreError`` when a listed record can't be read or more
@@ -63,17 +72,27 @@ def find_eligibility_record(store: KnowledgeStore, patient_account: str, payer: 
     """
 
     entries = [
-        entry for entry in store.entries_of_type(ELIGIBILITY_SOURCE_TYPE)
-        if entry.get("patient_account") == patient_account and entry.get("payer") == payer
+        entry
+        for entry in store.entries_of_type(ELIGIBILITY_SOURCE_TYPE)
+        if entry.get("patient_account") == patient_account
+        and entry.get("payer") == payer
     ]
     if not entries:
         return None
     if len(entries) > 1:
-        raise KnowledgeStoreError(f"More than one eligibility record for {patient_account} at {payer}.")
+        raise KnowledgeStoreError(
+            f"More than one eligibility record for {patient_account} at {payer}."
+        )
     entry = entries[0]
     document = store.load_source(entry)
-    if (document.get("patient_account"), document.get("payer")) != (patient_account, payer):
-        raise KnowledgeStoreError(f"Eligibility record {entry['source_id']} does not match its manifest entry.")
+    if (document.get("patient_account"), document.get("payer")) != (
+        patient_account,
+        payer,
+    ):
+        raise KnowledgeStoreError(
+            f"Eligibility record {entry['source_id']} does not match its "
+            "manifest entry."
+        )
     source_id, version = str(document["source_id"]), str(document["version"])
     return EligibilityRecord(
         source_id=source_id,
@@ -81,7 +100,9 @@ def find_eligibility_record(store: KnowledgeStore, patient_account: str, payer: 
         patient_account=patient_account,
         payer=payer,
         response_date=str(document["response_date"]),
-        coverage_periods=tuple(dict(period) for period in document["coverage_periods"]),
+        coverage_periods=tuple(
+            dict(period) for period in document["coverage_periods"]
+        ),
         passages=tuple(
             EvidencePassage(
                 passage_id=str(passage["passage_id"]),
@@ -97,27 +118,53 @@ def find_eligibility_record(store: KnowledgeStore, patient_account: str, payer: 
 
 @dataclass(frozen=True)
 class EligibilityToolDispatcher:
-    """Answer ``get_eligibility_evidence`` for the run's member; forward other tools."""
+    """Answer eligibility requests for the run's member; forward others."""
 
     dispatcher: object
     store: KnowledgeStore
     patient_account: str
+    allowed_payers: Tuple[str, ...] | None = None
 
-    def dispatch(self, request_id: str, tool_name: str, tool_arguments: Mapping[str, object]) -> ToolResult:
+    def dispatch(
+        self,
+        request_id: str,
+        tool_name: str,
+        tool_arguments: Mapping[str, object],
+    ) -> ToolResult:
         if tool_name != ELIGIBILITY_TOOL:
-            return self.dispatcher.dispatch(request_id=request_id, tool_name=tool_name, tool_arguments=tool_arguments)
+            return self.dispatcher.dispatch(
+                request_id=request_id,
+                tool_name=tool_name,
+                tool_arguments=tool_arguments,
+            )
 
         if set(tool_arguments) != ELIGIBILITY_ARGUMENT_NAMES or not all(
-            isinstance(value, str) and value.strip() for value in tool_arguments.values()
+            isinstance(value, str) and value.strip()
+            for value in tool_arguments.values()
         ):
             return _error(request_id, ErrorCode.MALFORMED_REQUEST)
         if tool_arguments["patient_account"] != self.patient_account:
             raise EligibilityArgumentMismatchError(
-                f"{ELIGIBILITY_TOOL} must name the run's member account {self.patient_account}."
+                f"{ELIGIBILITY_TOOL} must name the run's member account "
+                f"{self.patient_account}."
+            )
+        requested_payer = str(tool_arguments["payer"]).strip().upper()
+
+        if (
+            self.allowed_payers is not None
+            and requested_payer not in self.allowed_payers
+        ):
+            raise EligibilityArgumentMismatchError(
+                f"{ELIGIBILITY_TOOL} cannot query unapproved payer "
+                f"{requested_payer!r} for this run."
             )
 
         try:
-            record = find_eligibility_record(self.store, self.patient_account, str(tool_arguments["payer"]))
+            record = find_eligibility_record(
+                self.store,
+                self.patient_account,
+                requested_payer,
+            )
         except KnowledgeStoreError:
             return _error(request_id, ErrorCode.DOCUMENT_UNAVAILABLE)
         if record is None:
@@ -132,7 +179,9 @@ class EligibilityToolDispatcher:
                 "patient_account": record.patient_account,
                 "payer": record.payer,
                 "response_date": record.response_date,
-                "coverage_periods": [dict(period) for period in record.coverage_periods],
+                "coverage_periods": [
+                    dict(period) for period in record.coverage_periods
+                ],
             },
             source_ids=[f"{record.source_id}@v{record.version}"],
             evidence_passages=list(record.passages),
@@ -140,4 +189,9 @@ class EligibilityToolDispatcher:
 
 
 def _error(request_id: str, error_code: ErrorCode) -> ToolResult:
-    return ToolResult(request_id=request_id, tool_name=ELIGIBILITY_TOOL, status=ToolStatus.ERROR, error_code=error_code)
+    return ToolResult(
+        request_id=request_id,
+        tool_name=ELIGIBILITY_TOOL,
+        status=ToolStatus.ERROR,
+        error_code=error_code,
+    )
