@@ -555,13 +555,38 @@ def _rate(rate) -> dict:
     return {"hits": rate.hits, "total": rate.total, "value": rate.value, "wilson_95": rate.wilson()}
 
 
-def _read_run_trace(directory: Path) -> List[Mapping[str, object]]:
-    """The canonical trace events of one run, in order (empty for non-agent runs)."""
+AGENT_ROUTE = "AGENT_REQUIRED"
 
+
+def _read_run_trace(directory: Path, case_id: str) -> List[Mapping[str, object]]:
+    """The canonical trace of one agent-routed run, in order.
+
+    Missing evidence is never read as zero errors: a run that entered the agent
+    must have a readable trace for this exact run and case, or scoring stops.
+    """
+
+    run_id = json.loads((directory / "complete.json").read_text(encoding="utf-8"))["run_id"]
+    paths = sorted((directory / "trace").glob("*.jsonl")) if (directory / "trace").is_dir() else []
+    if not paths:
+        raise ExperimentError(f"agent run {run_id} has no canonical trace; trace metrics can't be reported")
     events: List[Mapping[str, object]] = []
-    for path in sorted((directory / "trace").glob("*.jsonl")) if (directory / "trace").exists() else []:
-        events.extend(json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
-    return sorted(events, key=lambda event: event.get("sequence_number", 0))
+    for path in paths:
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if not line.strip():
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ExperimentError(f"agent run {run_id} has a malformed trace ({path.name} line {number})") from error
+            if not isinstance(event, dict) or event.get("run_id") != run_id or event.get("case_id") != case_id:
+                raise ExperimentError(f"agent run {run_id} has a trace event for another run or case ({path.name} line {number})")
+            events.append(event)
+    if not events:
+        raise ExperimentError(f"agent run {run_id} has an empty canonical trace")
+    sequence = sorted(event.get("sequence_number", 0) for event in events)
+    if sequence != list(range(1, len(events) + 1)):
+        raise ExperimentError(f"agent run {run_id} has a trace with missing or repeated sequence numbers")
+    return sorted(events, key=lambda event: event["sequence_number"])
 
 
 def claim_services(dataset: Dataset) -> Dict[str, ClaimService]:
@@ -637,6 +662,9 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
     as_of = date.fromisoformat(prepared.dataset.as_of)
     facts = case_facts(prepared.dataset)
     services = claim_services(prepared.dataset)
+    agent_routed = {
+        case.case_id for case in prepared.dataset.cases if prepare_evaluation_case(case, as_of).requires_agent
+    }
     results: dict = {"experiment_id": plan.experiment_id, "plan_sha256": record["plan_sha256"],
                      "code_commit": record["code_commit"], "cases": len(prepared.dataset.cases), "systems": {}}
 
@@ -652,9 +680,15 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
             for case in prepared.dataset.cases:
                 directory = run_directory(experiment_root, system, case.case_id, n)
                 predictions[case.case_id] = _load_prediction(directory)
-                events = _read_run_trace(directory)
-                if events:
-                    traces[case.case_id] = events
+                if system == HOSTED_AGENT:
+                    # Which runs need a trace comes from routing the case again,
+                    # not from the run's own files, so a damaged artifact can't
+                    # opt out of the check.
+                    recorded = json.loads((directory / "prediction.json").read_text(encoding="utf-8")).get("route_outcome")
+                    if (recorded == AGENT_ROUTE) != (case.case_id in agent_routed):
+                        raise ExperimentError(f"{case.case_id} repeat-{n} recorded route {recorded!r}, which routing doesn't reproduce")
+                    if case.case_id in agent_routed:
+                        traces[case.case_id] = _read_run_trace(directory, case.case_id)
                 answers.setdefault(case.case_id, set()).add(
                     (predictions[case.case_id].disposition, predictions[case.case_id].root_cause)
                 )

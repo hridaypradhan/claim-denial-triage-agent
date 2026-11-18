@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import tempfile
 import unittest
 from datetime import date
@@ -77,6 +78,11 @@ class FlakyFactory:
             self.failed = True
             raise ConnectionError(SECRET_ERROR_TEXT)
         return offline_client_factory(profile=profile)
+
+
+def _drop_last_event(path: Path) -> None:
+    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    path.write_text("\n".join(lines[:1] + lines[2:]) + "\n", encoding="utf-8")  # a gap in the sequence
 
 
 def rehearsal_plan(**overrides) -> ExperimentPlan:
@@ -267,6 +273,45 @@ class RunAndScoreTests(unittest.TestCase):
             labels.write_text(labels.read_text(encoding="utf-8") + "\n", encoding="utf-8")
             with self.assertRaisesRegex(ExperimentError, "inputs changed since the experiment ran \\(labels\\)"):
                 score_experiment(prepare_experiment(rehearsal_plan(label_files=[str(labels)])), output_root=root)
+
+    def agent_case_id(self):
+        as_of = date.fromisoformat(self.prepared.dataset.as_of)
+        return next(c.case_id for c in self.prepared.dataset.cases if prepare_evaluation_case(c, as_of).requires_agent)
+
+    def test_missing_or_damaged_agent_trace_stops_scoring(self):
+        """Absent trace evidence must never be reported as zero trace-measured errors."""
+
+        case_id = self.agent_case_id()
+        damages = {
+            "removed": lambda trace_dir: shutil.rmtree(trace_dir),
+            "malformed": lambda trace_dir: next(trace_dir.glob("*.jsonl")).write_text("{not json\n", encoding="utf-8"),
+            "emptied": lambda trace_dir: next(trace_dir.glob("*.jsonl")).write_text("", encoding="utf-8"),
+            "truncated": lambda trace_dir: _drop_last_event(next(trace_dir.glob("*.jsonl"))),
+        }
+        for name, damage in damages.items():
+            with self.subTest(damage=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                self.run_all(root, commit="g")
+                score_experiment(self.prepared, output_root=root)  # intact traces score
+
+                trace_dir = run_directory(root / "rehearsal-test", HOSTED_AGENT, case_id, 1) / "trace"
+                self.assertTrue(any(trace_dir.glob("*.jsonl")))
+                damage(trace_dir)
+                with self.assertRaisesRegex(ExperimentError, "trace"):
+                    score_experiment(self.prepared, output_root=root)
+
+    def test_a_run_cannot_opt_out_of_the_trace_check(self):
+        case_id = self.agent_case_id()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.run_all(root, commit="h")
+            run = run_directory(root / "rehearsal-test", HOSTED_AGENT, case_id, 2)
+            prediction = json.loads((run / "prediction.json").read_text(encoding="utf-8"))
+            prediction["route_outcome"] = "DETERMINISTIC_ONLY"
+            (run / "prediction.json").write_text(json.dumps(prediction), encoding="utf-8")
+            shutil.rmtree(run / "trace")
+            with self.assertRaisesRegex(ExperimentError, "routing doesn't reproduce"):
+                score_experiment(self.prepared, output_root=root)
 
     def test_partial_run_is_not_treated_as_complete(self):
         with tempfile.TemporaryDirectory() as tmp:
