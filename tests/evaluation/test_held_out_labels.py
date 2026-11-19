@@ -1,16 +1,19 @@
-"""Structure checks for the held-out primary labels (#63).
+"""Structure and freeze checks for the held-out labels (#63).
 
-These check that each label file matches its batch of the held-out manifest
-and follows the rubric's mechanical rules. They never read system output.
+These check that each label file matches its batch of the held-out manifest,
+follows the rubric's mechanical rules, and still matches the freeze lock. They
+never read system output.
 """
 
 import dataclasses
+import hashlib
 import json
 import re
 import unittest
 from datetime import date
 from pathlib import Path
 
+from evaluation.final_experiment import load_plan, prepare_experiment
 from evaluation.pilot_data import load_dataset, load_labels
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -23,8 +26,18 @@ LABEL_FILES = {
 }
 
 
+LOCK = REPO_ROOT / "datasets" / "labels" / "HELD_OUT_LABELS_LOCK.json"
+
+
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def canonical_sha256(value: object) -> str:
+    """The lock's hash: parsed JSON re-serialized with sorted keys, so line endings don't matter."""
+
+    text = json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def knowledge_sources() -> dict:
@@ -102,6 +115,29 @@ class HeldOutPrimaryLabelTests(unittest.TestCase):
                         self.assertEqual(case["disposition"], "MANUAL_REVIEW")
                     else:
                         self.assertIn(case["disposition"], ("WRITE_OFF", "BILL_PATIENT"))
+
+    def test_frozen_labels_match_their_lock(self):
+        """Any change to a frozen label file, including a re-serialized edit, fails here."""
+
+        lock = read_json(LOCK)
+        self.assertEqual(lock["cases"], len(self.manifest["cases"]))
+        self.assertEqual(lock["knowledge_snapshot_id"], self.manifest["knowledge_snapshot_id"])
+        self.assertEqual({f["path"] for f in lock["files"]},
+                         {p.relative_to(REPO_ROOT).as_posix() for p in LABEL_FILES.values()})
+        for entry in lock["files"]:
+            with self.subTest(file=entry["path"]):
+                raw = read_json(REPO_ROOT / entry["path"])
+                self.assertEqual(raw["status"], "FROZEN")
+                self.assertEqual(raw["review"]["pull_request"], entry["review_pull_request"])
+                self.assertEqual(raw["review"]["reviewer"], entry["reviewer"])
+                self.assertEqual(len(raw["cases"]), entry["cases"])
+                self.assertEqual(canonical_sha256(raw), entry["canonical_sha256"])
+
+    def test_final_experiment_plan_accepts_the_frozen_labels(self):
+        """The final run's preflight passes on exactly these frozen files. Nothing is run."""
+
+        prepared = prepare_experiment(load_plan(REPO_ROOT / "evaluation" / "final_experiment_plan.json"))
+        self.assertEqual(len(prepared.labels), len(self.manifest["cases"]))
 
     def test_manual_review_and_deadline_fields_agree(self):
         for batch, path in LABEL_FILES.items():

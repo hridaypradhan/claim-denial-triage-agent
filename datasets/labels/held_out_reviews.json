@@ -1,0 +1,82 @@
+{
+  "record_version": "0.1",
+  "dataset": "H",
+  "split": "held_out",
+  "rubric_version": "0.1",
+  "procedure": "#63: one primary labeler (Sachin); one reviewer per batch, other than the labeler, checks every label against frozen rubric v0.1, the final claims, and knowledge-v2, and records agreement or the exact disputed fields. Disputes are resolved before any system prediction is examined. Reviewers do not write a second full label set.",
+  "note": "Review records kept separately from the primary labels (#63). Each review is in full on its pull request; this file summarizes it for the final report (#66).",
+  "batches": [
+    {
+      "batch": "A",
+      "cases": 28,
+      "label_file": "datasets/labels/held_out_batch_a.primary.json",
+      "reviewer": "hridaypradhan",
+      "pull_request": 84,
+      "reviews": [
+        {"submitted_at": "2026-11-17T00:47:32Z", "state": "CHANGES_REQUESTED"},
+        {"submitted_at": "2026-11-17T04:57:58Z", "state": "APPROVED"}
+      ],
+      "agreement": {
+        "dispositions": {"agreed": 28, "total": 28, "cohen_kappa": 1.0},
+        "criterion_statuses": {"agreed": 60, "total": 61, "cohen_kappa_reported": 0.972}
+      },
+      "disputes": [
+        {
+          "case_id": "CLM-2026-710119-L1",
+          "field": "criteria[B].status",
+          "primary": "SUPPORTED",
+          "reviewer": "UNKNOWN",
+          "resolution": "UNKNOWN. The policy requires moderate or severe cardiopulmonary disease, and the note doesn't state the severity. The primary labeler agreed; the disposition (MANUAL_REVIEW, CONFLICTING_EVIDENCE) is unchanged.",
+          "resolved_by": "agreement between labeler and reviewer; no adjudicator needed"
+        }
+      ]
+    },
+    {
+      "batch": "B",
+      "cases": 27,
+      "label_file": "datasets/labels/held_out_batch_b.primary.json",
+      "reviewer": "nkashp",
+      "pull_request": 85,
+      "reviews": [
+        {"submitted_at": "2026-11-17T18:14:13Z", "state": "APPROVED", "note": "Dismissed automatically when #84 merged and the base changed; labels unchanged."},
+        {"submitted_at": "2026-11-18T03:25:21Z", "state": "APPROVED"}
+      ],
+      "agreement": {
+        "dispositions": {"agreed": 27, "total": 27},
+        "all_fields": "27/27 cases agreed, 0 disputed fields"
+      },
+      "disputes": []
+    },
+    {
+      "batch": "C",
+      "cases": 25,
+      "label_file": "datasets/labels/held_out_batch_c.primary.json",
+      "reviewer": "Silas281",
+      "pull_request": 86,
+      "reviews": [
+        {"submitted_at": "2026-11-17T06:00:14Z", "state": "APPROVED", "note": "Dismissed automatically when the base changed after #85 merged; labels unchanged."},
+        {"submitted_at": "2026-11-18T04:05:54Z", "state": "APPROVED"}
+      ],
+      "agreement": {
+        "dispositions": {"agreed": 25, "total": 25},
+        "all_fields": "25/25 cases agreed, 0 disputed fields"
+      },
+      "disputes": [],
+      "notes_without_label_change": [
+        "CLM-2026-710321-L1: the labeler note said about 7 weeks from onset to CT; corrected to about 8. No field changed."
+      ]
+    }
+  ],
+  "team_decisions": [
+    {
+      "raised_by": "Silas281",
+      "raised_on": "#86",
+      "decision": "On a DEADLINE_EXPIRED manual review where the evidence supported an appeal, an appeal counts as CSE_ACTION_AFTER_DEADLINE only, not also CSE_UNSUPPORTED_APPEAL. CSE_UNSUPPORTED_APPEAL is removed from those labels' forbidden_outcomes, and evaluation/metrics.py follows the label.",
+      "cases": ["CLM-2026-710107-L1", "CLM-2026-710212-L1", "CLM-2026-710306-L1", "CLM-2026-710314-L1"],
+      "not_changed": "CLM-2026-710216-L1 is also DEADLINE_EXPIRED, but it is a correction case: an appeal there is still unsupported, so its label keeps CSE_UNSUPPORTED_APPEAL.",
+      "agreed_in": "the freeze pull request for #63"
+    }
+  ],
+  "frozen_on": "2026-11-19",
+  "lock": "datasets/labels/HELD_OUT_LABELS_LOCK.json"
+}

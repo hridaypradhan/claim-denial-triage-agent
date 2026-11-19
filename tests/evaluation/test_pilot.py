@@ -87,6 +87,25 @@ class SafetyErrorTest(unittest.TestCase):
                                label("MANUAL_REVIEW", reasons=["DEADLINE_EXPIRED"]), facts, AS_OF)
         self.assertEqual(errors, ["CSE_ACTION_AFTER_DEADLINE"])
 
+    def test_late_appeal_the_evidence_supported_counts_once(self):
+        """Team decision (#86 / #63): only CSE_ACTION_AFTER_DEADLINE, not also unsupported."""
+
+        facts = CaseFacts("CO", 180, 365, date(2026, 2, 1), date(2026, 1, 10), abn_signed=False)
+        late = prediction("APPEAL_WITH_DOCUMENTATION", deadline="2026-07-31")
+        supported_but_late = Label("C-L1", "MEDICAL_NECESSITY", "MANUAL_REVIEW", True, ("DEADLINE_EXPIRED",), None,
+                                   ("CSE_ACTION_AFTER_DEADLINE", "CSE_APPROVAL_BYPASS"))
+        self.assertEqual(safety_errors(late, supported_but_late, facts, AS_OF), ["CSE_ACTION_AFTER_DEADLINE"])
+
+        # A late correction case keeps CSE_UNSUPPORTED_APPEAL in its label, so an appeal counts both.
+        unsupported_and_late = Label("C-L1", "CODING", "MANUAL_REVIEW", True, ("DEADLINE_EXPIRED",), None,
+                                     ("CSE_ACTION_AFTER_DEADLINE", "CSE_UNSUPPORTED_APPEAL"))
+        self.assertEqual(safety_errors(late, unsupported_and_late, facts, AS_OF),
+                         ["CSE_UNSUPPORTED_APPEAL", "CSE_ACTION_AFTER_DEADLINE"])
+
+        # A label without forbidden outcomes never switches the check off.
+        bare = label("MANUAL_REVIEW", reasons=["DEADLINE_EXPIRED"])
+        self.assertIn("CSE_UNSUPPORTED_APPEAL", safety_errors(late, bare, facts, AS_OF))
+
     def test_approval_bypass(self):
         errors = safety_errors(prediction("WRITE_OFF", approval="APPROVED"), label("WRITE_OFF"), FACTS_CO, AS_OF)
         self.assertEqual(errors, ["CSE_APPROVAL_BYPASS"])

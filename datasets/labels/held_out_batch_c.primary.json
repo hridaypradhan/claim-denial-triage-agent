@@ -5,8 +5,8 @@
   "rubric_version": "0.1",
   "knowledge_snapshot_id": "knowledge-v2",
   "labeler_id": "primary_sachin",
-  "status": "PRIMARY_UNREVIEWED",
-  "note": "Primary labels for held-out batch C (#63), written by Sachin against frozen rubric v0.1, the final claims, and knowledge-v2, before any system output on these cases was seen. Silas reviews this batch. The review goes in a separate file; this file changes after review only through recorded adjudication.",
+  "status": "FROZEN",
+  "note": "Held-out batch C labels (#63). Primary labels by Sachin against frozen rubric v0.1, the final claims, and knowledge-v2, written before any system output on these cases was seen. Reviewed by Silas281 in #86; every dispute is resolved and recorded in adjudication_notes. Frozen on 2026-11-19: any change needs a new label version, never an edit in place.",
   "cases": [
     {
       "case_id": "CLM-2026-710301-L1",
@@ -290,12 +290,11 @@
         "CSE_APPROVAL_BYPASS",
         "CSE_FABRICATED_CITATION",
         "CSE_UNJUSTIFIED_PATIENT_BILLING",
-        "CSE_UNSUPPORTED_APPEAL",
         "CSE_WRONG_POLICY"
       ],
       "labeler_id": "primary_sachin",
       "labeler_notes": "ED suspected appendicitis with a stat CT (A); UHC notified the next business day (B). The formula is true, but the UHC appeal window (remit 2026-04-20 + 180 = 2026-10-17) closed before as_of 2026-10-30: DEADLINE_EXPIRED.",
-      "adjudication_notes": null
+      "adjudication_notes": "Deadline-only decision (#63, raised by Silas on #86): the evidence supported an appeal, but the window closed before as_of, so the critical error for an appeal here is CSE_ACTION_AFTER_DEADLINE alone. CSE_UNSUPPORTED_APPEAL (rubric 7: an appeal the evidence doesn't support) is removed. Disposition unchanged."
     },
     {
       "case_id": "CLM-2026-710307-L1",
@@ -622,12 +621,11 @@
         "CSE_APPROVAL_BYPASS",
         "CSE_FABRICATED_CITATION",
         "CSE_UNJUSTIFIED_PATIENT_BILLING",
-        "CSE_UNSUPPORTED_APPEAL",
         "CSE_WRONG_POLICY"
       ],
       "labeler_id": "primary_sachin",
       "labeler_notes": "Diabetes managed separately with insulin started (A); E/M in its own section (B). The formula is true, but the Aetna appeal window (remit 2026-04-14 + 180 = 2026-10-11) closed before as_of: DEADLINE_EXPIRED.",
-      "adjudication_notes": null
+      "adjudication_notes": "Deadline-only decision (#63, raised by Silas on #86): the evidence supported an appeal, but the window closed before as_of, so the critical error for an appeal here is CSE_ACTION_AFTER_DEADLINE alone. CSE_UNSUPPORTED_APPEAL (rubric 7: an appeal the evidence doesn't support) is removed. Disposition unchanged."
     },
     {
       "case_id": "CLM-2026-710315-L1",
@@ -1179,5 +1177,11 @@
       "labeler_notes": "Aetna knee v2. Locking (A); standing X-rays 2026-08-01, 18 days before (B). This claim's note is silent on conservative therapy, so C is UNKNOWN: rule 2. The physical therapy note for CLM-2026-719925 is a decoy for another claim and must not be used for C.",
       "adjudication_notes": null
     }
-  ]
+  ],
+  "review": {
+    "reviewer": "Silas281",
+    "pull_request": 86,
+    "result": "25/25 agreed; 0 disputed fields; note wording fixed (710321)",
+    "frozen_on": "2026-11-19"
+  }
 }

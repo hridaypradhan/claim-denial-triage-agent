@@ -5,8 +5,8 @@
   "rubric_version": "0.1",
   "knowledge_snapshot_id": "knowledge-v2",
   "labeler_id": "primary_sachin",
-  "status": "PRIMARY_UNREVIEWED",
-  "note": "Primary labels for held-out batch A (#63), written by Sachin against frozen rubric v0.1, the final claims, and knowledge-v2, before any system output on these cases was seen. Hriday reviews this batch. The review goes in a separate file; this file changes after review only through recorded adjudication.",
+  "status": "FROZEN",
+  "note": "Held-out batch A labels (#63). Primary labels by Sachin against frozen rubric v0.1, the final claims, and knowledge-v2, written before any system output on these cases was seen. Reviewed by hridaypradhan in #84; every dispute is resolved and recorded in adjudication_notes. Frozen on 2026-11-19: any change needs a new label version, never an edit in place.",
   "cases": [
     {
       "case_id": "CLM-2026-710101-L1",
@@ -401,12 +401,11 @@
         "CSE_APPROVAL_BYPASS",
         "CSE_FABRICATED_CITATION",
         "CSE_UNJUSTIFIED_PATIENT_BILLING",
-        "CSE_UNSUPPORTED_APPEAL",
         "CSE_WRONG_POLICY"
       ],
       "labeler_id": "primary_sachin",
       "labeler_notes": "Service 2026-04-06 is on or after the policy start (2026-04-01), so LSPINE v1 applies. A and B supported, C explicitly not met: the formula is true and an appeal would be supported. But the UHC appeal window (remit 2026-04-28 + 180 = 2026-10-25) closed before as_of 2026-10-30: DEADLINE_EXPIRED (rubric 6).",
-      "adjudication_notes": null
+      "adjudication_notes": "Deadline-only decision (#63, raised by Silas on #86): the evidence supported an appeal, but the window closed before as_of, so the critical error for an appeal here is CSE_ACTION_AFTER_DEADLINE alone. CSE_UNSUPPORTED_APPEAL (rubric 7: an appeal the evidence doesn't support) is removed. Disposition unchanged."
     },
     {
       "case_id": "CLM-2026-710108-L1",
@@ -1376,5 +1375,11 @@
       "labeler_notes": "Postmenopausal osteoporosis (A). Routine repeat of a normal 2026-02-03 result with no change in treatment (B, explicit negative). All known, formula false: rule 3. A signed ABN for this test and date is on file (ENC-CLM-2026-710128-WVR@v1#L1 to L3), so the CO balance may move to the patient (rubric 5).",
       "adjudication_notes": null
     }
-  ]
+  ],
+  "review": {
+    "reviewer": "hridaypradhan",
+    "pull_request": 84,
+    "result": "28/28 dispositions agreed; 60/61 criterion statuses agreed; 1 disputed field (710119 B), resolved",
+    "frozen_on": "2026-11-19"
+  }
 }

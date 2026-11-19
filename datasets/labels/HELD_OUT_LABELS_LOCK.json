@@ -1,0 +1,37 @@
+{
+  "lock_version": "0.1",
+  "dataset": "H",
+  "split": "held_out",
+  "rubric_version": "0.1",
+  "knowledge_snapshot_id": "knowledge-v2",
+  "frozen_on": "2026-11-19",
+  "cases": 80,
+  "hash_method": "SHA-256 of the parsed JSON re-serialized with sorted keys, no whitespace, UTF-8",
+  "files": [
+    {
+      "path": "datasets/labels/held_out_batch_a.primary.json",
+      "batch": "A",
+      "cases": 28,
+      "reviewer": "hridaypradhan",
+      "review_pull_request": 84,
+      "canonical_sha256": "175edcd70c30162b4902397964371a4c8913866955bad5fba4857fa880fd9269"
+    },
+    {
+      "path": "datasets/labels/held_out_batch_b.primary.json",
+      "batch": "B",
+      "cases": 27,
+      "reviewer": "nkashp",
+      "review_pull_request": 85,
+      "canonical_sha256": "924205e0c8f2ac0c2cd6eeefb925c05a4c78d80286c040adbe7bbf269ccf709a"
+    },
+    {
+      "path": "datasets/labels/held_out_batch_c.primary.json",
+      "batch": "C",
+      "cases": 25,
+      "reviewer": "Silas281",
+      "review_pull_request": 86,
+      "canonical_sha256": "131c7e9de0ba3a9a3060762989922b5869a6874c5aaa4f295f0917cd08094d0b"
+    }
+  ],
+  "note": "Held-out labels frozen before any final system prediction was examined (#63). Any later change to a label file fails tests/evaluation/test_held_out_labels.py and needs a new label version."
+}
