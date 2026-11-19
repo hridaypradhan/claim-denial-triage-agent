@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
@@ -13,6 +14,8 @@ from claim_agent.agent.hosted.client import (
     HostedModelTransportRequest,
     HostedModelTransportResponse,
 )
+from claim_agent.tools.deadline_tool import DEADLINE_TOOL
+from claim_agent.tools.eligibility import ELIGIBILITY_TOOL
 from claim_agent.tools.knowledge_store import KnowledgeStore
 from evaluation.hosted_comparison import (
     load_hosted_comparison_plan,
@@ -101,6 +104,71 @@ class HostedCaseExecutionTests(unittest.TestCase):
         )
         self.assertNotIn("get_payer_profile", tool_context)
 
+    def test_tool_context_describes_authorized_deadline_and_eligibility(
+        self,
+    ) -> None:
+        """Hosted context should expose only trusted tool arguments."""
+
+        plan = load_hosted_comparison_plan()
+        dataset = load_dataset(plan.manifest_path())
+        selected_case = next(
+            case for case in dataset.cases if case.case_id == "CLM-2026-005097-L1"
+        )
+        prepared_case = prepare_evaluation_case(
+            selected_case,
+            date.fromisoformat(dataset.as_of),
+        )
+        authorized_route = prepared_case.route_decision.model_copy(
+            update={
+                "authorized_tools": [
+                    DEADLINE_TOOL,
+                    ELIGIBILITY_TOOL,
+                ]
+            }
+        )
+        authorized_case = replace(
+            prepared_case,
+            route_decision=authorized_route,
+        )
+
+        tool_context = build_hosted_tool_context(
+            prepared_case=authorized_case,
+            knowledge_store=KnowledgeStore(KNOWLEDGE_ROOT),
+        )
+
+        self.assertEqual(
+            {
+                "purpose": (
+                    "Report the frozen baseline finding's deadline "
+                    "without recomputing payer rules."
+                ),
+                "claim_id": prepared_case.baseline_finding.claim_id,
+                "service_line_id": (
+                    prepared_case.baseline_finding.service_line_id
+                ),
+            },
+            tool_context[DEADLINE_TOOL],
+        )
+        self.assertEqual(
+            {
+                "purpose": (
+                    "Retrieve eligibility evidence for the active "
+                    "member and an explicitly approved payer."
+                ),
+                "patient_account": (
+                    prepared_case.claim_context.patient_account
+                ),
+                "approved_payers": list(
+                    prepared_case.claim_context.eligibility_payers
+                ),
+            },
+            tool_context[ELIGIBILITY_TOOL],
+        )
+        self.assertNotIn(
+            "retrieve_medical_policy",
+            tool_context,
+        )
+
     def test_case_produces_package_and_complete_hosted_trace(
         self,
     ) -> None:
@@ -169,6 +237,52 @@ class HostedCaseExecutionTests(unittest.TestCase):
         self.assertEqual(
             plan.plan_version,
             evaluation_context["experiment_id"],
+        )
+
+    def test_eligibility_only_route_does_not_require_encounter_notes(
+        self,
+    ) -> None:
+        """Eligibility-only execution must not assume a clinical document."""
+
+        plan = load_hosted_comparison_plan()
+        dataset = load_dataset(plan.manifest_path())
+        selected_case = next(
+            case for case in dataset.cases if case.case_id == plan.case_ids[0]
+        )
+        prepared_case = prepare_evaluation_case(
+            selected_case,
+            date.fromisoformat(dataset.as_of),
+        )
+        eligibility_route = prepared_case.route_decision.model_copy(
+            update={"authorized_tools": [ELIGIBILITY_TOOL]}
+        )
+        eligibility_case = replace(
+            prepared_case,
+            route_decision=eligibility_route,
+        )
+        profile = plan.candidates[0].hosted_profile()
+        model_client = HostedModelClient(
+            transport=ManualReviewTransport(),
+            model_name=profile.model_id,
+            timeout_seconds=profile.request_timeout_seconds,
+        )
+
+        execution = execute_hosted_case(
+            prepared_case=eligibility_case,
+            model_client=model_client,
+            profile=profile,
+            budgets=plan.budgets,
+            knowledge_store=KnowledgeStore(KNOWLEDGE_ROOT),
+            run_id="hosted-eligibility-only-run",
+            as_of=date.fromisoformat(dataset.as_of),
+            code_commit="offline-test-commit",
+            plan_version=plan.plan_version,
+            repeat_index=1,
+        )
+
+        self.assertEqual(
+            "MANUAL_REVIEW",
+            execution.output_package.final_disposition.value,
         )
 
     def test_non_agent_case_is_rejected(self) -> None:

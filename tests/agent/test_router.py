@@ -11,6 +11,8 @@ from claim_agent.contracts import RouteOutcome
 from claim_agent.safety.required_evidence import (
     REASON_MISSING_DECISION_CRITICAL,
 )
+from claim_agent.tools.deadline_tool import DEADLINE_TOOL
+from claim_agent.tools.eligibility import ELIGIBILITY_TOOL
 
 
 def load_fixture(filename: str) -> Claim:
@@ -62,6 +64,7 @@ class RouterTests(unittest.TestCase):
 
         self.assertEqual(route.outcome, RouteOutcome.AGENT_REQUIRED)
         self.assertIn("lookup_denial_code", route.authorized_tools)
+        self.assertIn(DEADLINE_TOOL, route.authorized_tools)
         self.assertNotIn("get_payer_profile", route.authorized_tools)
 
     def test_missing_ncci_lookup_requires_manual_review(self) -> None:
@@ -113,6 +116,7 @@ class RouterTests(unittest.TestCase):
                 "retrieve_medical_policy",
                 "get_encounter_note",
                 "lookup_denial_code",
+                DEADLINE_TOOL,
             ],
         )
 
@@ -135,6 +139,7 @@ class RouterTests(unittest.TestCase):
                 "get_encounter_note",
                 "lookup_denial_code",
                 "get_payer_profile",
+                DEADLINE_TOOL,
             ],
         )
 
@@ -151,6 +156,7 @@ class RouterTests(unittest.TestCase):
         self.assertEqual(finding.required_evidence, ["updated_insurance_card"])
         self.assertEqual(route.outcome, RouteOutcome.DETERMINISTIC_ONLY)
         self.assertEqual(route.reason_code, "BASELINE_RESOLVED")
+        self.assertNotIn(ELIGIBILITY_TOOL, route.authorized_tools)
 
     def test_correction_input_preserves_deterministic_route(self) -> None:
         """A15's proposed procedure-code correction is not external evidence."""
@@ -169,6 +175,37 @@ class RouterTests(unittest.TestCase):
         self.assertEqual(route.outcome, RouteOutcome.DETERMINISTIC_ONLY)
         self.assertEqual(route.reason_code, "BASELINE_RESOLVED")
 
+    def test_missing_eligibility_response_authorizes_retrieval(self) -> None:
+        """Missing eligibility evidence may enter its bounded tool route."""
+
+        claim = load_development_fixture("A05_eligibility_no_coverage.json")
+        claim.encounter.pop("eligibility_verified_on")
+
+        results = analyze_and_route_claim(claim, date(2026, 9, 6))
+
+        finding, route = results[0]
+        self.assertEqual(finding.required_evidence, ["eligibility_response"])
+        self.assertEqual(route.outcome, RouteOutcome.AGENT_REQUIRED)
+        self.assertEqual(
+            route.reason_code,
+            "ELIGIBILITY_EVIDENCE_REQUIRED",
+        )
+        self.assertEqual(route.authorized_tools, [ELIGIBILITY_TOOL])
+
+    def test_missing_member_identity_blocks_eligibility_retrieval(self) -> None:
+        """Eligibility lookup must not run without a trusted member binding."""
+
+        claim = load_development_fixture("A05_eligibility_no_coverage.json")
+        claim.encounter.pop("eligibility_verified_on")
+        claim.patient_account = ""
+
+        results = analyze_and_route_claim(claim, date(2026, 9, 6))
+
+        _finding, route = results[0]
+        self.assertEqual(route.outcome, RouteOutcome.MANUAL_REVIEW)
+        self.assertEqual(route.reason_code, REASON_MISSING_DECISION_CRITICAL)
+        self.assertEqual(route.authorized_tools, [])
+
     def test_recorded_eligibility_preserves_deterministic_route(self) -> None:
         """A05's recorded eligibility check satisfies its evidence token."""
 
@@ -180,6 +217,7 @@ class RouterTests(unittest.TestCase):
         self.assertEqual(finding.required_evidence, ["eligibility_response"])
         self.assertEqual(route.outcome, RouteOutcome.DETERMINISTIC_ONLY)
         self.assertEqual(route.reason_code, "BASELINE_RESOLVED")
+        self.assertNotIn(ELIGIBILITY_TOOL, route.authorized_tools)
 
     def test_attached_filing_proof_preserves_deterministic_route(self) -> None:
         """A12's attached clearinghouse report satisfies its evidence token."""

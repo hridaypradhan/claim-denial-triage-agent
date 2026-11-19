@@ -43,9 +43,26 @@ class ClaimToolContext:
     payer: str
     procedure_code: str
     service_date: date
+    patient_account: str | None = None
+    eligibility_payers: tuple[str, ...] = ()
     denial_carc: str | None = None
     denial_rarc: tuple[str, ...] = ()
     denial_group_code: str | None = None
+
+
+def _approved_eligibility_payers(claim: Claim) -> tuple[str, ...]:
+    """Return only payers explicitly named by the active claim."""
+
+    approved_payers = [claim.payer]
+    alternate_coverage = claim.encounter.get("alternate_coverage")
+
+    if isinstance(alternate_coverage, str):
+        normalized_alternate = alternate_coverage.strip().upper()
+
+        if normalized_alternate and normalized_alternate not in approved_payers:
+            approved_payers.append(normalized_alternate)
+
+    return tuple(approved_payers)
 
 
 def build_claim_tool_context(
@@ -75,9 +92,7 @@ def build_claim_tool_context(
         )
 
     matching_denials = [
-        denial
-        for denial in claim.denials
-        if denial.service_line == service_line_id
+        denial for denial in claim.denials if denial.service_line == service_line_id
     ]
 
     if len(matching_denials) != 1:
@@ -93,6 +108,8 @@ def build_claim_tool_context(
         payer=claim.payer,
         procedure_code=procedure_code,
         service_date=claim.date_of_service,
+        patient_account=claim.patient_account.strip() or None,
+        eligibility_payers=_approved_eligibility_payers(claim),
         denial_carc=denial.carc,
         denial_rarc=tuple(denial.rarc),
         denial_group_code=denial.group_code,

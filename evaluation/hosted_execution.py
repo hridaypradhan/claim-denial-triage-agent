@@ -25,6 +25,11 @@ from claim_agent.tools.dispatcher import (
     PAYER_PROFILE_TOOL,
     ToolDispatcher,
 )
+from claim_agent.tools.deadline_tool import DEADLINE_TOOL
+from claim_agent.tools.eligibility import (
+    ELIGIBILITY_ROOT,
+    ELIGIBILITY_TOOL,
+)
 from claim_agent.tools.encounter_notes import claim_document_inventory
 from claim_agent.tools.knowledge_store import KnowledgeStore
 from evaluation.hosted_comparison import HostedComparisonBudgets
@@ -114,6 +119,37 @@ def build_hosted_tool_context(
             "payer_id": claim_context.payer,
         }
 
+    if DEADLINE_TOOL in authorized_tools:
+        tool_context[DEADLINE_TOOL] = {
+            "purpose": (
+                "Report the frozen baseline finding's deadline without "
+                "recomputing payer rules."
+            ),
+            "claim_id": prepared_case.baseline_finding.claim_id,
+            "service_line_id": (prepared_case.baseline_finding.service_line_id),
+        }
+
+    if ELIGIBILITY_TOOL in authorized_tools:
+        if claim_context.patient_account is None:
+            raise EvaluationCasePreparationError(
+                "Authorized eligibility retrieval lacks a trusted "
+                "patient_account."
+            )
+
+        if not claim_context.eligibility_payers:
+            raise EvaluationCasePreparationError(
+                "Authorized eligibility retrieval has no approved payers."
+            )
+
+        tool_context[ELIGIBILITY_TOOL] = {
+            "purpose": (
+                "Retrieve eligibility evidence for the active member "
+                "and an explicitly approved payer."
+            ),
+            "patient_account": claim_context.patient_account,
+            "approved_payers": list(claim_context.eligibility_payers),
+        }
+
     return tool_context
 
 
@@ -166,15 +202,28 @@ def execute_hosted_case(
         prepared_case=prepared_case,
         knowledge_store=knowledge_store,
     )
-    encounter_tool_context = hosted_tool_context["get_encounter_note"]
-    available_document_ids = encounter_tool_context[
-        "available_document_ids"
-    ]
-    if not isinstance(available_document_ids, list):
-        raise EvaluationCasePreparationError(
-            "available_document_ids must be a list"
-        )
+    encounter_tool_context = hosted_tool_context.get(ENCOUNTER_NOTE_TOOL)
+    if encounter_tool_context is None:
+        available_document_ids: list[str] = []
+    else:
+        if not isinstance(encounter_tool_context, dict):
+            raise EvaluationCasePreparationError(
+                "Encounter-note tool context must be an object."
+            )
 
+        available_document_ids = encounter_tool_context.get(
+            "available_document_ids"
+        )
+        if not isinstance(available_document_ids, list):
+            raise EvaluationCasePreparationError(
+                "available_document_ids must be a list"
+            )
+
+    eligibility_store = (
+        KnowledgeStore(ELIGIBILITY_ROOT)
+        if ELIGIBILITY_TOOL in prepared_case.route_decision.authorized_tools
+        else None
+    )
     integrated_result = run_integrated_case(
         run_id=run_id,
         system_instructions=PLANNING_SYSTEM_INSTRUCTIONS,
@@ -187,6 +236,7 @@ def execute_hosted_case(
         as_of=as_of,
         package_version=package_version,
         knowledge_snapshot_id=knowledge_store.snapshot_id,
+        eligibility_store=eligibility_store,
         tool_context=hosted_tool_context,
         required_evidence_source_ids=tuple(
             str(document_id) for document_id in available_document_ids

@@ -11,15 +11,14 @@ from claim_agent.agent.hosted.action_schema import (
     build_runtime_action_response_format,
 )
 from claim_agent.tools.dispatcher import ENCOUNTER_NOTE_TOOL, MEDICAL_POLICY_TOOL
+from claim_agent.tools.deadline_tool import DEADLINE_TOOL
+from claim_agent.tools.eligibility import ELIGIBILITY_TOOL
 from tests.agent.runtime_test_support import make_test_agent_decision_payload
-
 
 ALLOWED_TOOLS = (ENCOUNTER_NOTE_TOOL, MEDICAL_POLICY_TOOL)
 
 
-def action_schema_for(
-    schema: dict[str, object], action_name: str
-) -> dict[str, object]:
+def action_schema_for(schema: dict[str, object], action_name: str) -> dict[str, object]:
     """Return the alternative for one top-level action."""
 
     for action_schema in schema["anyOf"]:
@@ -29,18 +28,13 @@ def action_schema_for(
     raise AssertionError(f"No schema exists for action {action_name}.")
 
 
-def tool_schema_for(
-    schema: dict[str, object], tool_name: str
-) -> dict[str, object]:
+def tool_schema_for(schema: dict[str, object], tool_name: str) -> dict[str, object]:
     """Return the alternative for one named tool."""
 
     for action_schema in schema["anyOf"]:
         properties = action_schema["properties"]
         tool_property = properties.get("tool_name")
-        if (
-            isinstance(tool_property, dict)
-            and tool_property.get("const") == tool_name
-        ):
+        if isinstance(tool_property, dict) and tool_property.get("const") == tool_name:
             return action_schema
     raise AssertionError(f"No schema exists for tool {tool_name}.")
 
@@ -53,9 +47,7 @@ class RuntimeActionSchemaTests(unittest.TestCase):
 
         response_format = build_runtime_action_response_format(ALLOWED_TOOLS)
         self.assertEqual("json_schema", response_format["type"])
-        self.assertEqual(
-            "runtime_action", response_format["json_schema"]["name"]
-        )
+        self.assertEqual("runtime_action", response_format["json_schema"]["name"])
         self.assertIs(True, response_format["json_schema"]["strict"])
 
         schema = response_format["json_schema"]["schema"]
@@ -90,8 +82,44 @@ class RuntimeActionSchemaTests(unittest.TestCase):
             {"payer", "procedure_code", "service_date", "query"},
             set(arguments["required"]),
         )
+        self.assertEqual(set(arguments["required"]), set(arguments["properties"]))
+
+    def test_deadline_tool_arguments_are_closed_and_required(self) -> None:
+        """Deadline lookup must identify the active claim and line."""
+
+        schema = build_runtime_action_json_schema((DEADLINE_TOOL,))
+        tool_action = tool_schema_for(schema, DEADLINE_TOOL)
+        arguments = tool_action["properties"]["tool_arguments"]
+
+        self.assertIs(False, arguments["additionalProperties"])
         self.assertEqual(
-            set(arguments["required"]), set(arguments["properties"])
+            {"claim_id", "service_line_id"},
+            set(arguments["required"]),
+        )
+        self.assertEqual(
+            set(arguments["required"]),
+            set(arguments["properties"]),
+        )
+        self.assertEqual(
+            1,
+            arguments["properties"]["service_line_id"]["minimum"],
+        )
+
+    def test_eligibility_tool_arguments_are_closed_and_required(self) -> None:
+        """Eligibility lookup must identify an approved member and payer."""
+
+        schema = build_runtime_action_json_schema((ELIGIBILITY_TOOL,))
+        tool_action = tool_schema_for(schema, ELIGIBILITY_TOOL)
+        arguments = tool_action["properties"]["tool_arguments"]
+
+        self.assertIs(False, arguments["additionalProperties"])
+        self.assertEqual(
+            {"patient_account", "payer"},
+            set(arguments["required"]),
+        )
+        self.assertEqual(
+            set(arguments["required"]),
+            set(arguments["properties"]),
         )
 
     def test_decision_schema_is_closed_and_fully_required(self) -> None:
@@ -102,15 +130,11 @@ class RuntimeActionSchemaTests(unittest.TestCase):
         decision = decision_action["properties"]["decision"]
 
         self.assertIs(False, decision["additionalProperties"])
-        self.assertEqual(
-            set(decision["properties"]), set(decision["required"])
-        )
+        self.assertEqual(set(decision["properties"]), set(decision["required"]))
 
         criterion = schema["$defs"]["CriterionAssessment"]
         self.assertIs(False, criterion["additionalProperties"])
-        self.assertEqual(
-            set(criterion["properties"]), set(criterion["required"])
-        )
+        self.assertEqual(set(criterion["properties"]), set(criterion["required"]))
 
     def test_schema_builders_return_independent_mappings(self) -> None:
         """A caller must not mutate future response configurations."""
@@ -119,9 +143,7 @@ class RuntimeActionSchemaTests(unittest.TestCase):
         first_format["json_schema"]["name"] = "changed"
         second_format = build_runtime_action_response_format(ALLOWED_TOOLS)
 
-        self.assertEqual(
-            "runtime_action", second_format["json_schema"]["name"]
-        )
+        self.assertEqual("runtime_action", second_format["json_schema"]["name"])
         self.assertIsNot(first_format, second_format)
 
     def test_rejects_unknown_or_duplicate_tool_names(self) -> None:
@@ -178,9 +200,7 @@ class RuntimeActionSchemaTests(unittest.TestCase):
         """Equivalent allowlists should serialize identically."""
 
         first_schema = build_runtime_action_json_schema(ALLOWED_TOOLS)
-        second_schema = build_runtime_action_json_schema(
-            tuple(reversed(ALLOWED_TOOLS))
-        )
+        second_schema = build_runtime_action_json_schema(tuple(reversed(ALLOWED_TOOLS)))
         self.assertEqual(
             json.dumps(first_schema, sort_keys=True, separators=(",", ":")),
             json.dumps(second_schema, sort_keys=True, separators=(",", ":")),

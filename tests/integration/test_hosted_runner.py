@@ -24,6 +24,7 @@ from claim_agent.agent.hosted_runner import (
     main,
     run_hosted_demo,
 )
+from claim_agent.tools.deadline_tool import DEADLINE_TOOL
 
 
 class ManualReviewTransport:
@@ -219,6 +220,7 @@ class HostedRunnerTests(unittest.TestCase):
                 "retrieve_medical_policy",
                 "get_encounter_note",
                 "lookup_denial_code",
+                DEADLINE_TOOL,
             ),
             request.allowed_tool_names,
         )

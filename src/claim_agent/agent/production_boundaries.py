@@ -14,17 +14,19 @@ from typing import Sequence
 from claim_agent.agent.decision_validation_adapter import (
     DecisionValidationAdapter,
 )
+from claim_agent.agent.run_evidence import RunEvidenceStore
 from claim_agent.agent.tool_request_guard import (
     ClaimBoundToolDispatcher,
     ClaimToolContext,
 )
-from claim_agent.agent.run_evidence import RunEvidenceStore
 from claim_agent.agent.tool_result_adapter import (
     SharedToolDispatcher,
     ToolResultDispatcherAdapter,
 )
 from claim_agent.contracts import BaselineFinding
 from claim_agent.tools.deadline_tool import DeadlineToolDispatcher
+from claim_agent.tools.eligibility import EligibilityToolDispatcher
+from claim_agent.tools.knowledge_store import KnowledgeStore
 
 
 @dataclass(frozen=True)
@@ -41,6 +43,7 @@ def build_production_runtime_boundaries(
     baseline_finding: BaselineFinding,
     claim_context: ClaimToolContext,
     as_of: date,
+    eligibility_store: KnowledgeStore | None = None,
     required_evidence_source_ids: Sequence[str] = (),
 ) -> ProductionRuntimeBoundaries:
     """Create guarded production adapters sharing one run's evidence store."""
@@ -68,8 +71,24 @@ def build_production_runtime_boundaries(
         as_of=as_of,
     )
 
+    active_dispatcher: SharedToolDispatcher = deadline_dispatcher
+
+    if eligibility_store is not None:
+        if claim_context.patient_account is None:
+            raise ValueError(
+                "Eligibility retrieval requires the active claim's "
+                "patient_account."
+            )
+
+        active_dispatcher = EligibilityToolDispatcher(
+            dispatcher=deadline_dispatcher,
+            store=eligibility_store,
+            patient_account=claim_context.patient_account,
+            allowed_payers=claim_context.eligibility_payers,
+        )
+
     tool_dispatcher = ToolResultDispatcherAdapter(
-        dispatcher=deadline_dispatcher,
+        dispatcher=active_dispatcher,
         observation_consumer=evidence_store.record_observation,
     )
     decision_validator = DecisionValidationAdapter(
