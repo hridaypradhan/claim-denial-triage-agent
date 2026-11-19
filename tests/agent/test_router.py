@@ -59,7 +59,10 @@ class RouterTests(unittest.TestCase):
         results = analyze_and_route_claim(claim, date(2026, 9, 6))
 
         _finding, route = results[0]
+
         self.assertEqual(route.outcome, RouteOutcome.AGENT_REQUIRED)
+        self.assertIn("lookup_denial_code", route.authorized_tools)
+        self.assertNotIn("get_payer_profile", route.authorized_tools)
 
     def test_missing_ncci_lookup_requires_manual_review(self) -> None:
         """A01 must not resolve a bundling correction without its lookup."""
@@ -106,7 +109,33 @@ class RouterTests(unittest.TestCase):
         self.assertEqual(route.reason_code, "EVIDENCE_EVALUATION_REQUIRED")
         self.assertEqual(
             route.authorized_tools,
-            ["retrieve_medical_policy", "get_encounter_note"],
+            [
+                "retrieve_medical_policy",
+                "get_encounter_note",
+                "lookup_denial_code",
+            ],
+        )
+
+    def test_authorization_route_includes_payer_profile_lookup(self) -> None:
+        """Authorization review may inspect the active payer's rules."""
+
+        claim = load_development_fixture(
+            "A10_auth_missing_retro_window_open.json"
+        )
+
+        results = analyze_and_route_claim(claim, date(2026, 9, 6))
+
+        finding, route = results[0]
+        self.assertEqual(finding.root_cause.value, "AUTHORIZATION")
+        self.assertEqual(route.outcome, RouteOutcome.AGENT_REQUIRED)
+        self.assertEqual(
+            route.authorized_tools,
+            [
+                "retrieve_medical_policy",
+                "get_encounter_note",
+                "lookup_denial_code",
+                "get_payer_profile",
+            ],
         )
 
     def test_nonessential_evidence_preserves_deterministic_route(self) -> None:

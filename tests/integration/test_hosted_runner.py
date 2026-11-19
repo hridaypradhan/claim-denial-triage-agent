@@ -218,6 +218,7 @@ class HostedRunnerTests(unittest.TestCase):
             (
                 "retrieve_medical_policy",
                 "get_encounter_note",
+                "lookup_denial_code",
             ),
             request.allowed_tool_names,
         )

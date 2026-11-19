@@ -97,8 +97,8 @@ later corpus changes detectable. `knowledge-v1` adds the Dataset B encounter
 notes to `knowledge-v0` without changing any earlier file, so earlier passage
 IDs still resolve.
 
-The final snapshot is **`knowledge-v2`**, frozen for the final evaluation
-(#62): `knowledge-v1` plus the held-out policies and evidence (#58), 92 sources
+The final snapshot is **`knowledge-v2`**, frozen for the final evaluation:
+`knowledge-v1` plus the held-out policies and evidence, with 92 sources
 in all. [`knowledge/SNAPSHOT_LOCK.json`](knowledge/SNAPSHOT_LOCK.json) records
 its manifest hash and the one document that is intentionally unavailable
 (`CLM-2026-710313`'s clinical note). Any change to the corpus now fails the
@@ -139,15 +139,18 @@ date, then ranks its passages with BM25. `ToolDispatcher` exposes it as
 a claim's note as numbered, citable passages. It also provides
 `lookup_denial_code` and `get_payer_profile`, which read the frozen baseline
 tables. All four return the shared `ToolResult` contract. Policy and encounter
-retrieval are exercised by the integrated runtime; the new lookup tools remain
-outside the agent's route allowlist pending routing-owner approval. An unknown
-CARC or unlisted payer returns `NO_MATCH`, not the baseline's default profile.
+retrieval are exercised by the integrated runtime. Agent routes that interpret
+denial evidence may call `lookup_denial_code`; authorization routes may also
+call `get_payer_profile` for payer-specific retro-authorization rules. Both
+tools are bound to the active claim's trusted denial and payer fields, while
+deterministic and manual-review routes authorize neither tool. An unknown CARC
+or unlisted payer returns `NO_MATCH`, not the baseline's default profile.
 `calculate_deadline` reports the run's filing deadline, its status, and days
 remaining or overdue from the trusted baseline finding, without recomputing
 it. It is wired into every run but available to the agent only on routes that
 authorize it (none yet).
 
-`get_eligibility_evidence` (#56) returns a payer's eligibility response for the
+`get_eligibility_evidence` returns a payer's eligibility response for the
 claim's own member account: coverage periods and citable passages such as
 `ELIG-PA-SYN-10104-UHC@v1#E2`. It reports evidence and never decides
 eligibility. Another payer may be queried, to check for other coverage. The
@@ -157,7 +160,7 @@ corpus is unchanged. Each retrieval in the evidence bundle records the
 eligibility snapshot it read, so a bundle lists every frozen store behind its
 evidence (`bundle.snapshot_ids`). Only development and demonstration claims have records
 (610104, 610105, 005097), and no held-out claim does. No route authorizes the
-tool yet (#55).
+tool yet.
 
 To check the corpus, or to freeze it for the final evaluation:
 
@@ -833,7 +836,7 @@ also recording its 75% joint accuracy and conservative write-off limitations.
 
 ## Run the final repeated-run experiment
 
-[`evaluation/final_experiment.py`](evaluation/final_experiment.py) (#53) runs
+[`evaluation/final_experiment.py`](evaluation/final_experiment.py) runs
 the baseline once and the hosted agent three times on every case of one frozen
 plan, [`evaluation/final_experiment_plan.json`](evaluation/final_experiment_plan.json).
 Before any run, it checks that:
@@ -1034,7 +1037,7 @@ These limitations define the work assigned to the agentic extension; they are no
 - [x] Wrap deterministic baseline findings and routing behind typed interfaces.
 - [x] Implement a validated common tool dispatcher.
 - [x] Add versioned payer-policy and encounter-note retrieval.
-- [x] Add eligibility retrieval (#56); route authorization is #55.
+- [x] Add eligibility retrieval; route authorization remains pending.
 - [x] Implement a bounded planning loop with structured model outputs behind scripted offline boundaries.
 - [x] Connect typed routing, tool, validation, output, and canonical-trace adapters.
 - [x] Add criterion-level evidence assessment and resolvable citations.

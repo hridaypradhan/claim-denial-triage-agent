@@ -16,8 +16,10 @@ from baseline.triage.claim import Claim
 from claim_agent.agent.tool_result_adapter import SharedToolDispatcher
 from claim_agent.contracts import ToolResult
 from claim_agent.tools.dispatcher import (
+    DENIAL_CODE_TOOL,
     ENCOUNTER_NOTE_TOOL,
     MEDICAL_POLICY_TOOL,
+    PAYER_PROFILE_TOOL,
 )
 
 
@@ -41,6 +43,9 @@ class ClaimToolContext:
     payer: str
     procedure_code: str
     service_date: date
+    denial_carc: str | None = None
+    denial_rarc: tuple[str, ...] = ()
+    denial_group_code: str | None = None
 
 
 def build_claim_tool_context(
@@ -69,11 +74,28 @@ def build_claim_tool_context(
             "for claim-bound retrieval."
         )
 
+    matching_denials = [
+        denial
+        for denial in claim.denials
+        if denial.service_line == service_line_id
+    ]
+
+    if len(matching_denials) != 1:
+        raise ClaimToolContextError(
+            f"Claim {claim.claim_id!r} service line {service_line_id} "
+            "must have exactly one denial for claim-bound reference lookup."
+        )
+
+    denial = matching_denials[0]
+
     return ClaimToolContext(
         claim_id=claim.claim_id,
         payer=claim.payer,
         procedure_code=procedure_code,
         service_date=claim.date_of_service,
+        denial_carc=denial.carc,
+        denial_rarc=tuple(denial.rarc),
+        denial_group_code=denial.group_code,
     )
 
 
@@ -118,7 +140,7 @@ class ClaimBoundToolDispatcher:
     def _expected_arguments(
         self,
         tool_name: str,
-    ) -> Mapping[str, str]:
+    ) -> Mapping[str, object]:
         """Return the trusted claim arguments required by one known tool."""
 
         if tool_name == MEDICAL_POLICY_TOOL:
@@ -131,6 +153,27 @@ class ClaimBoundToolDispatcher:
         if tool_name == ENCOUNTER_NOTE_TOOL:
             return {
                 "claim_id": self._claim_context.claim_id,
+            }
+
+        if tool_name == DENIAL_CODE_TOOL:
+            if (
+                self._claim_context.denial_carc is None
+                or self._claim_context.denial_group_code is None
+            ):
+                raise ClaimToolContextError(
+                    "The active claim context lacks denial fields required "
+                    "for denial-code lookup."
+                )
+
+            return {
+                "carc": self._claim_context.denial_carc,
+                "rarc": list(self._claim_context.denial_rarc),
+                "group_code": self._claim_context.denial_group_code,
+            }
+
+        if tool_name == PAYER_PROFILE_TOOL:
+            return {
+                "payer_id": self._claim_context.payer,
             }
 
         # Fail closed until the tool has an explicit claim-binding rule.
