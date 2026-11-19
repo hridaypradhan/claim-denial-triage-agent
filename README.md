@@ -5,10 +5,11 @@ A hybrid agentic AI system for evidence-grounded triage of denied outpatient med
 > **Project status:** Active academic capstone. The deterministic baseline,
 > shared contracts, local retrieval tools, safety validator, bounded runtime,
 > an OpenAI-compatible hosted-model transport, and a production-shaped local
-> integration with durable canonical traces are runnable and tested. A
-> tool-less, same-run evidence-verification orchestration boundary is also
-> implemented and tested; insertion into the full end-to-end runner, final
-> evaluation, and the final report remain in progress.
+> integration with durable canonical traces are runnable and tested.
+> Tool-less, same-run evidence-verification and grounded appeal-drafting
+> orchestration boundaries are also implemented and tested; insertion into
+> the full end-to-end runner, final evaluation, and the final report remain
+> in progress.
 
 ## Problem
 
@@ -402,12 +403,12 @@ explicitly tracked extension points:
   harness.
 
 Route authorization for the deadline and eligibility tools, end-to-end
-verifier and drafting integration, grounded drafting, and the full comparative
-evaluation remain incomplete rather than implied by directory names. The
-standalone hosted execution, tool-less verifier orchestration, deadline tool,
-and separate eligibility retrieval boundaries are implemented, but the
-current integrated runner does not yet invoke the verifier after deterministic
-validation.
+verifier and drafting integration, and the full comparative evaluation remain
+incomplete rather than implied by directory names. The standalone hosted
+execution, tool-less verifier orchestration, authorization-first grounded
+drafting orchestration, deadline tool, and separate eligibility retrieval
+boundaries are implemented, but the current integrated runner does not yet
+invoke verification and drafting after deterministic validation.
 
 ## Safety boundaries
 
@@ -447,6 +448,36 @@ validation.
   disagreement, or uncertainty produces an explicit manual-review result.
 - This component is reusable orchestration for the later end-to-end assembly;
   the current integrated demonstration does not yet call it automatically.
+
+### Grounded appeal-drafting orchestration
+
+- Post-decision drafting runs only after deterministic validation accepts the
+  exact proposed decision and the tool-less verifier returns a coherent
+  `AGREE` result for the same frozen evidence bundle.
+- The drafting model has no tool authority and receives only `DraftingInput`:
+  the accepted `ValidationResult`, matching `VerifierValidationResult`, and
+  same-run `EvidenceBundle`. Rejected or manual-review gates prevent the
+  drafting client from being called.
+- Hosted drafting requests the strict `AppealDraft` schema through the shared
+  OpenAI-compatible transport. Every result remains `PENDING_REVIEW`; no draft
+  is submitted, approved, or substituted with a scripted or alternate-model
+  fallback.
+- Deterministic validation requires resolvable same-run citations, exact
+  normalized quotes for grounded claim statements, and matching case
+  identities. After structured output parsing, code replaces provider-written
+  body prose with the deterministic rendering of those claims and citations;
+  unsupported claims therefore cannot enter the final body. Malformed,
+  unsupported, timed-out, or failed drafts produce no validated draft and
+  require manual review.
+- Drafting requests, provider responses, sanitized failures, validation
+  outcomes, latency, usage, prompt version, and bundle provenance enter the
+  canonical trace with `model_role=DRAFTER`. Canonical response events retain
+  audit identifiers and citations without storing appeal subject or body text.
+  Unparseable raw output is replaced by `[REDACTED]` plus a SHA-256 fingerprint
+  before durable trace persistence.
+- Normal tests use injected fake verifier and drafting clients and require no
+  hosted credential or network access. The current integrated demonstration
+  does not yet call this post-decision coordinator automatically.
 
 ## Requirements
 
@@ -1015,6 +1046,7 @@ These limitations define the work assigned to the agentic extension; they are no
 - [x] Add the OpenAI-compatible hosted transport and strict action schemas.
 - [ ] Complete live hosted execution and freeze the selected model.
 - [x] Add standalone tool-less evidence-verification orchestration.
+- [x] Add standalone authorization-first grounded drafting orchestration.
 - [ ] Integrate verification and grounded drafting into the end-to-end runner.
 - [ ] Build development and held-out synthetic datasets.
 - [ ] Compare the agentic system against the unchanged baseline.
@@ -1032,7 +1064,9 @@ docs/decisions/           Architecture decision records
 evaluation/               Evaluation and fault-injection harnesses
 knowledge/                Versioned policy and synthetic evidence corpus
 src/claim_agent/agent/    Bounded LLM orchestration
+  drafting/               Grounded drafting prompt, execution, trace, and gates
   hosted/                 Hosted client, schemas, transport, and configuration
+  verification/           Tool-less evidence-verification orchestration
 src/claim_agent/contracts Shared schemas and enums
 src/claim_agent/output/   Reports and appeal preparation
 src/claim_agent/safety/   Deterministic validation and human-review gates

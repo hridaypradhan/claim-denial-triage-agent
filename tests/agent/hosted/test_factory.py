@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from claim_agent.agent.hosted.client import HostedModelClient
+from claim_agent.agent.hosted.drafting_client import HostedDraftingClient
 from claim_agent.agent.hosted.factory import (
     HOSTED_API_KEY_ENVIRONMENT_VARIABLE,
     SELECTED_VOYAGER_PROFILE,
@@ -14,6 +15,7 @@ from claim_agent.agent.hosted.factory import (
     HostedModelConfigurationError,
     HostedModelProfile,
     build_hosted_model_client,
+    build_hosted_drafting_client,
     build_hosted_verifier_client,
 )
 from claim_agent.agent.hosted.openai_chat import (
@@ -26,6 +28,37 @@ from claim_agent.agent.hosted.verifier_client import (
 
 class HostedModelFactoryTests(unittest.TestCase):
     """Verify frozen settings and local credential handling."""
+
+    def test_valid_key_builds_toolless_drafting_client(self) -> None:
+        """The shared credential path should construct a drafter."""
+
+        fake_transport = object()
+
+        with patch.object(
+            OpenAICompatibleChatTransport,
+            "from_api_key",
+            return_value=fake_transport,
+        ) as transport_factory:
+            client = build_hosted_drafting_client(
+                environment={
+                    HOSTED_API_KEY_ENVIRONMENT_VARIABLE: "synthetic-voyager-key",
+                }
+            )
+
+        self.assertIsInstance(client, HostedDraftingClient)
+        transport_factory.assert_called_once()
+
+    def test_drafter_rejects_missing_key_before_sdk_creation(self) -> None:
+        """Drafter construction should share fail-fast key handling."""
+
+        with patch.object(
+            OpenAICompatibleChatTransport,
+            "from_api_key",
+        ) as transport_factory:
+            with self.assertRaises(HostedModelConfigurationError):
+                build_hosted_drafting_client(environment={})
+
+        transport_factory.assert_not_called()
 
     def test_valid_key_builds_toolless_verifier_client(
         self,
