@@ -56,6 +56,7 @@ from claim_agent.tools.knowledge_store import KnowledgeStore
 from claim_agent.tools.snapshot_freeze import check_lock
 from evaluation.hosted_comparison import HostedCandidate, HostedComparisonBudgets
 from evaluation.hosted_execution import execute_hosted_case
+from evaluation.label_lock import check_label_lock
 from baseline.triage.claim import load_claim
 from evaluation.metrics import ALL_SAFETY_ERRORS, Rate, score_system
 from evaluation.trace_metrics import ClaimService, measure_traces, trace_safety_counts
@@ -100,6 +101,8 @@ class ExperimentPlan(BaseModel):
     phase: Literal["rehearsal", "final"]
     dataset_manifest: str
     label_files: Tuple[str, ...]
+    # Required for held-out cases: the freeze lock every label file must match.
+    label_lock: Optional[str] = None
     knowledge_snapshot_id: str
     prompt_version: str
     agent_repetitions: int
@@ -161,6 +164,7 @@ class PreparedExperiment:
     knowledge_root: Path
     manifest_path: Path
     label_paths: Tuple[Path, ...]
+    label_lock_path: Optional[Path] = None
 
 
 def load_experiment_labels(dataset: Dataset, manifest_path: Path, label_paths: Sequence[Path]) -> Dict[str, Label]:
@@ -222,9 +226,18 @@ def prepare_experiment(plan: ExperimentPlan, *, repo_root: Path = REPO_ROOT, kno
                 raise ExperimentError(
                     f"{path.name} has status {status!r}; held-out labels must be frozen before any final run"
                 )
+        if not plan.label_lock:
+            raise ExperimentError("held-out labels need a label_lock in the plan")
+        label_problems = check_label_lock(
+            repo_root / plan.label_lock, label_paths,
+            repo_root=repo_root, knowledge_snapshot_id=plan.knowledge_snapshot_id,
+        )
+        if label_problems:
+            raise ExperimentError("held-out labels do not match their freeze lock: " + "; ".join(label_problems))
 
     labels = load_experiment_labels(dataset, manifest_path, label_paths)
-    return PreparedExperiment(plan, dataset, labels, knowledge_root, manifest_path, label_paths)
+    lock_path = None if plan.label_lock is None else repo_root / plan.label_lock
+    return PreparedExperiment(plan, dataset, labels, knowledge_root, manifest_path, label_paths, lock_path)
 
 
 def experiment_record(prepared: PreparedExperiment, code_commit: str) -> dict:
@@ -252,6 +265,10 @@ def experiment_record(prepared: PreparedExperiment, code_commit: str) -> dict:
             {"path": rel, "sha256": _sha256(path)}
             for rel, path in zip(prepared.plan.label_files, prepared.label_paths)
         ],
+        "label_lock": None if prepared.label_lock_path is None else {
+            "path": prepared.plan.label_lock,
+            "sha256": _sha256(prepared.label_lock_path),
+        },
         "knowledge": {
             "snapshot_id": prepared.plan.knowledge_snapshot_id,
             "manifest_sha256": _sha256(knowledge / "manifest.json"),
@@ -260,7 +277,7 @@ def experiment_record(prepared: PreparedExperiment, code_commit: str) -> dict:
     }
 
 
-RECORDED_INPUTS = ("plan_sha256", "code_commit", "dataset", "labels", "knowledge")
+RECORDED_INPUTS = ("plan_sha256", "code_commit", "dataset", "labels", "label_lock", "knowledge")
 
 
 def _changed_inputs(recorded: Mapping[str, object], current: Mapping[str, object]) -> List[str]:

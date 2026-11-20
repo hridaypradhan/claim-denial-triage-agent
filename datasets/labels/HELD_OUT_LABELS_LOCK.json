@@ -33,5 +33,5 @@
       "canonical_sha256": "131c7e9de0ba3a9a3060762989922b5869a6874c5aaa4f295f0917cd08094d0b"
     }
   ],
-  "note": "Held-out labels frozen before any final system prediction was examined (#63). Any later change to a label file fails tests/evaluation/test_held_out_labels.py and needs a new label version."
+  "note": "Held-out labels frozen before any final system prediction was examined (#63). Any later change to a label file fails the final experiment preflight (evaluation/label_lock.py) and tests/evaluation/test_held_out_labels.py, and needs a new label version."
 }

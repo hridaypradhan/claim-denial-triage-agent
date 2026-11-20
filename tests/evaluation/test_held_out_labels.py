@@ -6,7 +6,6 @@ never read system output.
 """
 
 import dataclasses
-import hashlib
 import json
 import re
 import unittest
@@ -14,6 +13,7 @@ from datetime import date
 from pathlib import Path
 
 from evaluation.final_experiment import load_plan, prepare_experiment
+from evaluation.label_lock import canonical_sha256
 from evaluation.pilot_data import load_dataset, load_labels
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -31,13 +31,6 @@ LOCK = REPO_ROOT / "datasets" / "labels" / "HELD_OUT_LABELS_LOCK.json"
 
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
-
-
-def canonical_sha256(value: object) -> str:
-    """The lock's hash: parsed JSON re-serialized with sorted keys, so line endings don't matter."""
-
-    text = json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def knowledge_sources() -> dict:
