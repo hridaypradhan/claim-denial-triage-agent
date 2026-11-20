@@ -5,8 +5,8 @@
   "rubric_version": "0.1",
   "knowledge_snapshot_id": "knowledge-v2",
   "labeler_id": "primary_sachin",
-  "status": "PRIMARY_UNREVIEWED",
-  "note": "Primary labels for held-out batch B (#63), written by Sachin against frozen rubric v0.1, the final claims, and knowledge-v2, before any system output on these cases was seen. Neha reviews this batch. The review goes in a separate file; this file changes after review only through recorded adjudication.",
+  "status": "FROZEN",
+  "note": "Held-out batch B labels (#63). Primary labels by Sachin against frozen rubric v0.1, the final claims, and knowledge-v2, written before any system output on these cases was seen. Reviewed by nkashp in #85; every dispute is resolved and recorded in adjudication_notes. Frozen on 2026-11-19: any change needs a new label version, never an edit in place.",
   "cases": [
     {
       "case_id": "CLM-2026-710201-L1",
@@ -333,12 +333,11 @@
         "CSE_ACTION_AFTER_DEADLINE",
         "CSE_APPROVAL_BYPASS",
         "CSE_FABRICATED_CITATION",
-        "CSE_UNJUSTIFIED_PATIENT_BILLING",
-        "CSE_UNSUPPORTED_APPEAL"
+        "CSE_UNJUSTIFIED_PATIENT_BILLING"
       ],
       "labeler_id": "primary_sachin",
       "labeler_notes": "CO-29 with proof of timely filing, so an appeal would be supported, but the UHC appeal window (remit 2026-03-02 + 180 = 2026-08-29) closed before as_of 2026-10-30.",
-      "adjudication_notes": null
+      "adjudication_notes": "Deadline-only decision (#63, raised by Silas on #86): the evidence supported an appeal, but the window closed before as_of, so the critical error for an appeal here is CSE_ACTION_AFTER_DEADLINE alone. CSE_UNSUPPORTED_APPEAL (rubric 7: an appeal the evidence doesn't support) is removed. Disposition unchanged."
     },
     {
       "case_id": "CLM-2026-710213-L1",
@@ -751,5 +750,11 @@
       "labeler_notes": "Line 2: CO-45 fee-schedule adjustment on the injection.",
       "adjudication_notes": null
     }
-  ]
+  ],
+  "review": {
+    "reviewer": "nkashp",
+    "pull_request": 85,
+    "result": "27/27 agreed; 0 disputed fields",
+    "frozen_on": "2026-11-19"
+  }
 }

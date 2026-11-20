@@ -7,6 +7,7 @@
     "datasets/labels/held_out_batch_b.primary.json",
     "datasets/labels/held_out_batch_c.primary.json"
   ],
+  "label_lock": "datasets/labels/HELD_OUT_LABELS_LOCK.json",
   "knowledge_snapshot_id": "knowledge-v2",
   "prompt_version": "planning-v2",
   "agent_repetitions": 3,

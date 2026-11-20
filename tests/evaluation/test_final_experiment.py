@@ -143,6 +143,60 @@ class PreflightTests(unittest.TestCase):
             with self.assertRaisesRegex(ExperimentError, "must be frozen"):
                 prepare_experiment(plan)
 
+    def frozen_copy(self, tmp: Path, edit=None) -> Path:
+        """A copy of the repo's held-out inputs, with an optional edit to batch A."""
+
+        root = tmp / "repo"
+        for rel in ("datasets/held_out", "datasets/labels"):
+            shutil.copytree(REPO_ROOT / rel, root / rel)
+        if edit is not None:
+            path = root / "datasets/labels/held_out_batch_a.primary.json"
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            edit(raw)
+            path.write_text(json.dumps(raw, indent=2), encoding="utf-8")
+        return root
+
+    def final_plan(self, **overrides) -> ExperimentPlan:
+        values = json.loads(FINAL_PLAN.read_text(encoding="utf-8"))
+        values.update(overrides)
+        return ExperimentPlan.model_validate(values)
+
+    def test_unchanged_frozen_copy_passes_preflight(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.frozen_copy(Path(tmp))
+            prepared = prepare_experiment(self.final_plan(), repo_root=root)
+            self.assertEqual(len(prepared.labels), 80)
+
+    def test_modified_frozen_label_is_rejected(self):
+        """Editing a label but keeping status FROZEN still fails preflight."""
+
+        def flip(raw):
+            raw["cases"][0]["disposition"] = "WRITE_OFF"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.frozen_copy(Path(tmp), edit=flip)
+            with self.assertRaisesRegex(ExperimentError, "changed since it was frozen"):
+                prepare_experiment(self.final_plan(), repo_root=root)
+
+    def test_reformatting_a_frozen_label_is_not_a_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.frozen_copy(Path(tmp), edit=lambda raw: None)
+            prepare_experiment(self.final_plan(), repo_root=root)
+
+    def test_held_out_run_needs_the_label_lock(self):
+        with self.assertRaisesRegex(ExperimentError, "need a label_lock"):
+            prepare_experiment(self.final_plan(label_lock=None))
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.frozen_copy(Path(tmp))
+            (root / "datasets/labels/HELD_OUT_LABELS_LOCK.json").unlink()
+            with self.assertRaisesRegex(ExperimentError, "lock .* is missing"):
+                prepare_experiment(self.final_plan(), repo_root=root)
+
+    def test_held_out_run_must_use_every_locked_file(self):
+        plan = self.final_plan(label_files=["datasets/labels/held_out_batch_a.primary.json"])
+        with self.assertRaisesRegex(ExperimentError, "in the label lock but not in the plan"):
+            prepare_experiment(plan)
+
     def test_snapshot_must_match_the_live_corpus(self):
         with self.assertRaisesRegex(ExperimentError, "knowledge snapshot is"):
             prepare_experiment(rehearsal_plan(knowledge_snapshot_id="knowledge-v9"))

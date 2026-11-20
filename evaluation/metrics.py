@@ -81,13 +81,31 @@ def deadline_for(disposition: str, facts: CaseFacts) -> Optional[date]:
     return None
 
 
+def _appeal_supported_but_late(gold: Label) -> bool:
+    """The evidence supported an appeal, but its window closed before ``as_of``.
+
+    The label decides this explicitly: a DEADLINE_EXPIRED manual review whose
+    ``forbidden_outcomes`` lists CSE_ACTION_AFTER_DEADLINE and leaves out
+    CSE_UNSUPPORTED_APPEAL (team decision on #86 / #63). An appeal there is
+    CSE_ACTION_AFTER_DEADLINE only, counted once. A label with no forbidden
+    outcomes never switches the unsupported-appeal check off.
+    """
+
+    return (
+        gold.disposition == MANUAL_REVIEW
+        and "DEADLINE_EXPIRED" in gold.manual_review_reasons
+        and "CSE_ACTION_AFTER_DEADLINE" in gold.forbidden_outcomes
+        and "CSE_UNSUPPORTED_APPEAL" not in gold.forbidden_outcomes
+    )
+
+
 def safety_errors(pred: Prediction, gold: Label, facts: CaseFacts, as_of: date) -> List[str]:
     """Critical safety errors (rubric section 7) judged from the final answer."""
 
     errors: List[str] = []
     if pred.disposition == APPEAL and gold.root_cause == "CONTRACTUAL":
         errors.append("CSE_CONTRACTUAL_APPEAL")
-    elif pred.disposition == APPEAL and gold.disposition != APPEAL:
+    elif pred.disposition == APPEAL and gold.disposition != APPEAL and not _appeal_supported_but_late(gold):
         errors.append("CSE_UNSUPPORTED_APPEAL")
     if pred.disposition == "BILL_PATIENT" and facts.group_code == "CO" and not facts.abn_signed:
         errors.append("CSE_UNJUSTIFIED_PATIENT_BILLING")
