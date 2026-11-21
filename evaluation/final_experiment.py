@@ -42,7 +42,7 @@ import statistics
 import time
 import traceback
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Callable, Dict, List, Literal, Mapping, Optional, Sequence, Tuple
@@ -122,6 +122,11 @@ class ExperimentPlan(BaseModel):
     # appeal through the drafter, before the final package is scored (#66).
     # The baseline never uses either.
     post_decision: Literal["none", "verify_and_draft"] = "none"
+    # The drafter's own request timeout and completion limit (#66 smoke
+    # tests). Only the drafting client uses them; the planner and verifier
+    # keep the candidate's settings. None means the candidate's value.
+    drafter_request_timeout_seconds: Optional[float] = None
+    drafter_max_completion_tokens: Optional[int] = None
     budgets: HostedComparisonBudgets
     candidate: HostedCandidate
     token_prices: Optional[TokenPrices] = None
@@ -131,6 +136,20 @@ class ExperimentPlan(BaseModel):
     def require_safe_identifier(cls, value: str) -> str:
         if not value or not all(ch.isalnum() or ch in "-_." for ch in value):
             raise ValueError("experiment_id must use only letters, digits, '-', '_', or '.'")
+        return value
+
+    @field_validator("drafter_request_timeout_seconds")
+    @classmethod
+    def require_positive_drafter_timeout(cls, value: Optional[float]) -> Optional[float]:
+        if value is not None and value <= 0:
+            raise ValueError("drafter_request_timeout_seconds must be greater than zero")
+        return value
+
+    @field_validator("drafter_max_completion_tokens")
+    @classmethod
+    def require_positive_drafter_tokens(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and value <= 0:
+            raise ValueError("drafter_max_completion_tokens must be greater than zero")
         return value
 
     @field_validator("agent_repetitions")
@@ -144,6 +163,23 @@ class ExperimentPlan(BaseModel):
         """The baseline is deterministic and runs once; the agent runs N times."""
 
         return (1,) if system == BASELINE_V1 else tuple(range(1, self.agent_repetitions + 1))
+
+
+def model_profiles(plan: ExperimentPlan) -> Dict[str, HostedModelProfile]:
+    """The exact profile each hosted client is built with.
+
+    Every role uses the candidate profile. Only the drafter's request timeout
+    and completion limit can differ, through ``drafter_request_timeout_seconds``
+    and ``drafter_max_completion_tokens``.
+    """
+
+    profile = plan.candidate.hosted_profile()
+    overrides = {}
+    if plan.drafter_request_timeout_seconds is not None:
+        overrides["request_timeout_seconds"] = plan.drafter_request_timeout_seconds
+    if plan.drafter_max_completion_tokens is not None:
+        overrides["max_completion_tokens"] = plan.drafter_max_completion_tokens
+    return {"planner": profile, "verifier": profile, "drafter": replace(profile, **overrides)}
 
 
 def load_plan(path: Path) -> ExperimentPlan:
@@ -390,12 +426,13 @@ def _predict(
         )
         return prediction_from_output_package(case, HOSTED_AGENT, package, ()), None
 
-    profile: HostedModelProfile = plan.candidate.hosted_profile()
+    profiles = model_profiles(plan)
+    profile: HostedModelProfile = profiles["planner"]
     post_decision_clients = None
     if plan.post_decision == "verify_and_draft":
         post_decision_clients = PostDecisionClients(
-            verifier_factory=lambda: verifier_factory(profile=profile),
-            drafting_factory=lambda: drafting_factory(profile=profile),
+            verifier_factory=lambda: verifier_factory(profile=profiles["verifier"]),
+            drafting_factory=lambda: drafting_factory(profile=profiles["drafter"]),
         )
     execution = execute_hosted_case(
         prepared_case=prepared,

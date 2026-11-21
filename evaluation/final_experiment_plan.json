@@ -12,6 +12,8 @@
   "prompt_version": "planning-v2",
   "agent_repetitions": 3,
   "post_decision": "verify_and_draft",
+  "drafter_request_timeout_seconds": 180.0,
+  "drafter_max_completion_tokens": 4096,
   "budgets": {
     "max_model_calls": 4,
     "max_tool_calls": 3,
