@@ -21,6 +21,10 @@ from claim_agent.contracts import Disposition
 from claim_agent.tools.dispatcher import ENCOUNTER_NOTE_TOOL, ToolDispatcher
 from claim_agent.tools.knowledge_store import KnowledgeStore
 from evaluation.final_experiment import (
+    _measure_trace,
+    _post_decision_measurements,
+    _run_measurements,
+    post_decision_summary,
     BASELINE_V1,
     HOSTED_AGENT,
     ExperimentError,
@@ -34,6 +38,10 @@ from evaluation.hosted_execution import PostDecisionClients, execute_hosted_case
 from evaluation.pilot_data import REPO_ROOT, load_dataset
 from evaluation.scripted_agent import prepare_evaluation_case
 
+# Model prose that must never reach a persisted trace (ADR 0002).
+VERIFIER_PROSE = "VERIFIER-PROSE-MARKER the verifier explains its reasoning here."
+DRAFT_PROSE = "DRAFT-PROSE-MARKER dear reviewer, the appeal letter body."
+INVALID_PROSE = "INVALID-PROSE-MARKER not a draft at all"
 FINAL_PLAN = REPO_ROOT / "evaluation" / "final_experiment_plan.json"
 SET_B = REPO_ROOT / "datasets" / "development" / "set_b" / "manifest.json"
 APPEAL_CASE = "CLM-2026-005097-L1"
@@ -118,7 +126,7 @@ def _passage_text(passage_id: str) -> str:
 def _verifier_json(outcome: str = "AGREE") -> str:
     return json.dumps({
         "decision_id": DECISION_ID, "claim_id": CLAIM_ID, "service_line_id": 1, "outcome": outcome,
-        "rationale": "Checked against same-run passages.",
+        "rationale": VERIFIER_PROSE,
         "supported_criterion_ids": ["A", "B", "C"] if outcome == "AGREE" else ["A", "B"],
         "disputed_criterion_ids": [] if outcome == "AGREE" else ["C"],
         "unresolved_questions": [],
@@ -130,7 +138,7 @@ def _draft_json(statement: str, citation: str = f"{PN}#L1") -> str:
     return json.dumps({
         "draft_id": "DRF-PIPELINE-1", "decision_id": DECISION_ID, "claim_id": CLAIM_ID, "service_line_id": 1,
         "disposition": "APPEAL_WITH_DOCUMENTATION", "approval_state": "PENDING_REVIEW",
-        "subject": "Medical necessity appeal", "body": "Rendered for human review.",
+        "subject": "Medical necessity appeal", "body": DRAFT_PROSE,
         "grounded_claims": [{"statement": statement, "citation_ids": [citation]}],
         "citation_ids": [citation],
     })
@@ -145,24 +153,30 @@ class FakeVerifier:
         self.calls += 1
         if self.behaviour == "RAISE":
             raise ConnectionError("provider outage")
+        if self.behaviour == "TIMEOUT":
+            raise TimeoutError("verifier timed out")
         return VerifierResponse(request_id=request.request_id, response_text=_verifier_json(self.behaviour),
                                 input_token_count=300, output_token_count=30)
 
 
 class FakeDrafter:
-    def __init__(self, grounded=True):
+    def __init__(self, grounded=True, invalid=False):
         self.grounded = grounded
+        self.invalid = invalid
         self.calls = 0
 
     def draft(self, request):
         self.calls += 1
+        if self.invalid:
+            return DraftingResponse(request_id=request.request_id, response_text=INVALID_PROSE,
+                                    input_token_count=500, output_token_count=5)
         statement = _passage_text(f"{PN}#L1") if self.grounded else "This claim was pre-approved by phone."
         return DraftingResponse(request_id=request.request_id, response_text=_draft_json(statement),
                                 input_token_count=500, output_token_count=80)
 
 
-class HostedCaseGateTests(unittest.TestCase):
-    """execute_hosted_case with the verifier and drafter, on the appeal case."""
+class AppealCaseRunner(unittest.TestCase):
+    """Runs execute_hosted_case on the set B appeal case; holds no tests itself."""
 
     @classmethod
     def setUpClass(cls):
@@ -185,6 +199,10 @@ class HostedCaseGateTests(unittest.TestCase):
             code_commit="test", plan_version="test", repeat_index=1, post_decision_clients=clients,
         )
         return execution, verifier, drafter
+
+
+class HostedCaseGateTests(AppealCaseRunner):
+    """execute_hosted_case with the verifier and drafter, on the appeal case."""
 
     def test_verified_appeal_with_grounded_draft_stays_an_appeal(self):
         execution, verifier, drafter = self.run_case()
@@ -254,6 +272,74 @@ class HostedCaseGateTests(unittest.TestCase):
         self.assertEqual((verifier.calls, drafter.calls), (0, 0))
 
 
+def _serialized(events) -> str:
+    return "\n".join(json.dumps(e.model_dump(mode="json"), sort_keys=True) for e in events)
+
+
+class RedactionAndUsageTests(AppealCaseRunner):
+    """Hriday's #93 blockers: redacted post-decision traces and honest token completeness."""
+
+    PRICES = ExperimentPlan.model_validate({
+        **json.loads(FINAL_PLAN.read_text(encoding="utf-8")),
+        "token_prices": {"currency": "USD", "input_per_million_tokens": 1.0, "output_per_million_tokens": 2.0},
+    }).token_prices
+
+    def test_persisted_post_decision_trace_has_no_model_prose(self):
+        execution, _, _ = self.run_case()
+        post = execution.post_decision
+        raw = "\n".join(json.dumps(dict(e.details), default=str) for e in post.trace_entries)
+        self.assertIn("VERIFIER-PROSE-MARKER", raw)  # the in-memory entries do hold it
+        text = _serialized(post.canonical_trace_events)
+        for marker in ("VERIFIER-PROSE-MARKER", "DRAFT-PROSE-MARKER", "response_text"):
+            self.assertNotIn(marker, text)
+        roles = {e.payload.get("model_role") for e in post.canonical_trace_events if e.payload}
+        self.assertEqual(roles, {"VERIFIER", "DRAFTER"})
+        self.assertTrue(all(e.run_id == "pipeline-test" for e in post.canonical_trace_events))
+
+    def test_invalid_drafter_output_is_redacted(self):
+        execution, _, _ = self.run_case(drafter=FakeDrafter(invalid=True))
+        self.assertEqual(execution.output_package.final_disposition, Disposition.MANUAL_REVIEW)
+        text = _serialized(execution.post_decision.canonical_trace_events)
+        self.assertNotIn("INVALID-PROSE-MARKER", text)
+        self.assertIn("raw_output_sha256", text)
+
+    def assert_incomplete(self, execution):
+        summary = post_decision_summary(execution.post_decision, execution.output_package)
+        usage = _post_decision_measurements(summary, self.PRICES)
+        self.assertEqual(usage["model_calls"], 1)
+        self.assertEqual(usage["model_responses"], 0)
+        self.assertFalse(usage["token_usage_complete"])
+        self.assertIsNone(usage["cost"])
+
+    def test_verifier_timeout_makes_usage_incomplete(self):
+        execution, _, _ = self.run_case(verifier=FakeVerifier("TIMEOUT"))
+        self.assertIn("VERIFIER_TIMEOUT", execution.output_package.manual_review_reasons)
+        self.assert_incomplete(execution)
+
+    def test_verifier_provider_failure_makes_usage_incomplete(self):
+        execution, _, _ = self.run_case(verifier=FakeVerifier("RAISE"))
+        self.assert_incomplete(execution)
+
+    def test_pipeline_cost_is_unknown_when_any_call_lacks_usage(self):
+        execution, _, _ = self.run_case(verifier=FakeVerifier("RAISE"))
+        summary = post_decision_summary(execution.post_decision, execution.output_package)
+        prediction = type("P", (), {"trace_events": execution.canonical_trace_events})()
+        measured = _run_measurements(prediction, summary, 10, self.PRICES)
+        self.assertFalse(measured["pipeline"]["token_usage_complete"])
+        self.assertIsNone(measured["pipeline"]["cost"])
+
+    def test_failed_planning_call_makes_decision_usage_incomplete(self):
+        class FailingPlanner:
+            def generate_response(self, request):
+                raise ConnectionError("planner outage")
+
+        execution, _, _ = self.run_case(model=FailingPlanner())
+        measured = _measure_trace(execution.canonical_trace_events, self.PRICES)
+        self.assertGreaterEqual(measured["model_calls"], 1)
+        self.assertFalse(measured["token_usage_complete"])
+        self.assertIsNone(measured["cost"])
+
+
 def set_b_plan(**overrides) -> ExperimentPlan:
     values = {
         **json.loads(FINAL_PLAN.read_text(encoding="utf-8")),
@@ -298,6 +384,13 @@ class HarnessPipelineTests(unittest.TestCase):
         for name in ("post-decision.json", "decision-package.json", "evidence-bundle.json",
                      "post-decision-trace.jsonl", "appeal-draft.json", "output-package.json"):
             self.assertTrue((run / name).is_file(), name)
+        # Model prose is redacted everywhere except the accepted draft itself,
+        # which is the PENDING_REVIEW output a human reviews.
+        for path in run.rglob("*"):
+            if path.is_file() and path.name != "appeal-draft.json":
+                text = path.read_text(encoding="utf-8")
+                self.assertNotIn("VERIFIER-PROSE-MARKER", text, path.name)
+                self.assertNotIn("DRAFT-PROSE-MARKER", text, path.name)
         summary = json.loads((run / "post-decision.json").read_text(encoding="utf-8"))
         self.assertEqual(summary["verifier"]["outcome"], "AGREE")
         self.assertTrue(summary["drafting"]["draft_accepted"])

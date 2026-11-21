@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from typing import Callable, Optional
 
@@ -75,9 +75,14 @@ class PostDecisionExecution:
     # None when deterministic validation did not accept a decision, so
     # neither gate ran.
     result: Optional[PostDecisionDraftingResult]
+    # Internal entries, kept in memory only: verifier and drafter responses
+    # here hold unrestricted model text. Never persist these.
     trace_entries: tuple[RuntimeTraceEntry, ...]
     # Why the final package was escalated by these gates, or None.
     escalation_reason: Optional[str]
+    # The same events through the canonical trace adapter, redacted under
+    # ADR 0002. This is the only form that may be written to disk.
+    canonical_trace_events: tuple[TraceEvent, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -127,7 +132,7 @@ def apply_post_decision_gates(
       reason code. Other dispositions need no draft and keep their decision.
     """
 
-    trace = InMemoryRuntimeTrace(f"{run_id}-post-decision")
+    trace = InMemoryRuntimeTrace(run_id)
     validation = decision_package.validation_result
     decision = decision_package.proposed_decision
     if (
@@ -378,7 +383,7 @@ def execute_hosted_case(
         ),
     )
 
-    canonical_trace_events = CanonicalTraceAdapter(
+    trace_adapter = CanonicalTraceAdapter(
         run_configuration=run_configuration,
         route_decision=prepared_case.route_decision,
         evaluation_context={
@@ -387,7 +392,10 @@ def execute_hosted_case(
             "scenario_family_id": prepared_case.case.scenario_family_id,
             "system": "hosted-comparison",
         },
-    ).adapt(integrated_result.runtime_result.trace_entries)
+    )
+    canonical_trace_events = trace_adapter.adapt(
+        integrated_result.runtime_result.trace_entries
+    )
 
     if post_decision_clients is None:
         return HostedCaseExecution(
@@ -400,6 +408,13 @@ def execute_hosted_case(
         evidence_bundle=integrated_result.evidence_bundle,
         clients=post_decision_clients,
         run_id=run_id,
+    )
+    # The verifier and drafter events go through the same adapter and
+    # redaction as the decision trace, as a separate trace so the decision
+    # trace and its metrics are unchanged.
+    post_decision = replace(
+        post_decision,
+        canonical_trace_events=trace_adapter.adapt(post_decision.trace_entries),
     )
     return HostedCaseExecution(
         output_package=final_package,

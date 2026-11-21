@@ -337,11 +337,13 @@ def run_directory(experiment_root: Path, system: str, case_id: str, repeat_index
 
 
 def _measure_trace(events: Sequence[TraceEvent], prices: Optional[TokenPrices]) -> dict:
+    requests = [e for e in events if e.event_type is TraceEventType.MODEL_REQUESTED]
     responses = [e for e in events if e.event_type is TraceEventType.MODEL_RESPONDED]
     reported = [e for e in responses if e.input_tokens is not None and e.output_tokens is not None]
     input_tokens = sum(e.input_tokens for e in reported)
     output_tokens = sum(e.output_tokens for e in reported)
-    complete_usage = len(reported) == len(responses)
+    # Same rule as the verifier and drafter: a failed planning call counts.
+    complete_usage = len(reported) == len(requests)
     cost = None
     if prices is not None and responses and complete_usage:
         cost = round(
@@ -468,7 +470,9 @@ def _post_decision_measurements(summary: Optional[dict], prices: Optional[TokenP
     reported = [c for c in responded if c["input_tokens"] is not None and c["output_tokens"] is not None]
     input_tokens = sum(c["input_tokens"] for c in reported)
     output_tokens = sum(c["output_tokens"] for c in reported)
-    complete = len(reported) == len(responded)
+    # Every attempted call must have reported tokens. A call that failed or
+    # timed out still happened, and its usage is unknown, not zero.
+    complete = len(reported) == len(calls)
     cost = None
     if prices is not None and complete:
         cost = round(
@@ -563,15 +567,20 @@ def _write_run(
             post_decision.decision_package.model_dump(mode="json", exclude_none=True),
         )
         _write_json(partial / "evidence-bundle.json", post_decision.evidence_bundle.model_dump(mode="json"))
-        with (partial / "post-decision-trace.jsonl").open("w", encoding="utf-8") as handle:
-            for entry in post_decision.trace_entries:
-                handle.write(json.dumps({
-                    "run_id": run_id,
-                    "sequence_number": entry.sequence_number,
-                    "event_name": entry.event_name,
-                    "elapsed_ms": entry.elapsed_ms,
-                    "details": dict(entry.details),
-                }, sort_keys=True, default=str) + "\n")
+        # Only the adapted, redacted events are written (ADR 0002); the raw
+        # entries hold verifier and drafter output text.
+        # The canonical writer accepts only a whole run (RUN_STARTED first), so
+        # this partial trace uses the same serialization directly.
+        (partial / "post-decision-trace.jsonl").write_text(
+            "".join(
+                json.dumps(
+                    event.model_dump(mode="json", exclude_none=True),
+                    sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ) + "\n"
+                for event in post_decision.canonical_trace_events
+            ),
+            encoding="utf-8",
+        )
         validated_draft = None if post_decision.result is None else post_decision.result.validated_draft
         if validated_draft is not None:
             _write_json(partial / "appeal-draft.json", validated_draft.model_dump(mode="json"))
