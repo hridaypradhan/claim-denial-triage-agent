@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Sequence
+from typing import Callable, Optional, Sequence
 
 from claim_agent.agent.decision_validation_adapter import (
     DecisionValidationAdapter,
@@ -45,6 +45,9 @@ def build_production_runtime_boundaries(
     as_of: date,
     eligibility_store: KnowledgeStore | None = None,
     required_evidence_source_ids: Sequence[str] = (),
+    dispatcher_wrapper: Optional[
+        Callable[[SharedToolDispatcher], SharedToolDispatcher]
+    ] = None,
 ) -> ProductionRuntimeBoundaries:
     """Create guarded production adapters sharing one run's evidence store."""
 
@@ -86,6 +89,11 @@ def build_production_runtime_boundaries(
             patient_account=claim_context.patient_account,
             allowed_payers=claim_context.eligibility_payers,
         )
+
+    # An optional outermost wrapper, such as the same-run evidence bundle
+    # recorder, sees every guarded tool result exactly as the runtime does.
+    if dispatcher_wrapper is not None:
+        active_dispatcher = dispatcher_wrapper(active_dispatcher)
 
     tool_dispatcher = ToolResultDispatcherAdapter(
         dispatcher=active_dispatcher,

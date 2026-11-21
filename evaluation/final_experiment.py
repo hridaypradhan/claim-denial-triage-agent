@@ -41,6 +41,7 @@ import json
 import statistics
 import time
 import traceback
+from collections import Counter
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -49,13 +50,23 @@ from typing import Callable, Dict, List, Literal, Mapping, Optional, Sequence, T
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from claim_agent.agent.canonical_trace import TraceEvent, TraceEventType
-from claim_agent.agent.hosted.factory import HostedModelProfile, build_hosted_model_client
+from claim_agent.agent.hosted.factory import (
+    HostedModelProfile,
+    build_hosted_drafting_client,
+    build_hosted_model_client,
+    build_hosted_verifier_client,
+)
 from claim_agent.agent.model_interface import ModelClient
 from claim_agent.agent.trace_writer import JsonLinesTraceWriter
+from claim_agent.contracts import OutputPackage
 from claim_agent.tools.knowledge_store import KnowledgeStore
 from claim_agent.tools.snapshot_freeze import check_lock
 from evaluation.hosted_comparison import HostedCandidate, HostedComparisonBudgets
-from evaluation.hosted_execution import execute_hosted_case
+from evaluation.hosted_execution import (
+    PostDecisionClients,
+    PostDecisionExecution,
+    execute_hosted_case,
+)
 from evaluation.label_lock import check_label_lock
 from baseline.triage.claim import load_claim
 from evaluation.metrics import ALL_SAFETY_ERRORS, Rate, score_system
@@ -106,6 +117,11 @@ class ExperimentPlan(BaseModel):
     knowledge_snapshot_id: str
     prompt_version: str
     agent_repetitions: int
+    # "verify_and_draft" runs every agent decision that deterministic
+    # validation accepts through the tool-less verifier, and every verified
+    # appeal through the drafter, before the final package is scored (#66).
+    # The baseline never uses either.
+    post_decision: Literal["none", "verify_and_draft"] = "none"
     budgets: HostedComparisonBudgets
     candidate: HostedCandidate
     token_prices: Optional[TokenPrices] = None
@@ -307,6 +323,7 @@ def _ensure_experiment_record(experiment_root: Path, record: dict) -> None:
 
 
 ClientFactory = Callable[..., ModelClient]
+POST_DECISION_ARTIFACT = "post-decision.json"
 
 
 def run_id_for(experiment_id: str, system: str, case_id: str, repeat_index: int) -> str:
@@ -355,9 +372,11 @@ def _predict(
     run_id: str,
     repeat_index: int,
     code_commit: str,
-) -> Prediction:
+    verifier_factory: Callable[..., object] = build_hosted_verifier_client,
+    drafting_factory: Callable[..., object] = build_hosted_drafting_client,
+) -> Tuple[Prediction, Optional[PostDecisionExecution]]:
     if system == BASELINE_V1:
-        return predict_baseline_v1(case, as_of)
+        return predict_baseline_v1(case, as_of), None
 
     prepared = prepare_evaluation_case(case, as_of)
     if not prepared.requires_agent:
@@ -367,9 +386,15 @@ def _predict(
             package_version=PACKAGE_VERSION,
             knowledge_snapshot_id=knowledge_store.snapshot_id,
         )
-        return prediction_from_output_package(case, HOSTED_AGENT, package, ())
+        return prediction_from_output_package(case, HOSTED_AGENT, package, ()), None
 
     profile: HostedModelProfile = plan.candidate.hosted_profile()
+    post_decision_clients = None
+    if plan.post_decision == "verify_and_draft":
+        post_decision_clients = PostDecisionClients(
+            verifier_factory=lambda: verifier_factory(profile=profile),
+            drafting_factory=lambda: drafting_factory(profile=profile),
+        )
     execution = execute_hosted_case(
         prepared_case=prepared,
         model_client=client_factory(profile=profile),
@@ -381,10 +406,112 @@ def _predict(
         code_commit=code_commit,
         plan_version=plan.experiment_id,
         repeat_index=repeat_index,
+        post_decision_clients=post_decision_clients,
     )
-    return prediction_from_output_package(
+    prediction = prediction_from_output_package(
         case, HOSTED_AGENT, execution.output_package, execution.canonical_trace_events
     )
+    return prediction, execution.post_decision
+
+
+def _call_usage(execution) -> Optional[dict]:
+    """One verifier or drafter call's latency and tokens; None if no model was called."""
+
+    if execution is None or execution.request is None:
+        return None
+    response = execution.response
+    return {
+        "elapsed_ms": execution.elapsed_ms,
+        "responded": response is not None,
+        "input_tokens": None if response is None else response.input_token_count,
+        "output_tokens": None if response is None else response.output_token_count,
+    }
+
+
+def post_decision_summary(post: PostDecisionExecution, final: OutputPackage) -> dict:
+    """The verifier and drafter outcome for one run, as written to post-decision.json."""
+
+    result = post.result
+    verification = None if result is None else result.verification_execution
+    drafting = None if result is None else result.drafting_execution
+    return {
+        "gates_run": result is not None,
+        "stop_reason": None if result is None else result.stop_reason,
+        "decision_disposition": post.decision_package.final_disposition.value,
+        "final_disposition": final.final_disposition.value,
+        "escalation_reason": post.escalation_reason,
+        "bundle_fingerprint": post.evidence_bundle.fingerprint(),
+        "verifier": None if verification is None else {
+            "outcome": verification.validation_result.outcome.value,
+            "reason_code": verification.validation_result.reason_code,
+            "requires_manual_review": verification.validation_result.requires_manual_review,
+            "call": _call_usage(verification),
+        },
+        "drafting": None if drafting is None else {
+            "outcome": drafting.validation_result.outcome.value,
+            "reason_code": drafting.validation_result.reason_code,
+            "draft_accepted": drafting.validation_result.validated_draft is not None,
+            "approval_state": drafting.validation_result.approval_state,
+            "call": _call_usage(drafting),
+        },
+    }
+
+
+def _post_decision_measurements(summary: Optional[dict], prices: Optional[TokenPrices]) -> dict:
+    """Calls, latency, and tokens of the verifier and drafter together."""
+
+    calls = [] if summary is None else [
+        stage["call"] for stage in (summary["verifier"], summary["drafting"])
+        if stage is not None and stage["call"] is not None
+    ]
+    responded = [c for c in calls if c["responded"]]
+    reported = [c for c in responded if c["input_tokens"] is not None and c["output_tokens"] is not None]
+    input_tokens = sum(c["input_tokens"] for c in reported)
+    output_tokens = sum(c["output_tokens"] for c in reported)
+    complete = len(reported) == len(responded)
+    cost = None
+    if prices is not None and complete:
+        cost = round(
+            input_tokens / 1e6 * prices.input_per_million_tokens
+            + output_tokens / 1e6 * prices.output_per_million_tokens,
+            6,
+        )
+    return {
+        "model_calls": len(calls),
+        "model_responses": len(responded),
+        "model_elapsed_ms": sum(c["elapsed_ms"] for c in calls),
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "token_usage_complete": complete,
+        "cost": cost,
+    }
+
+
+def _run_measurements(prediction: Prediction, summary: Optional[dict], wall_clock_ms: int, prices: Optional[TokenPrices]) -> dict:
+    """Decision-stage numbers keep their keys; the pipeline totals add the verifier and drafter."""
+
+    decision = _measure_trace(prediction.trace_events, prices)
+    post = _post_decision_measurements(summary, prices)
+    pipeline_cost = None
+    if decision["cost"] is not None and post["cost"] is not None:
+        pipeline_cost = round(decision["cost"] + post["cost"], 6)
+    elif post["model_calls"] == 0:
+        pipeline_cost = decision["cost"]
+    elif decision["model_calls"] == 0:
+        pipeline_cost = post["cost"]
+    return {
+        "wall_clock_ms": wall_clock_ms,
+        **decision,
+        "post_decision": post,
+        "pipeline": {
+            "model_calls": decision["model_calls"] + post["model_calls"],
+            "model_elapsed_ms": decision["model_elapsed_ms"] + post["model_elapsed_ms"],
+            "input_tokens": decision["input_tokens"] + post["input_tokens"],
+            "output_tokens": decision["output_tokens"] + post["output_tokens"],
+            "token_usage_complete": decision["token_usage_complete"] and post["token_usage_complete"],
+            "cost": pipeline_cost,
+        },
+    }
 
 
 def _prediction_record(prediction: Prediction, route_outcome: Optional[str]) -> dict:
@@ -401,7 +528,15 @@ def _prediction_record(prediction: Prediction, route_outcome: Optional[str]) -> 
     }
 
 
-def _write_run(final_dir: Path, prediction: Prediction, measurements: dict, run_id: str, repeat_index: int) -> None:
+def _write_run(
+    final_dir: Path,
+    prediction: Prediction,
+    measurements: dict,
+    run_id: str,
+    repeat_index: int,
+    post_decision: Optional[PostDecisionExecution] = None,
+    post_decision_record: Optional[dict] = None,
+) -> None:
     """Write into a temporary sibling, then rename it into place in one step."""
 
     final_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -419,6 +554,27 @@ def _write_run(final_dir: Path, prediction: Prediction, measurements: dict, run_
         )
     if prediction.trace_events:
         JsonLinesTraceWriter(partial / "trace").write(prediction.trace_events)
+    if post_decision is not None:
+        # The verifier and drafter run after the canonical decision trace
+        # ends, so their own events, inputs, and outcomes are kept beside it.
+        _write_json(partial / POST_DECISION_ARTIFACT, post_decision_record)
+        _write_json(
+            partial / "decision-package.json",
+            post_decision.decision_package.model_dump(mode="json", exclude_none=True),
+        )
+        _write_json(partial / "evidence-bundle.json", post_decision.evidence_bundle.model_dump(mode="json"))
+        with (partial / "post-decision-trace.jsonl").open("w", encoding="utf-8") as handle:
+            for entry in post_decision.trace_entries:
+                handle.write(json.dumps({
+                    "run_id": run_id,
+                    "sequence_number": entry.sequence_number,
+                    "event_name": entry.event_name,
+                    "elapsed_ms": entry.elapsed_ms,
+                    "details": dict(entry.details),
+                }, sort_keys=True, default=str) + "\n")
+        validated_draft = None if post_decision.result is None else post_decision.result.validated_draft
+        if validated_draft is not None:
+            _write_json(partial / "appeal-draft.json", validated_draft.model_dump(mode="json"))
     _write_json(partial / "measurements.json", measurements)
     _write_json(partial / "complete.json", {
         "run_id": run_id,
@@ -492,6 +648,8 @@ def run_experiment(
     systems: Sequence[str] = SYSTEMS,
     case_ids: Optional[Sequence[str]] = None,
     client_factory: ClientFactory = build_hosted_model_client,
+    verifier_factory: Callable[..., object] = build_hosted_verifier_client,
+    drafting_factory: Callable[..., object] = build_hosted_drafting_client,
 ) -> dict:
     """Run every planned (system, case, repeat) that is not already complete."""
 
@@ -527,14 +685,18 @@ def run_experiment(
                 run_id = run_id_for(plan.experiment_id, system, case.case_id, repeat_index)
                 started = time.perf_counter()
                 try:
-                    prediction = _predict(
-                        system, case, as_of, plan, store, client_factory, run_id, repeat_index, code_commit
+                    prediction, post_decision = _predict(
+                        system, case, as_of, plan, store, client_factory, run_id, repeat_index, code_commit,
+                        verifier_factory=verifier_factory, drafting_factory=drafting_factory,
                     )
-                    measurements = {
-                        "wall_clock_ms": round((time.perf_counter() - started) * 1000),
-                        **_measure_trace(prediction.trace_events, plan.token_prices),
-                    }
-                    _write_run(final_dir, prediction, measurements, run_id, repeat_index)
+                    summary = (
+                        None if post_decision is None
+                        else post_decision_summary(post_decision, prediction.output_package)
+                    )
+                    measurements = _run_measurements(
+                        prediction, summary, round((time.perf_counter() - started) * 1000), plan.token_prices
+                    )
+                    _write_run(final_dir, prediction, measurements, run_id, repeat_index, post_decision, summary)
                     completed += 1
                 except Exception as error:  # noqa: BLE001 - every failure is recorded, then the run continues
                     failed.append(str(_record_failure(experiment_root, system, case.case_id, repeat_index, run_id, error)))
@@ -640,6 +802,70 @@ def trace_safety_report(
     }
 
 
+def post_decision_report(
+    summaries: Mapping[str, dict],
+    decision_predictions: Mapping[str, Prediction],
+    labels: Mapping[str, Label],
+    facts,
+    as_of: date,
+) -> dict:
+    """Supplemental verifier, drafter, and decision-stage measures for one repeat.
+
+    The frozen labels score the final package. Scoring the decision package
+    the same way shows what the verifier and drafter changed.
+    """
+
+    gated = [s for s in summaries.values() if s["gates_run"]]
+    verifier = [s["verifier"] for s in gated if s["verifier"] is not None]
+    drafting = [s["drafting"] for s in gated if s["drafting"] is not None and s["drafting"]["call"] is not None]
+    failures = ("PROVIDER_FAILURE", "TIMEOUT")
+    decision_score = score_system(
+        HOSTED_AGENT, dict(decision_predictions), dict(labels), facts, as_of, has_traces=True
+    )
+    return {
+        "agent_runs": len(summaries),
+        "decisions_accepted_by_validation": len(gated),
+        "verifier_calls": len(verifier),
+        "verifier_outcomes": dict(Counter(v["outcome"] for v in verifier)),
+        "escalated_by_verifier": sum(s["stop_reason"] == "verification_not_agreed" for s in gated),
+        "appeals_drafted": len(drafting),
+        "draft_outcomes": dict(Counter(d["outcome"] for d in drafting)),
+        "drafts_accepted": sum(d["draft_accepted"] for d in drafting),
+        "escalated_by_drafting": sum(
+            s["escalation_reason"] is not None and s["stop_reason"] == "drafting_attempted" for s in gated
+        ),
+        "provider_failures": {
+            "verifier": sum(v["outcome"] in failures for v in verifier),
+            "drafter": sum(d["outcome"] in failures for d in drafting),
+        },
+        "decision_stage": {
+            "joint_accuracy": _rate(decision_score.joint),
+            "disposition_accuracy": _rate(decision_score.disposition),
+            "coverage": _rate(decision_score.coverage),
+            "manual_review_rate": _rate(decision_score.manual_review_rate),
+            "critical_safety_errors": {
+                code: decision_score.safety_counts.get(code, 0) for code in ALL_SAFETY_ERRORS
+            },
+        },
+    }
+
+
+def _read_post_decision(directory: Path, run_id_hint: str) -> Tuple[dict, OutputPackage]:
+    """A gated run's post-decision summary and its decision-stage package."""
+
+    path = directory / POST_DECISION_ARTIFACT
+    if not path.is_file():
+        raise ExperimentError(
+            f"agent run {run_id_hint} has no {POST_DECISION_ARTIFACT}; verifier and drafter results can't be reported"
+        )
+    summary = json.loads(path.read_text(encoding="utf-8"))
+    final = json.loads((directory / "prediction.json").read_text(encoding="utf-8"))
+    if summary.get("final_disposition") != final["disposition"]:
+        raise ExperimentError(f"agent run {run_id_hint} post-decision record disagrees with its prediction")
+    package = OutputPackage.model_validate_json((directory / "decision-package.json").read_text(encoding="utf-8"))
+    return summary, package
+
+
 def _percentile(values: List[float], fraction: float) -> Optional[float]:
     if not values:
         return None
@@ -690,9 +916,13 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
         answers: Dict[str, set] = {}
         latencies: List[float] = []
         totals = {"model_calls": 0, "tool_calls": 0, "input_tokens": 0, "output_tokens": 0}
+        post_totals = {"model_calls": 0, "model_elapsed_ms": 0, "input_tokens": 0, "output_tokens": 0}
         costs: List[Optional[float]] = []
+        gated_system = system == HOSTED_AGENT and plan.post_decision == "verify_and_draft"
         for n in plan.repeats(system):
             predictions = {}
+            decision_predictions: Dict[str, Prediction] = {}
+            summaries: Dict[str, dict] = {}
             traces: Dict[str, List[Mapping[str, object]]] = {}
             for case in prepared.dataset.cases:
                 directory = run_directory(experiment_root, system, case.case_id, n)
@@ -706,6 +936,15 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
                         raise ExperimentError(f"{case.case_id} repeat-{n} recorded route {recorded!r}, which routing doesn't reproduce")
                     if case.case_id in agent_routed:
                         traces[case.case_id] = _read_run_trace(directory, case.case_id)
+                if gated_system:
+                    if case.case_id in agent_routed:
+                        summary, package = _read_post_decision(directory, f"{case.case_id} repeat-{n}")
+                        summaries[case.case_id] = summary
+                        decision_predictions[case.case_id] = prediction_from_output_package(
+                            case, HOSTED_AGENT, package, ()
+                        )
+                    else:
+                        decision_predictions[case.case_id] = predictions[case.case_id]
                 answers.setdefault(case.case_id, set()).add(
                     (predictions[case.case_id].disposition, predictions[case.case_id].root_cause)
                 )
@@ -713,7 +952,14 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
                 latencies.append(measured["wall_clock_ms"])
                 for key in totals:
                     totals[key] += measured.get(key, 0)
-                if measured.get("model_responses"):
+                post = measured.get("post_decision") or {}
+                for key in post_totals:
+                    post_totals[key] += post.get(key, 0)
+                pipeline = measured.get("pipeline")
+                if pipeline is not None:
+                    if pipeline["model_calls"]:
+                        costs.append(pipeline["cost"])
+                elif measured.get("model_responses"):
                     costs.append(measured.get("cost"))
             score = score_system(system, predictions, prepared.labels, facts, as_of, has_traces=system == HOSTED_AGENT)
             safety_counts = {code: score.safety_counts.get(code, 0) for code in ALL_SAFETY_ERRORS}
@@ -738,6 +984,10 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
                 "critical_safety_errors": safety_counts,
                 "safety_unmeasured": unmeasured,
                 "trace_measures": trace_report,
+                "post_decision": (
+                    post_decision_report(summaries, decision_predictions, prepared.labels, facts, as_of)
+                    if gated_system else None
+                ),
                 "per_case": score.per_case,
             }
         stable = sum(len(v) == 1 for v in answers.values())
@@ -753,6 +1003,7 @@ def score_experiment(prepared: PreparedExperiment, *, output_root: Path) -> dict
                 "wall_clock_ms_median": statistics.median(latencies) if latencies else None,
                 "wall_clock_ms_p95": _percentile(latencies, 0.95),
                 **totals,
+                "post_decision": post_totals if gated_system else None,
                 "cost_total": (round(sum(costs), 6) if costs and all(c is not None for c in costs) else None),
                 "cost_currency": plan.token_prices.currency if plan.token_prices else None,
             },
