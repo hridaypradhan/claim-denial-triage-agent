@@ -17,3 +17,6 @@ accepted appeal drafts by gold label: {'APPEAL_WITH_DOCUMENTATION': 33}
 1 DETERMINISTIC_ONLY WRITE_OFF
 2 DETERMINISTIC_ONLY WRITE_OFF
 3 DETERMINISTIC_ONLY WRITE_OFF
+== Provider usage of the 13 failed attempts (abandoned folders, not scored) ==
+{'attempts': 13, 'model_calls': 40, 'post_decision_calls': 7, 'input_tokens': 66331, 'output_tokens': 14240, 'usage_complete': True}
+total including failed attempts: calls 453 input 748708 output 157466

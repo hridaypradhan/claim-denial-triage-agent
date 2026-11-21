@@ -86,7 +86,9 @@ python evaluation/results/final-heldout-v1/derived_values.py .local-output/final
 | Citation precision 98.0% / 99.3% / 99.3%, pooled 435/440 = 98.9% | `A[n].trace_measures.citation_precision`; pooled in `D` |
 | Policy requests 41/41 | `A[n].trace_measures.policy_requests_matching_claim` |
 | Budget overruns 0; unterminated runs 0 | `A[n].trace_measures.budget_overruns`, `.unterminated_runs` |
-| Cost and latency: 413 calls (77 post-decision), 682,377 input and 143,226 output tokens, median 23.1 s, p95 120.4 s | `systems.hosted-agent.operations` |
+| Cost and latency **of the 240 completed and scored agent runs only**: 413 calls (77 post-decision), 682,377 input and 143,226 output tokens, median 23.1 s, p95 120.4 s | `systems.hosted-agent.operations` |
+| Provider usage of the 13 failed attempts (not scored, not in the row above): 40 calls (7 post-decision), 66,331 input and 14,240 output tokens; usage was reported for every call | `D`, from `runs/hosted-agent/*/*.abandoned-*/measurements.json` |
+| Total provider usage including failed attempts: 453 calls, 748,708 input and 157,466 output tokens | `D` (sum of the two rows above) |
 
 ### Poster
 
@@ -103,4 +105,4 @@ python evaluation/results/final-heldout-v1/derived_values.py .local-output/final
 - first resume: 11 completed and 1 failed again;
 - second resume: that run completed.
 
-All 13 attempt records are listed in `failure-index.json` and `results.json → failed_attempts_recorded`. The half-written folders are kept in the bundle as `*.abandoned-*` and are not scored. No code, prompt, plan or label was changed after held-out execution began.
+All 13 attempt records are listed in `failure-index.json` and `results.json → failed_attempts_recorded`. The half-written folders are kept in the bundle as `*.abandoned-*` and are not scored. Their model calls had already completed, so their provider usage is reported separately above; one of the 13 (`CLM-2026-710211-L1`, repeat 2) was a deterministic run with no model calls. No code, prompt, plan or label was changed after held-out execution began.
