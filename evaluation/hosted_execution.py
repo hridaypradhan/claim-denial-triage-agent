@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
+from typing import Callable, Optional
 
 from claim_agent.agent.canonical_trace import TraceEvent
+from claim_agent.agent.drafting.interface import DraftingClient
+from claim_agent.agent.drafting.post_decision import (
+    DRAFTING_ATTEMPTED,
+    VERIFICATION_NOT_AGREED,
+    PostDecisionDraftingResult,
+    run_post_decision_drafting,
+)
 from claim_agent.agent.hosted.configuration import (
     build_hosted_run_configuration,
 )
@@ -16,8 +24,17 @@ from claim_agent.agent.planning_prompt import (
     PLANNING_SYSTEM_INSTRUCTIONS,
 )
 from claim_agent.agent.run_configuration import AllowedTool
+from claim_agent.agent.runtime_trace import InMemoryRuntimeTrace, RuntimeTraceEntry
+from claim_agent.agent.verification.interface import VerifierClient
 from claim_agent.agent.trace_adapter import CanonicalTraceAdapter
-from claim_agent.contracts import OutputPackage
+from claim_agent.contracts import (
+    Disposition,
+    DraftingOutcome,
+    EvidenceBundle,
+    OutputPackage,
+    ValidationOutcome,
+)
+from claim_agent.output.package import create_output_package
 from claim_agent.tools.dispatcher import (
     DENIAL_CODE_TOOL,
     ENCOUNTER_NOTE_TOOL,
@@ -31,6 +48,7 @@ from claim_agent.tools.eligibility import (
     ELIGIBILITY_TOOL,
 )
 from claim_agent.tools.encounter_notes import claim_document_inventory
+from claim_agent.tools.evidence_bundle import claim_available_sources
 from claim_agent.tools.knowledge_store import KnowledgeStore
 from evaluation.hosted_comparison import HostedComparisonBudgets
 from evaluation.scripted_agent import (
@@ -40,11 +58,125 @@ from evaluation.scripted_agent import (
 
 
 @dataclass(frozen=True)
+class PostDecisionClients:
+    """Builds the tool-less verifier and drafter only when a gate needs them."""
+
+    verifier_factory: Callable[[], VerifierClient]
+    drafting_factory: Callable[[], DraftingClient]
+
+
+@dataclass(frozen=True)
+class PostDecisionExecution:
+    """What the verifier and drafter did after deterministic validation."""
+
+    # The package deterministic validation produced, before these gates.
+    decision_package: OutputPackage
+    evidence_bundle: EvidenceBundle
+    # None when deterministic validation did not accept a decision, so
+    # neither gate ran.
+    result: Optional[PostDecisionDraftingResult]
+    # Internal entries, kept in memory only: verifier and drafter responses
+    # here hold unrestricted model text. Never persist these.
+    trace_entries: tuple[RuntimeTraceEntry, ...]
+    # Why the final package was escalated by these gates, or None.
+    escalation_reason: Optional[str]
+    # The same events through the canonical trace adapter, redacted under
+    # ADR 0002. This is the only form that may be written to disk.
+    canonical_trace_events: tuple[TraceEvent, ...] = ()
+
+
+@dataclass(frozen=True)
 class HostedCaseExecution:
     """Auditable artifacts produced by one hosted case run."""
 
     output_package: OutputPackage
     canonical_trace_events: tuple[TraceEvent, ...]
+    # Present only when verification and drafting were requested.
+    post_decision: Optional[PostDecisionExecution] = None
+
+
+def _escalated_package(package: OutputPackage, reason: str) -> OutputPackage:
+    """The final package when a post-decision gate fails closed.
+
+    The output contract ties an accepted validation result to its own
+    disposition, so the escalated package omits the decision and names the
+    gate's reason; the accepted decision is kept in ``decision_package``.
+    """
+
+    return create_output_package(
+        run_id=package.run_id,
+        package_version=package.package_version,
+        knowledge_snapshot_id=package.knowledge_snapshot_id,
+        finding=package.baseline_finding,
+        route_outcome=package.route_outcome,
+        proposed_decision=None,
+        validation_result=None,
+        agent_terminal_reason=reason,
+    )
+
+
+def apply_post_decision_gates(
+    *,
+    decision_package: OutputPackage,
+    evidence_bundle: EvidenceBundle,
+    clients: PostDecisionClients,
+    run_id: str,
+) -> tuple[OutputPackage, PostDecisionExecution]:
+    """Run the verifier, then the drafter for appeals, and settle the final package.
+
+    - Deterministic validation did not accept a decision: neither model is
+      called and the package is unchanged.
+    - The verifier does not agree, fails, or times out: the final package is
+      MANUAL_REVIEW with the verifier's reason code.
+    - An appeal whose draft is not accepted: MANUAL_REVIEW with the drafting
+      reason code. Other dispositions need no draft and keep their decision.
+    """
+
+    trace = InMemoryRuntimeTrace(run_id)
+    validation = decision_package.validation_result
+    decision = decision_package.proposed_decision
+    if (
+        decision is None
+        or validation is None
+        or validation.outcome != ValidationOutcome.ACCEPTED
+        or validation.validated_decision is None
+    ):
+        return decision_package, PostDecisionExecution(
+            decision_package, evidence_bundle, None, trace.entries, None
+        )
+
+    # Build both clients before either gate runs. A configuration error, such
+    # as a missing key, then fails the run visibly instead of being recorded
+    # as a verifier or drafter provider failure.
+    verifier_client = clients.verifier_factory()
+    drafting_client = clients.drafting_factory()
+    result = run_post_decision_drafting(
+        verifier_client=verifier_client,
+        drafting_client=drafting_client,
+        verification_request_id=f"{run_id}-verify",
+        drafting_request_id=f"{run_id}-draft",
+        proposed_decision=decision,
+        evidence_bundle=evidence_bundle,
+        deterministic_validation=validation,
+        runtime_trace=trace,
+    )
+
+    reason: Optional[str] = None
+    if result.stop_reason == VERIFICATION_NOT_AGREED:
+        reason = result.verification_execution.validation_result.reason_code
+    elif (
+        result.stop_reason == DRAFTING_ATTEMPTED
+        and validation.validated_decision.recommended_disposition
+        == Disposition.APPEAL_WITH_DOCUMENTATION
+        and result.drafting_execution.validation_result.outcome
+        != DraftingOutcome.ACCEPTED
+    ):
+        reason = result.drafting_execution.validation_result.reason_code
+
+    final = decision_package if reason is None else _escalated_package(decision_package, reason)
+    return final, PostDecisionExecution(
+        decision_package, evidence_bundle, result, trace.entries, reason
+    )
 
 
 def build_hosted_tool_context(
@@ -166,6 +298,7 @@ def execute_hosted_case(
     plan_version: str,
     repeat_index: int,
     package_version: str = "v1",
+    post_decision_clients: Optional[PostDecisionClients] = None,
 ) -> HostedCaseExecution:
     """Run one agent-authorized case with frozen comparison settings."""
 
@@ -241,9 +374,16 @@ def execute_hosted_case(
         required_evidence_source_ids=tuple(
             str(document_id) for document_id in available_document_ids
         ),
+        bundle_available_sources=(
+            None
+            if post_decision_clients is None
+            else claim_available_sources(
+                knowledge_store, prepared_case.claim_context.claim_id
+            )
+        ),
     )
 
-    canonical_trace_events = CanonicalTraceAdapter(
+    trace_adapter = CanonicalTraceAdapter(
         run_configuration=run_configuration,
         route_decision=prepared_case.route_decision,
         evaluation_context={
@@ -252,9 +392,32 @@ def execute_hosted_case(
             "scenario_family_id": prepared_case.case.scenario_family_id,
             "system": "hosted-comparison",
         },
-    ).adapt(integrated_result.runtime_result.trace_entries)
+    )
+    canonical_trace_events = trace_adapter.adapt(
+        integrated_result.runtime_result.trace_entries
+    )
 
+    if post_decision_clients is None:
+        return HostedCaseExecution(
+            output_package=integrated_result.output_package,
+            canonical_trace_events=canonical_trace_events,
+        )
+
+    final_package, post_decision = apply_post_decision_gates(
+        decision_package=integrated_result.output_package,
+        evidence_bundle=integrated_result.evidence_bundle,
+        clients=post_decision_clients,
+        run_id=run_id,
+    )
+    # The verifier and drafter events go through the same adapter and
+    # redaction as the decision trace, as a separate trace so the decision
+    # trace and its metrics are unchanged.
+    post_decision = replace(
+        post_decision,
+        canonical_trace_events=trace_adapter.adapt(post_decision.trace_entries),
+    )
     return HostedCaseExecution(
-        output_package=integrated_result.output_package,
+        output_package=final_package,
         canonical_trace_events=canonical_trace_events,
+        post_decision=post_decision,
     )

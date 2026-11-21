@@ -11,6 +11,7 @@
   "knowledge_snapshot_id": "knowledge-v2",
   "prompt_version": "planning-v2",
   "agent_repetitions": 3,
+  "post_decision": "verify_and_draft",
   "budgets": {
     "max_model_calls": 4,
     "max_tool_calls": 3,

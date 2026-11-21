@@ -26,6 +26,7 @@ from claim_agent.agent.tool_request_guard import ClaimToolContext
 from claim_agent.agent.tool_result_adapter import SharedToolDispatcher
 from claim_agent.contracts import (
     AgentDecision,
+    EvidenceBundle,
     BaselineFinding,
     EvidencePassage,
     OutputPackage,
@@ -33,6 +34,11 @@ from claim_agent.contracts import (
     ValidationResult,
 )
 from claim_agent.output.package import create_output_package
+from claim_agent.tools.evidence_bundle import (
+    AvailableSource,
+    ClaimEvidenceScope,
+    EvidenceBundleRecorder,
+)
 from claim_agent.tools.knowledge_store import KnowledgeStore
 
 
@@ -46,6 +52,9 @@ class IntegratedCaseResult:
     proposed_decision: Optional[AgentDecision]
     validation_result: Optional[ValidationResult]
     output_package: OutputPackage
+    # Present only when the caller asked for the same-run evidence bundle that
+    # post-decision verification and drafting consume.
+    evidence_bundle: Optional[EvidenceBundle] = None
 
 
 def run_integrated_case(
@@ -64,6 +73,7 @@ def run_integrated_case(
     tool_context: Mapping[str, object] | None = None,
     required_evidence_source_ids: Sequence[str] = (),
     monotonic_clock: Callable[[], float] = time.monotonic,
+    bundle_available_sources: Optional[Sequence[AvailableSource]] = None,
 ) -> IntegratedCaseResult:
     """Validate, assemble, and execute one authorized agent case."""
 
@@ -76,6 +86,27 @@ def run_integrated_case(
         tool_context=tool_context,
     )
 
+    # When requested, record every guarded tool result into a frozen same-run
+    # evidence bundle. Provenance comes from the trusted claim context.
+    recorder: Optional[EvidenceBundleRecorder] = None
+
+    def record_bundle(active: SharedToolDispatcher) -> SharedToolDispatcher:
+        nonlocal recorder
+        recorder = EvidenceBundleRecorder(
+            active,
+            run_id,
+            knowledge_snapshot_id,
+            ClaimEvidenceScope(
+                claim_id=claim_context.claim_id,
+                service_line_id=baseline_finding.service_line_id,
+                payer=claim_context.payer,
+                procedure_code=claim_context.procedure_code,
+                service_date=claim_context.service_date,
+            ),
+            available_sources=tuple(bundle_available_sources or ()),
+        )
+        return recorder
+
     boundaries = build_production_runtime_boundaries(
         dispatcher=dispatcher,
         baseline_finding=baseline_finding,
@@ -83,6 +114,9 @@ def run_integrated_case(
         as_of=as_of,
         eligibility_store=eligibility_store,
         required_evidence_source_ids=required_evidence_source_ids,
+        dispatcher_wrapper=(
+            None if bundle_available_sources is None else record_bundle
+        ),
     )
 
     runtime = OfflineAgentRuntime(
@@ -118,4 +152,5 @@ def run_integrated_case(
         proposed_decision=(boundaries.decision_validator.last_proposed_decision),
         validation_result=(boundaries.decision_validator.last_validation_result),
         output_package=output_package,
+        evidence_bundle=None if recorder is None else recorder.freeze(),
     )
