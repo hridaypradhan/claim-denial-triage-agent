@@ -20,7 +20,15 @@ from claim_agent.agent.verification.interface import VerifierResponse
 from claim_agent.contracts import Disposition
 from claim_agent.tools.dispatcher import ENCOUNTER_NOTE_TOOL, ToolDispatcher
 from claim_agent.tools.knowledge_store import KnowledgeStore
+from claim_agent.agent.hosted.factory import (
+    HOSTED_API_KEY_ENVIRONMENT_VARIABLE,
+    build_hosted_drafting_client,
+    build_hosted_model_client,
+    build_hosted_verifier_client,
+)
 from evaluation.final_experiment import (
+    load_plan,
+    model_profiles,
     _measure_trace,
     _post_decision_measurements,
     _run_measurements,
@@ -338,6 +346,64 @@ class RedactionAndUsageTests(AppealCaseRunner):
         self.assertGreaterEqual(measured["model_calls"], 1)
         self.assertFalse(measured["token_usage_complete"])
         self.assertIsNone(measured["cost"])
+
+
+class EffectiveTimeoutTests(unittest.TestCase):
+    """#66: only the drafter's request timeout changes; planner and verifier stay at 60 s."""
+
+    def test_frozen_plan_sets_planner_60_verifier_60_drafter_180(self):
+        plan = load_plan(FINAL_PLAN)
+        profiles = model_profiles(plan)
+        self.assertEqual(
+            {role: p.request_timeout_seconds for role, p in profiles.items()},
+            {"planner": 60.0, "verifier": 60.0, "drafter": 180.0},
+        )
+        # Nothing else about the drafter's model settings differs.
+        for field in ("model_id", "base_url", "max_completion_tokens", "temperature",
+                      "reasoning_effort", "response_format_mode", "disable_gateway_addons"):
+            self.assertEqual(getattr(profiles["drafter"], field), getattr(profiles["planner"], field), field)
+        self.assertEqual(profiles["planner"].model_id, "beam-1-0")
+
+    def test_built_clients_use_those_limits(self):
+        profiles = model_profiles(load_plan(FINAL_PLAN))
+        env = {HOSTED_API_KEY_ENVIRONMENT_VARIABLE: "offline-test-key"}  # nothing is sent
+        built = {
+            "planner": build_hosted_model_client(profile=profiles["planner"], environment=env),
+            "verifier": build_hosted_verifier_client(profile=profiles["verifier"], environment=env),
+            "drafter": build_hosted_drafting_client(profile=profiles["drafter"], environment=env),
+        }
+        self.assertEqual(
+            {role: client._timeout_seconds for role, client in built.items()},
+            {"planner": 60.0, "verifier": 60.0, "drafter": 180.0},
+        )
+
+    def test_harness_passes_each_role_its_own_profile(self):
+        seen = {}
+
+        def record(role, client):
+            def factory(*, profile):
+                seen.setdefault(role, set()).add(profile.request_timeout_seconds)
+                return client()
+            return factory
+
+        prepared = prepare_experiment(set_b_plan(drafter_request_timeout_seconds=180.0))
+        with tempfile.TemporaryDirectory() as tmp:
+            run_experiment(
+                prepared, output_root=Path(tmp), code_commit="test", confirm_live=True,
+                systems=(HOSTED_AGENT,), case_ids=[APPEAL_CASE],
+                client_factory=record("planner", CaseAwarePlanner),
+                verifier_factory=record("verifier", FakeVerifier),
+                drafting_factory=record("drafter", FakeDrafter),
+            )
+        self.assertEqual(seen, {"planner": {60.0}, "verifier": {60.0}, "drafter": {180.0}})
+
+    def test_without_the_field_the_drafter_keeps_the_candidate_timeout(self):
+        profiles = model_profiles(set_b_plan(drafter_request_timeout_seconds=None))
+        self.assertEqual(profiles["drafter"].request_timeout_seconds, 60.0)
+
+    def test_non_positive_drafter_timeout_is_rejected(self):
+        with self.assertRaises(ValueError):
+            set_b_plan(drafter_request_timeout_seconds=0)
 
 
 def set_b_plan(**overrides) -> ExperimentPlan:
