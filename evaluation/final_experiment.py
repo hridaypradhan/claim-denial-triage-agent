@@ -122,10 +122,11 @@ class ExperimentPlan(BaseModel):
     # appeal through the drafter, before the final package is scored (#66).
     # The baseline never uses either.
     post_decision: Literal["none", "verify_and_draft"] = "none"
-    # The drafter's own request timeout. Only the drafting client uses it;
-    # the planner and verifier keep candidate.request_timeout_seconds. None
-    # means the drafter uses the candidate's timeout too (#66 smoke test).
+    # The drafter's own request timeout and completion limit (#66 smoke
+    # tests). Only the drafting client uses them; the planner and verifier
+    # keep the candidate's settings. None means the candidate's value.
     drafter_request_timeout_seconds: Optional[float] = None
+    drafter_max_completion_tokens: Optional[int] = None
     budgets: HostedComparisonBudgets
     candidate: HostedCandidate
     token_prices: Optional[TokenPrices] = None
@@ -144,6 +145,13 @@ class ExperimentPlan(BaseModel):
             raise ValueError("drafter_request_timeout_seconds must be greater than zero")
         return value
 
+    @field_validator("drafter_max_completion_tokens")
+    @classmethod
+    def require_positive_drafter_tokens(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and value <= 0:
+            raise ValueError("drafter_max_completion_tokens must be greater than zero")
+        return value
+
     @field_validator("agent_repetitions")
     @classmethod
     def require_repetitions(cls, value: int) -> int:
@@ -160,15 +168,18 @@ class ExperimentPlan(BaseModel):
 def model_profiles(plan: ExperimentPlan) -> Dict[str, HostedModelProfile]:
     """The exact profile each hosted client is built with.
 
-    Every role uses the candidate profile; only the drafter's request timeout
-    can differ, through ``drafter_request_timeout_seconds``.
+    Every role uses the candidate profile. Only the drafter's request timeout
+    and completion limit can differ, through ``drafter_request_timeout_seconds``
+    and ``drafter_max_completion_tokens``.
     """
 
     profile = plan.candidate.hosted_profile()
-    drafter = profile
+    overrides = {}
     if plan.drafter_request_timeout_seconds is not None:
-        drafter = replace(profile, request_timeout_seconds=plan.drafter_request_timeout_seconds)
-    return {"planner": profile, "verifier": profile, "drafter": drafter}
+        overrides["request_timeout_seconds"] = plan.drafter_request_timeout_seconds
+    if plan.drafter_max_completion_tokens is not None:
+        overrides["max_completion_tokens"] = plan.drafter_max_completion_tokens
+    return {"planner": profile, "verifier": profile, "drafter": replace(profile, **overrides)}
 
 
 def load_plan(path: Path) -> ExperimentPlan:
