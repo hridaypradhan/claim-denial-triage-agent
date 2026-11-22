@@ -1,5 +1,9 @@
 # Milestone 2 pilot: analysis
 
+> Historical development analysis. It predates hosted-model selection and the
+> frozen held-out experiment; do not treat its scripted results as final model
+> performance.
+
 This is a small synthetic development pilot: 23 Dataset A cases and 12 Dataset B cases, scored against adjudicated labels under rubric v0.1. The numbers are in [comparison.md](comparison.md). Every rate there has its count and a 95% Wilson interval. With samples this small, most differences between systems are within those intervals.
 
 ## Systems

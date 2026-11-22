@@ -1,6 +1,6 @@
 # Final held-out evaluation (`final-heldout-v1`): evidence
 
-This folder holds the evidence for the final results reported in #66 and on the poster (#96).
+This folder holds the evidence for the final project results and poster.
 
 ## What is preserved, and where
 
@@ -49,7 +49,7 @@ python evaluation/results/final-heldout-v1/derived_values.py .local-output/final
 - `A[n]` is `results.json → systems.hosted-agent.repeats.repeat-n`.
 - `D` is `derived_values_output.txt`.
 
-### Main table (#66)
+### Main results table
 
 | Value | Source |
 |---|---|

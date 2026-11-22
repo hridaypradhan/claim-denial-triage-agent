@@ -1,7 +1,10 @@
-# Final Output-Package and Human-Review Safety Audit (`#64`)
+# Final output-package and human-review safety audit
 
-## Scope & Objective
-This audit verifies end-to-end that the integrated claim-denial triage workflow (`#57` required-evidence routing, `#60` tool-less evidence verification, `#61` grounded appeal drafting, and `OutputPackage` assembly) cannot bypass deterministic safety gates or emit an approved, submitted, or ungrounded review package.
+## Scope
+
+This audit verifies that required-evidence routing, tool-less verification,
+grounded drafting, and `OutputPackage` assembly cannot bypass deterministic
+safety gates or emit an approved, submitted, or ungrounded review package.
 
 ## Audited Components
 - **Routing & Required-Evidence Gate (`src/claim_agent/agent/router.py`, `src/claim_agent/safety/required_evidence.py`):** Evaluates required evidence tokens solely against trusted claim inputs (`documentation_attached`, `eligibility_verified_on`, `primary_eob_on_file`). Missing decision-critical evidence (`ncci_edit_lookup`, `primary_eob`, `cob_confirmation`) forces `RouteOutcome.MANUAL_REVIEW` before any model invocation, while correction-supplied fields and nonessential documents (`updated_insurance_card`) preserve deterministic routing.
@@ -10,13 +13,22 @@ This audit verifies end-to-end that the integrated claim-denial triage workflow 
 - **Grounded Appeal Drafting (`src/claim_agent/agent/drafting/post_decision.py`, `src/claim_agent/agent/drafting/execution.py`, `src/claim_agent/safety/drafting.py`):** Enforces sequential gate order (`ACCEPTED` deterministic validation -> `AGREE` verifier result -> authorized `DraftingInput`). Deterministically renders `AppealDraft.body` from `grounded_claims` via `render_grounded_appeal_body`, verifies exact quote grounding and same-run `EvidenceBundle` citation resolution, strips raw appeal prose from canonical trace payloads, and locks `approval_state="PENDING_REVIEW"` with zero scripted or alternate-model fallbacks.
 - **Final Output Packaging (`src/claim_agent/output/package.py`, `src/claim_agent/contracts/schema.py`):** Enforces `final_disposition == Disposition.MANUAL_REVIEW` unless `route_outcome == RouteOutcome.AGENT_REQUIRED` and `validation_result.outcome == ValidationOutcome.ACCEPTED` (or `RouteOutcome.DETERMINISTIC_ONLY`), consolidates deduplicated `manual_review_reasons`, and enforces `approval_state == "PENDING_REVIEW"` on every `ValidationResult` and `AppealDraft`.
 
-## Architecture Boundary Note for Final Report (`#66`)
-`run_integrated_case` (`src/claim_agent/agent/integrated_runtime.py`) and `execute_hosted_case` (`evaluation/hosted_execution.py`) assemble `OutputPackage` directly after deterministic decision validation (`DecisionValidationAdapter`). Post-decision verification (`#60`) and grounded appeal drafting (`#61`) execute through the standalone `run_post_decision_drafting` boundary (`src/claim_agent/agent/drafting/post_decision.py`) over the frozen same-run `EvidenceBundle`. Every failure path at either boundary closes safely to `MANUAL_REVIEW` with `validated_draft=None` and `approval_state="PENDING_REVIEW"`.
+## Runtime boundary
+
+`run_integrated_case` (`src/claim_agent/agent/integrated_runtime.py`) provides
+the repeatable local integration path and assembles the same-run evidence
+bundle. Hosted evaluation calls `execute_hosted_case`
+(`evaluation/hosted_execution.py`) with post-decision clients; after
+deterministic validation it invokes `run_post_decision_drafting`
+(`src/claim_agent/agent/drafting/post_decision.py`) to run verification and,
+when authorized, drafting over that frozen bundle. Every failure closes safely
+to `MANUAL_REVIEW` with `validated_draft=None` and
+`approval_state="PENDING_REVIEW"`.
 
 ## Acceptance Criteria Verification Matrix
-| Acceptance Criterion (`#64`) | Verified Behavior | Automated Audit Coverage |
+| Acceptance criterion | Verified behavior | Automated audit coverage |
 | --- | --- | --- |
 | No tested failure path creates an approved or submitted outcome | Every `ValidationResult`, `DraftingValidationResult`, and `AppealDraft` enforces `Literal["PENDING_REVIEW"]`; no auto-approval or submission state exists in contracts or runtime. | `test_drafting_negative_and_accepted_paths_enforce_groundedness_and_pending_review`, `test_hard_safety_invariants_escalate_to_manual_review_package` |
 | Every unsafe or uncertain path has an explicit manual-review reason | Missing critical evidence, `DISAGREE`/`UNCERTAIN`/malformed/timeout/error verifier paths, drafting rejections, expired deadlines, prohibited `CO-*` billing, and contractual appeals populate explicit `manual_review_reasons` / `reason_code`. | `test_missing_decision_critical_evidence_escalates_to_manual_review_package`, `test_verifier_negative_paths_fail_closed_and_block_drafting`, `test_hard_safety_invariants_escalate_to_manual_review_package` |
 | All citations in accepted packages resolve to same-run evidence | `validate_agent_decision` and `EvidenceBundle.check_citations` reject unretrieved or cross-claim passage IDs; accepted decisions and `AppealDraft` citations resolve 100% against the same-run `EvidenceBundle`. | `test_drafting_negative_and_accepted_paths_enforce_groundedness_and_pending_review`, `test_hard_safety_invariants_escalate_to_manual_review_package` |
-| Audit evidence is preserved for the final report | Reproducible end-to-end audit suite (`tests/integration/test_output_package_safety_audit.py`) and this report (`docs/safety_audit_64.md`) are committed for `#66`. | `tests/integration/test_output_package_safety_audit.py` |
+| Audit evidence is preserved | The reproducible end-to-end audit suite and this report are committed with the project. | `tests/integration/test_output_package_safety_audit.py` |

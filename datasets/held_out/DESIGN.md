@@ -1,23 +1,30 @@
 # Held-out case design
 
-- **Issue:** #52. **Owner:** Sachin. **Reviewers:** Silas (evidence feasibility), Neha (safety expectations).
-- **Status:** draft for review. Case facts may still change after review. Labels come later, in #63.
-- **Rubric:** v0.1 (frozen). **As-of date:** 2026-10-30. **Knowledge snapshot:** set in #62 when the corpus is frozen.
+- **Status:** Frozen and used by `final-heldout-v1`.
+- **Rubric:** v0.1 (frozen). **As-of date:** 2026-10-30.
+- **Knowledge snapshot:** `knowledge-v2`.
+- **Review:** Evidence feasibility, safety expectations, and all label batches
+  were reviewed before final predictions were inspected.
 
 ## Size
 
-The project plan asks for **80 held-out cases** ([TEAM_DEVELOPMENT_GUIDE.md](../../docs/TEAM_DEVELOPMENT_GUIDE.md), dataset rule 3). This set has 80 cases from 77 synthetic claims, because three claims have two denied lines. As in development, a case is one denied service line (rubric §1).
+The project plan asks for **80 held-out cases**
+([team development guide](../../docs/team-development-guide.md), dataset rule
+3). This set has 80 cases from 77 synthetic claims, because three claims have
+two denied lines. As in development, a case is one denied service line
+(rubric §1).
 
 ## Rules for this split
 
 - Every family ID starts with `H-`, and no family, claim ID, or procedure-policy pair is shared with development. A test enforces the IDs.
 - Claim IDs are `CLM-2026-7101xx` (batch A), `7102xx` (batch B), and `7103xx` (batch C). File and family names don't reveal the expected answer.
 - Held-out cases are **never** used for development checks, prompt writing, or debugging (rubric §8 and §10). Running the code on them before the freeze is limited to checking that they load.
-- Every held-out failure is kept for the final analysis (#66). Nothing is tuned against it.
+- Every held-out failure is kept for final analysis. Nothing is tuned against it.
 
 ## Batches
 
-The batches match the review batches in #63. They are also the order in which specs go to the corpus owner (#58).
+The batches match the frozen label-review batches and the order in which
+evidence specifications were prepared.
 
 | Batch | Cases | Focus | Label reviewer | Needs new evidence |
 |---|---:|---|---|---|
@@ -38,7 +45,7 @@ The batches match the review batches in #63. They are also the order in which sp
 | No applicable policy: wrong payer, wrong code, or service date before the policy | 5 |
 | Policy version or effective-date boundary | 8 |
 | Appeal or corrected-claim window already closed | 5 |
-| Missing evidence that a deterministic answer depends on (the #49 rule) | 8 |
+| Missing evidence that a deterministic answer depends on | 8 |
 | Patient billing: waivers, PR groups, CO groups without a waiver | 9 |
 | Instruction-like text in a note | 3 |
 | Multi-line claims | 6 cases on 3 claims |
@@ -46,7 +53,9 @@ The batches match the review batches in #63. They are also the order in which sp
 
 Payers: UHC 26, Aetna 21, Cigna 14, BCBS AZ 14, Medicare Part B 4, and one payer missing from the contract matrix. Group codes: CO 77, PR 3. There are 17 different group-code and CARC pairs, including one unmapped CARC (234).
 
-Every manual-review reason in rubric §4 and every disposition in rubric §2 is reachable. The exact gold answers are decided in #63, not here.
+Every manual-review reason in rubric §4 and every disposition in rubric §2 is
+reachable. Exact gold answers are stored in the separately frozen label files,
+not in this design document.
 
 ## Families
 
@@ -63,19 +72,31 @@ Every manual-review reason in rubric §4 and every disposition in rubric §2 is 
 
 Full per-case facts for the corpus owner are in [`EVIDENCE_SPECS.md`](EVIDENCE_SPECS.md).
 
-## New knowledge needed (#58)
+## Knowledge delivered
 
-Eight policy versions across seven sources: `POL-UHC-MRI-LSPINE` v1, `POL-CIGNA-SLEEP-TESTING` v1, `POL-AETNA-MRI-KNEE` v1 and v2, `POL-MEDICAREB-VITD-TESTING` v1, `POL-UHC-AUTH-ADV-IMAGING` v1, `POL-AETNA-EM-MOD25` v1, and `POL-BCBSAZ-CT-SINUS` v1. The criteria and formulas in `EVIDENCE_SPECS.md` are proposals that the corpus owner may reword, as long as each case's facts still map to the same criteria.
+The frozen corpus contains eight policy versions across seven sources:
+`POL-UHC-MRI-LSPINE` v1, `POL-CIGNA-SLEEP-TESTING` v1,
+`POL-AETNA-MRI-KNEE` v1 and v2, `POL-MEDICAREB-VITD-TESTING` v1,
+`POL-UHC-AUTH-ADV-IMAGING` v1, `POL-AETNA-EM-MOD25` v1, and
+`POL-BCBSAZ-CT-SINUS` v1. Their criteria and formulas are locked in
+`knowledge-v2`.
 
 Batch B needs no documents. Case `CLM-2026-710313-L1` must have **no** note in the corpus. The decoy therapy note belongs to `CLM-2026-719925`, a claim that isn't in any manifest.
 
-## Open questions for review
+## Review outcomes
 
-1. **Labeling procedure (settled).** #63 applies: one primary labeler, plus one reviewer per batch who checks each label against the frozen rubric, claims, and evidence. The development guide now says the same. Rubric v0.1 §8 still describes two independent labelers; it is frozen, so the difference is recorded here instead of edited there.
-2. **Corpus effort.** Batches A and C need about 60 notes and 8 policy versions. Silas, please confirm this is feasible, or name families to shrink.
-3. **Safety expectations.** Neha, please confirm the batch B cases tagged `required-evidence` match the rule you are defining in #49, especially `H-CODING-DX` (the corrected diagnosis isn't stated in the case) and `H-WAIVER-CONFLICT`.
-4. **Development cases.** The guide also asks for at least 20 more development cases. They aren't part of #52.
+1. One primary labeler produced each batch and a different team member reviewed
+   it against the frozen rubric, claims, and evidence. Disputes were resolved
+   before system outputs were inspected.
+2. The specified policies and notes were delivered in `knowledge-v2`; no held-out
+   family was removed for corpus effort.
+3. Required-evidence cases were checked against the deterministic safety rule.
+4. Development cases remain separate from this held-out split.
 
 ## Regenerating
 
-The claims, manifest, and evidence specs all come from the case table in [`build_cases.py`](build_cases.py). To change a case, edit the table and run `python datasets/held_out/build_cases.py` from the repository root; don't edit the JSON by hand. The script sits under `datasets/`, outside the runtime code, and records case facts only, never gold labels.
+The claims, manifest, and evidence specs come from the case table in
+[`build_cases.py`](build_cases.py). The final split is frozen; do not regenerate
+it under the same version. A future revision must use a new dataset version,
+then update the table and run `python datasets/held_out/build_cases.py` from the
+repository root. The script records case facts only, never gold labels.

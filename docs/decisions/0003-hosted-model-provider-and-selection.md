@@ -9,6 +9,23 @@
 - **Consulted:** Sachin Kothandaraman (repeat-run evidence), Silas Sangmin (citation preservation)
 - **Affected components:** hosted-model transport, planning prompt, run configuration, canonical trace, hosted-run documentation
 
+## At a glance
+
+| Question | Accepted decision |
+|---|---|
+| Hosted provider | ASU Research Computing Voyager |
+| Transport | One reusable OpenAI Chat Completions-compatible transport |
+| Selected model | `beam-1-0` |
+| Local tool authority | The local dispatcher only; gateway tools are disabled |
+| Hosted failure | Record the failure and require manual review |
+| Fallback | No scripted-model or alternate-model fallback |
+| Credentials | One local key per developer, read from `CLAIM_AGENT_LLM_API_KEY` |
+| Normal tests | Offline with fake transports |
+
+The sections below preserve why the team made this choice and the development
+gates that rejected earlier configurations. Readers who only need the current
+decision can stop after [Failure and fallback policy](#failure-and-fallback-policy).
+
 ## Context
 
 The bounded runtime already depends on a provider-neutral `ModelClient` and a
@@ -61,6 +78,12 @@ configuration rather than automatic routing among models.
   same frozen configuration under the rerun policy defined before evaluation.
 
 ### Model-selection procedure
+
+<details>
+<summary>Development comparison and selection history</summary>
+
+This history is retained so the accepted model and configuration can be traced
+to development evidence rather than general chat rankings.
 
 `mimo-v2-6-pro` was the initial integration model because Voyager currently
 lists both Tools and Schema capabilities, a 262.1K context window, and a strong
@@ -231,9 +254,8 @@ The selected non-secret runtime configuration is:
 - at most four model calls, three tool calls, one repair, and seven total
   runtime steps, with one tool retry and a 30-second tool-request timeout.
 
-The implementation and development evidence are complete, but this record
-remains Proposed until the required reviewer confirms the selection. That
-review changes only the ADR status; it must not alter the frozen V10 evidence.
+The required reviewer accepted this selection on 2026-11-14. The accepted
+review changed only the ADR status and did not alter the frozen V10 evidence.
 
 Rank results in this order:
 
@@ -249,9 +271,10 @@ Rank results in this order:
 
 Use safety, grounded accuracy, schema reliability, stability, and then latency
 as tie breakers. Do not inspect held-out final labels or use final-evaluation
-results to tune or select the model. Update this record to **Accepted** with the
-result table, exact winning model ID, prompt version, and frozen parameters
-before issue #66 begins.
+results to tune or select the model. The accepted result table, winning model,
+prompt version, and parameters above were frozen before held-out execution.
+
+</details>
 
 ## Consequences
 
@@ -264,6 +287,5 @@ before issue #66 begins.
 - Voyager model retirement or replacement requires a new documented
   development comparison; it must not silently change an in-progress frozen
   evaluation.
-- The README must document credential setup, offline and hosted commands,
-  frozen configuration, failure behavior, and the synthetic-data restriction
-  as the implementation lands.
+- Public documentation records credential setup, offline and hosted commands,
+  frozen configuration, failure behavior, and the synthetic-data restriction.

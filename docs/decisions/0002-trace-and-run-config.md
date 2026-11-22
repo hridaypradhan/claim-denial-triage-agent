@@ -12,6 +12,16 @@
 
 This record is numbered `0002` because decision `0001` is the retrieval method in PR #4.
 
+## Reader guide
+
+- Start with [Decision summary](#decision-summary) for the ten adopted rules.
+- Use [Event types](#event-types) and [AgentRunConfig](#agentrunconfig) when
+  implementing or reviewing a trace.
+- Use [Redaction and data safety](#redaction-and-data-safety) for security
+  review.
+- The remaining sections are the detailed contract and test examples. Their
+  precision is intentional because evaluation reads these fields directly.
+
 ## Context
 
 The evaluation must be able to do three things with every agent run:

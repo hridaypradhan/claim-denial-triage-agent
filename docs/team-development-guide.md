@@ -65,7 +65,7 @@ Primary ownership means coordinating design, implementation, tests, and document
 - Common tool dispatcher and argument validation at the tool boundary.
 - Fake dispatcher with scripted tool results for the offline vertical slice.
 - Denial-code and payer-profile lookup wrappers; payer profiles report their version and whether values are verified or illustrative.
-- Implemented policy, encounter-note, and eligibility-record retrieval (#56).
+- Implemented policy, encounter-note, and eligibility-record retrieval.
   All tools are read-only.
 - Policy matching that filters by payer, procedure, and service date before ranking, with no fallback to another payer's policy or a different effective date.
 - Encounter notes returned as numbered, citable passages, with unavailable documents reported explicitly.
@@ -109,8 +109,8 @@ Primary ownership means coordinating design, implementation, tests, and document
   use the claim-bound denial-code lookup, while authorization routes may also
   use the active payer's profile. Deterministic and manual-review routes expose
   neither reference tool.
-- Separate tool-less evidence-verification and appeal-drafting model calls
-  planned under #34.
+- Tool-less evidence verification and grounded appeal drafting after
+  deterministic validation.
 - Agent CLI and the offline vertical-slice runner.
 
 **Delivers**
@@ -150,7 +150,7 @@ Primary ownership means coordinating design, implementation, tests, and document
 
 - Runtime prompts, model repair behavior, or tool implementation.
 - Deterministic safety policy or final report-generation code.
-- Unreviewed held-out labels; every held-out label batch is reviewed by another team member (#63).
+- Unreviewed held-out labels; every held-out label batch is reviewed by another team member.
 
 **Must coordinate with**
 
@@ -165,7 +165,7 @@ Primary ownership means coordinating design, implementation, tests, and document
 | Shared contracts v0.1 | Neha | All affected owners approve breaking fields |
 | Baseline adapter and deterministic router | Neha | Baseline regression tests |
 | Tool dispatcher and knowledge manifest | Silas | Contract approval from Neha; runtime review from Hriday |
-| Policy, encounter, and eligibility tools (#56) | Silas | Evaluation provenance requirements from Sachin |
+| Policy, encounter, and eligibility tools | Silas | Evaluation provenance requirements from Sachin |
 | Fake dispatcher for the offline vertical slice | Silas | Tool contracts from Neha; consumer review from Hriday |
 | Policy corpus selection and source metadata | Silas | Payer/procedure coverage needs from Sachin |
 | Optional `calculate_deadline` tool | Silas | Deadline from the frozen baseline finding; route authorization remains separate |
@@ -218,7 +218,7 @@ Later work may be developed behind fake interfaces, but it cannot merge before i
 2. Use the original six cases only for development and regression.
 3. Create at least 20 additional development cases and 80 held-out cases.
 4. Keep scenario variants and counterfactual pairs in the same split.
-5. Give each held-out case one primary label, then have a different team member review each batch against the frozen rubric, final claims, and final evidence, recording any disputed fields. Resolve every dispute, with another reviewer adjudicating when needed, before reviewing outputs. Reviewers check labels; they do not write a second full label set (#63).
+5. Give each held-out case one primary label, then have a different team member review each batch against the frozen rubric, final claims, and final evidence, recording any disputed fields. Resolve every dispute, with another reviewer adjudicating when needed, before reviewing outputs. Reviewers check labels; they do not write a second full label set.
 6. Freeze splits, labels, model, prompt, parameters, budgets, and knowledge snapshot before final evaluation.
 7. Run the baseline once and the agent three times per held-out case.
 8. Never tune against held-out failures; preserve them for final analysis.
@@ -226,7 +226,8 @@ Later work may be developed behind fake interfaces, but it cannot merge before i
 The accepted trace and run-configuration format that evaluation depends on is
 in [decision 0002](decisions/0002-trace-and-run-config.md), with example traces
 and a config-hash test vector in [`evaluation/examples/`](../evaluation/examples/).
-PR #33 implements its canonical adapter and JSON Lines persistence boundary.
+The canonical adapter and JSON Lines persistence boundary implement that
+decision.
 
 ## Git and pull-request workflow
 
@@ -295,21 +296,21 @@ Record cross-workstream decisions under `docs/decisions/` with context, consider
 
 Hold two brief progress syncs and one integration demonstration per week. Each owner reports completed work, next dependency, and blockers using tested behavior rather than file counts. Decisions that affect another workstream must be recorded in an issue or architecture decision, not only in chat.
 
-## Immediate shared backlog
+## Completed shared foundation
 
 - [x] Use Pydantic for the agent-side schema library.
 - [x] Define contract version `0.1` and contract rejection tests.
 - [x] Implement the baseline adapter and deterministic router.
 - [x] Implement the scripted fake model and fake dispatcher.
 - [x] Add a provider-neutral hosted-model client and offline transport tests.
-- [ ] Select and implement the Milestone 2 provider-specific model transport.
+- [x] Select the hosted provider and model, and implement one reusable
+  OpenAI-compatible transport.
 - [x] Add the offline vertical-slice integration test.
 - [x] Carry structured validation problems into bounded repair prompts.
 - [x] Select the initial payer/procedure policy subset: BCBS_AZ brain MRI and AETNA physical therapy, with dated policy versions in knowledge corpus v0.
-- [ ] Draft the dataset annotation rubric.
+- [x] Draft and freeze the dataset annotation rubric.
 
-The offline vertical slice and production-shaped local retrieval path now
-pass. Keep scripted boundaries for deterministic regression coverage. Hosted
-model work must use the provider-independent model interface and preserve the
-same route authorization, budgets, safety validation, `PENDING_REVIEW` output,
-and failure-path tests.
+The offline and hosted paths share the same provider-independent interfaces,
+route authorization, budgets, safety validation, `PENDING_REVIEW` output, and
+failure-path tests. Scripted boundaries remain only for deterministic offline
+regression coverage; they are not a hosted fallback.
