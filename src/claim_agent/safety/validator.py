@@ -1,3 +1,5 @@
+"""Deterministically validate model-proposed decisions before packaging."""
+
 from datetime import date
 from typing import List, Optional
 

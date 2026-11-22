@@ -1,3 +1,5 @@
+"""Public contract types shared across runtime components."""
+
 from .schema import (
     AgentDecision,
     AgentStatus,

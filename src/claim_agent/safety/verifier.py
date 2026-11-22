@@ -1,4 +1,4 @@
-"""Deterministic fail-safe validation for the tool-less evidence verifier (#50)."""
+"""Deterministic fail-safe validation for the tool-less evidence verifier."""
 
 from __future__ import annotations
 

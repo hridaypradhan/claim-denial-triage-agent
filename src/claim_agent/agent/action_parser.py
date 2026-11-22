@@ -1,8 +1,8 @@
 """Parse raw model text into a small set of permitted runtime actions.
 
-These internal actions are temporary runtime types, not the team's final shared
-AgentDecision contract. The parser creates a strict safety boundary between
-untrusted model text and executable runtime behavior.
+These internal actions describe one permitted runtime step; a proposed final
+decision still uses the shared ``AgentDecision`` contract. The parser creates a
+strict boundary between untrusted model text and executable runtime behavior.
 """
 
 from __future__ import annotations

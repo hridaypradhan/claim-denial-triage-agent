@@ -1,4 +1,4 @@
-"""Validate and freeze the knowledge snapshot used by the final evaluation (#62).
+"""Validate and freeze the knowledge snapshot used by evaluation.
 
 ``validate_snapshot`` checks the corpus is internally consistent: every
 manifest hash matches its bytes, manifest fields match their documents, policy

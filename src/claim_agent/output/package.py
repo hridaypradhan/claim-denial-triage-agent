@@ -1,7 +1,16 @@
+"""Assemble the final, always-pending package presented for human review."""
+
 from typing import List, Optional
+
 from claim_agent.contracts import (
-    OutputPackage, RouteOutcome, BaselineFinding, AgentDecision,
-    ValidationResult, ValidationOutcome, Disposition, RootCause, CONTRACT_VERSION
+    AgentDecision,
+    BaselineFinding,
+    CONTRACT_VERSION,
+    Disposition,
+    OutputPackage,
+    RouteOutcome,
+    ValidationOutcome,
+    ValidationResult,
 )
 
 
@@ -13,13 +22,13 @@ def create_output_package(
     route_outcome: RouteOutcome,
     proposed_decision: Optional[AgentDecision] = None,
     validation_result: Optional[ValidationResult] = None,
-    agent_terminal_reason: Optional[str] = None
+    agent_terminal_reason: Optional[str] = None,
 ) -> OutputPackage:
-    """
-    Constructs and validates the OutputPackage, computing final disposition
-    and consolidating manual review reasons.
-    """
-    # 1. Compute final disposition & root cause per Sachin's evaluation rules
+    """Settle the safe disposition and consolidate human-review reasons."""
+
+    # A deterministic route may keep its baseline disposition. An agent route
+    # may keep only a decision that the deterministic validator accepted.
+    # Every other path fails closed to manual review.
     if route_outcome == RouteOutcome.DETERMINISTIC_ONLY:
         final_disposition = finding.baseline_disposition
     elif route_outcome == RouteOutcome.MANUAL_REVIEW:
@@ -36,7 +45,7 @@ def create_output_package(
 
     final_root_cause = finding.root_cause
 
-    # 2. Consolidate manual_review_reasons at package level
+    # Collect reasons from each boundary so the reviewer sees one ordered list.
     reasons: List[str] = []
     if finding.deadline_status == "EXPIRED":
         reasons.append("DEADLINE_EXPIRED")
@@ -48,7 +57,7 @@ def create_output_package(
     ):
         reasons.append(agent_terminal_reason)
 
-    # Deduplicate while preserving order
+    # dict preserves insertion order and removes repeated boundary reasons.
     consolidated_reasons = list(dict.fromkeys(reasons))
 
     return OutputPackage(
@@ -65,5 +74,5 @@ def create_output_package(
         agent_terminal_reason=agent_terminal_reason,
         final_disposition=final_disposition,
         final_root_cause=final_root_cause,
-        manual_review_reasons=consolidated_reasons
+        manual_review_reasons=consolidated_reasons,
     )

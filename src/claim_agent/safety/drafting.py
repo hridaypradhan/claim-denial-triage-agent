@@ -1,4 +1,4 @@
-"""Drafting authorization and groundedness validation (#51)."""
+"""Drafting authorization and groundedness validation."""
 
 from __future__ import annotations
 
@@ -93,7 +93,7 @@ def check_drafting_authorization(
             ),
         )
 
-    # Require typed AGREE result from the tool-less verifier (#50)
+    # Require a typed AGREE result from the tool-less verifier.
     if (
         ver.outcome != VerificationOutcome.AGREE
         or ver.requires_manual_review

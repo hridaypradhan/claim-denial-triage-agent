@@ -25,7 +25,7 @@ def append_tool_observation(
     Args:
         task_context: Claim facts and observations already available.
         tool_name: Name of the read-only tool that produced the result.
-        observation: Structured result returned through the temporary port.
+        observation: Structured result returned through the offline test port.
 
     Returns:
         A new context string containing the original context and a clearly

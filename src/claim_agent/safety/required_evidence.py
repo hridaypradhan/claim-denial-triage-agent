@@ -1,8 +1,8 @@
-"""Deterministic required-evidence safety decisions (#49).
+"""Deterministic required-evidence safety decisions.
 
 Distinguishes decision-critical evidence from fields supplied by a proposed
 correction itself and helpful-but-nonessential documents, returning a stable
-safety decision that routing (#57) can consume without overriding normal
+safety decision that routing can consume without overriding normal
 DETERMINISTIC_ONLY vs. AGENT_REQUIRED route selection.
 """
 
@@ -19,7 +19,7 @@ from claim_agent.contracts.schema import (
     RouteOutcome,
 )
 
-# Stable reason codes consumed by routing (#57) and audit traces
+# Stable reason codes consumed by routing and audit traces.
 REASON_NO_REQUIRED_EVIDENCE = "NO_REQUIRED_EVIDENCE"
 REASON_DECISION_CRITICAL_SATISFIED = "DECISION_CRITICAL_EVIDENCE_SATISFIED"
 REASON_MISSING_DECISION_CRITICAL = "MISSING_DECISION_CRITICAL_EVIDENCE"
@@ -184,7 +184,7 @@ def evaluate_required_evidence_safety(
       force MANUAL_REVIEW.
     - Unknown/unrecognized requirement tokens fail closed as DECISION_CRITICAL.
     - When safe to continue, returns ``requires_manual_review=False`` and
-      ``recommended_outcome=None`` so routing (#57) preserves normal
+      ``recommended_outcome=None`` so routing preserves normal
       DETERMINISTIC_ONLY vs. AGENT_REQUIRED route selection.
     """
 
