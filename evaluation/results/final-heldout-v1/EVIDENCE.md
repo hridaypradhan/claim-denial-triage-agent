@@ -84,7 +84,7 @@ python evaluation/results/final-heldout-v1/derived_values.py .local-output/final
 | Value | Source |
 |---|---|
 | Citation precision 98.0% / 99.3% / 99.3%, pooled 435/440 = 98.9% | `A[n].trace_measures.citation_precision`; pooled in `D` |
-| Policy requests 41/41 | `A[n].trace_measures.policy_requests_matching_claim` |
+| Policy requests matching the claim 41/41, 41/41, 42/42 | `A[n].trace_measures.policy_requests_matching_claim` |
 | Budget overruns 0; unterminated runs 0 | `A[n].trace_measures.budget_overruns`, `.unterminated_runs` |
 | Latency of the 240 completed and scored agent runs: median 23.1 s, p95 120.4 s (wall clock, whole pipeline) | `systems.hosted-agent.operations.wall_clock_ms_median`, `.wall_clock_ms_p95` |
 | Provider usage of the 240 completed and scored runs: **490 calls, 977,566 input and 218,488 output tokens**. That is the decision stage (413 calls, 682,377 / 143,226) plus the verifier and drafter (77 calls, 295,189 / 75,262) | `systems.hosted-agent.operations` (top level = decision stage) + `operations.post_decision`; summed in `D` |
