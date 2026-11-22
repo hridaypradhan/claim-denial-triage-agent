@@ -1,0 +1,30 @@
+== Baseline critical safety errors ==
+{'CSE_MISSED_ESCALATION': 17, 'CSE_UNSUPPORTED_APPEAL': 30} total 47 cases 35
+== Agent per repeat ==
+repeat-1 joint 60 CSE {'CSE_FABRICATED_CITATION': 3, 'CSE_MISSED_ESCALATION': 1} total 4 MR 52 selective 27/28
+repeat-2 joint 60 CSE {'CSE_FABRICATED_CITATION': 1, 'CSE_MISSED_ESCALATION': 1} total 2 MR 51 selective 27/29
+repeat-3 joint 60 CSE {'CSE_FABRICATED_CITATION': 1, 'CSE_MISSED_ESCALATION': 1} total 2 MR 51 selective 27/29
+== Combining the 3 repeats ==
+majority-of-3 correct 60 all-3 59 any 61
+majority manual review 51
+citation precision pooled 435 / 440
+== Gold labels ==
+Counter({'MANUAL_REVIEW': 34, 'APPEAL_WITH_DOCUMENTATION': 15, 'WRITE_OFF': 14, 'BILL_PATIENT': 6, 'NO_ACTION_CONTRACTUAL': 5, 'CORRECT_AND_RESUBMIT': 4, 'ROUTE_TO_CORRECT_PAYER': 2})
+== Post-decision: verifier escalations and accepted drafts vs gold ==
+escalations (reason, decision, gold): {('VERIFIER_FORMULA_NOT_SATISFIED', 'NO_ACTION_CONTRACTUAL', 'WRITE_OFF'): 4, ('VERIFIER_DISAGREED', 'NO_ACTION_CONTRACTUAL', 'WRITE_OFF'): 5}
+accepted appeal drafts by gold label: {'APPEAL_WITH_DOCUMENTATION': 33}
+== Route of CLM-2026-710220-L1 ==
+1 DETERMINISTIC_ONLY WRITE_OFF
+2 DETERMINISTIC_ONLY WRITE_OFF
+3 DETERMINISTIC_ONLY WRITE_OFF
+== Provider usage, completed and scored runs (240) ==
+decision stage {'model_calls': 413, 'input_tokens': 682377, 'output_tokens': 143226}
+post-decision {'model_calls': 77, 'input_tokens': 295189, 'output_tokens': 75262}
+total {'model_calls': 490, 'input_tokens': 977566, 'output_tokens': 218488}
+== Provider usage, 13 failed attempts (abandoned folders, not scored) ==
+attempts 13 usage reported for every call True
+decision stage {'model_calls': 40, 'input_tokens': 66331, 'output_tokens': 14240}
+post-decision {'model_calls': 7, 'input_tokens': 28771, 'output_tokens': 7146}
+total {'model_calls': 47, 'input_tokens': 95102, 'output_tokens': 21386}
+== Provider usage, all attempts ==
+{'model_calls': 537, 'input_tokens': 1072668, 'output_tokens': 239874}

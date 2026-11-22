@@ -1,0 +1,76 @@
+{
+  "code_commit": "7b48ac307d3a8f9b70c54c9dbd76e682526ce624",
+  "created_at": "2026-11-21T05:51:27.686863+00:00",
+  "dataset": {
+    "as_of": "2026-10-30",
+    "cases": 80,
+    "declared_knowledge_snapshot_id": "knowledge-v2",
+    "manifest": "datasets/held_out/manifest.json",
+    "sha256": "a2ed818d8dfa7e58bc4cd96ddca8ea362afe0948cf5dadfead0f724b657bdb5e",
+    "split": "held_out"
+  },
+  "experiment_id": "final-heldout-v1",
+  "knowledge": {
+    "lock_sha256": "20cf6b0b25c0d4cb103a02bb25cd9253f135487ffc5307f084b1aeceaf8a3ca5",
+    "manifest_sha256": "4a2f61a303bfdd14ee99be13ea4403c2e3b3849410e5455a3f0fda4b3e75681e",
+    "snapshot_id": "knowledge-v2"
+  },
+  "label_lock": {
+    "path": "datasets/labels/HELD_OUT_LABELS_LOCK.json",
+    "sha256": "2841dd963e2219f556ec3d991d4f879b52dd3c8bd01057ea1f5a12b04a430098"
+  },
+  "labels": [
+    {
+      "path": "datasets/labels/held_out_batch_a.primary.json",
+      "sha256": "a9a55c8c42049f97081a4ee31f5589c94dc73c76bb9783b5a312658d742888fd"
+    },
+    {
+      "path": "datasets/labels/held_out_batch_b.primary.json",
+      "sha256": "5d456fa38759ae966e80215fce697d2fafb0b40001a67c3f8bb338dda64aab36"
+    },
+    {
+      "path": "datasets/labels/held_out_batch_c.primary.json",
+      "sha256": "bf521e9f192f9dbaa7e61e9c6c8b71fac271bd43f21a91618c362c1613bea8ce"
+    }
+  ],
+  "phase": "final",
+  "plan": {
+    "agent_repetitions": 3,
+    "budgets": {
+      "max_model_calls": 4,
+      "max_repair_attempts": 1,
+      "max_runtime_seconds": 300.0,
+      "max_tool_calls": 3,
+      "max_tool_retries": 1,
+      "max_total_steps": 7,
+      "tool_request_timeout_seconds": 30.0
+    },
+    "candidate": {
+      "base_url": "https://openai.rc.asu.edu/v1",
+      "disable_gateway_addons": true,
+      "max_completion_tokens": 2048,
+      "model_id": "beam-1-0",
+      "provider_name": "asu-rc-voyager",
+      "reasoning_effort": "none",
+      "request_timeout_seconds": 60.0,
+      "response_format_mode": "json_schema",
+      "temperature": 0.0
+    },
+    "dataset_manifest": "datasets/held_out/manifest.json",
+    "drafter_max_completion_tokens": 4096,
+    "drafter_request_timeout_seconds": 180.0,
+    "experiment_id": "final-heldout-v1",
+    "knowledge_snapshot_id": "knowledge-v2",
+    "label_files": [
+      "datasets/labels/held_out_batch_a.primary.json",
+      "datasets/labels/held_out_batch_b.primary.json",
+      "datasets/labels/held_out_batch_c.primary.json"
+    ],
+    "label_lock": "datasets/labels/HELD_OUT_LABELS_LOCK.json",
+    "phase": "final",
+    "post_decision": "verify_and_draft",
+    "prompt_version": "planning-v2",
+    "token_prices": null
+  },
+  "plan_sha256": "e0394310b9b39241234b910a18d74ebe59fb26fad777639af2b5c12b37fbea56"
+}
