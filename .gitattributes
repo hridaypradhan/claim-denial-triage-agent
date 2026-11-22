@@ -1,4 +1,6 @@
 knowledge/**/*.json text eol=lf
 eligibility/**/*.json text eol=lf
+datasets/held_out/**/*.json text eol=crlf
+datasets/labels/*.json text eol=crlf
 evaluation/results/final-heldout-v1/results.json -text
 evaluation/results/final-heldout-v1/experiment.json -text
