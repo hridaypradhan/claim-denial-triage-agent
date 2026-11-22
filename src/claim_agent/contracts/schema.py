@@ -1,3 +1,5 @@
+"""Versioned data contracts shared by routing, tools, safety, and output."""
+
 from datetime import date
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
@@ -229,7 +231,7 @@ class RouteDecision(StrictContract):
     authorized_tools: List[str] = Field(default_factory=list)
 
 
-# --- Contract v0.1: Required-Evidence Safety Decisions (#49) ---
+# --- Contract v0.1: Required-Evidence Safety Decisions ---
 class ClassifiedEvidenceRequirement(StrictContract):
     requirement: str
     category: EvidenceRequirementCategory
@@ -243,7 +245,7 @@ class RequiredEvidenceSafetyDecision(StrictContract):
 
     When ``requires_manual_review`` is True, ``recommended_outcome`` is
     ``RouteOutcome.MANUAL_REVIEW``. When safe to proceed, ``recommended_outcome``
-    is ``None`` so routing (#57) preserves normal deterministic vs. agent route
+    is ``None`` so routing preserves normal deterministic versus agent route
     selection.
     """
 
@@ -351,9 +353,9 @@ class ValidationResult(StrictContract):
         return self
 
 
-# --- Contract v0.1: Tool-less Evidence Verifier (#50) ---
+# --- Contract v0.1: Tool-less Evidence Verifier ---
 class VerifierInput(StrictContract):
-    """Frozen input for the tool-less verifier (#50)."""
+    """Frozen input for the tool-less verifier."""
 
     contract_version: str = Field(default=CONTRACT_VERSION)
     proposed_decision: AgentDecision
@@ -448,10 +450,10 @@ class VerifierValidationResult(StrictContract):
         return self
 
 
-# --- Contract v0.1: Appeal Drafting (#51) ---
+# --- Contract v0.1: Appeal Drafting ---
 class DraftingInput(StrictContract):
     """Authorized drafting input bound to deterministic validation, typed verifier
-    agreement (#50), and the frozen same-run EvidenceBundle (#59).
+    agreement, and the frozen same-run ``EvidenceBundle``.
     """
 
     contract_version: str = Field(default=CONTRACT_VERSION)

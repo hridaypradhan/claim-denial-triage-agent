@@ -1,9 +1,9 @@
-"""Same-run evidence bundle contract (#59).
+"""Same-run evidence bundle contract.
 
 An ``EvidenceBundle`` is the frozen record of everything one agent run
 retrieved for one claim service line: the passages with their provenance,
 every retrieval call, the policy formula, and the claim's listed documents.
-Verification (#50, #60) and drafting (#51, #61) take the bundle itself, so the
+Verification and drafting take the bundle itself, so the
 run, snapshot, evidence, permitted citations, and fingerprint all come from
 one source. ``claim_agent.tools.evidence_bundle`` builds bundles during a run.
 """
@@ -22,7 +22,7 @@ from pydantic import Field, model_serializer, model_validator
 from claim_agent.contracts.schema import EvidencePassage, StrictContract, ToolStatus
 
 BUNDLE_VERSION = "0.1"
-# Passages of this type come from the separate frozen eligibility store (#56),
+# Passages of this type come from the separate frozen eligibility store,
 # so the call that returned them must record that store's snapshot.
 ELIGIBILITY_SOURCE_TYPE = "eligibility_record"
 PASSAGE_ID_PATTERN = re.compile(r"^(?P<source_id>[^@#\s]+)@v(?P<version>[^#\s]+)#(?P<anchor>[^#\s]+)$")

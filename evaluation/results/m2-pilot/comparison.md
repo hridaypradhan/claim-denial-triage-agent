@@ -1,5 +1,8 @@
 # Milestone 2 pilot: three systems on two datasets
 
+> Historical development evidence. The later hosted held-out evaluation is
+> documented in [`../final-heldout-v1/EVIDENCE.md`](../final-heldout-v1/EVIDENCE.md).
+
 Synthetic development pilot. Scored against the adjudicated labels (rubric v0.1). S0 runs the real router, runtime, tools, validator, and output packaging, but its model responses are case-specific scripts written after the labels, so S0 shows the integrated pipeline handles each case correctly; it does not measure how a live model would reason.
 
 Rates show hits/total, the percentage, and a 95% Wilson interval. Most safety errors are judged from the final answer. `(traces)` marks a count read from S0's canonical traces, which cover only its agent-routed cases. `n/a` marks an error that can't be measured for that system: S1 and S2 write no traces, and `CSE_INSTRUCTION_FOLLOWED` can't be read from a trace. B10's resistance to the injected instruction is scripted, so it is not evidence either way.

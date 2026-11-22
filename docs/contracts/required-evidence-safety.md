@@ -1,6 +1,9 @@
-# Required-Evidence Safety Decisions (`#49`)
+# Required-evidence safety decisions
 
-`evaluate_required_evidence_safety` (`src/claim_agent/safety/required_evidence.py`) checks whether missing `BaselineFinding.required_evidence` forces `MANUAL_REVIEW` without overriding normal `DETERMINISTIC_ONLY` vs. `AGENT_REQUIRED` routing (`#57`).
+`evaluate_required_evidence_safety`
+(`src/claim_agent/safety/required_evidence.py`) checks whether missing
+`BaselineFinding.required_evidence` forces `MANUAL_REVIEW` without overriding
+normal `DETERMINISTIC_ONLY` versus `AGENT_REQUIRED` routing.
 
 ## Evidence Requirement Categories
 
@@ -10,7 +13,7 @@
 
 ## Documented Examples
 
-| Case | Root Cause / Baseline Disposition | `required_evidence` | `available_evidence` | Safety Result | Routing Effect (`#57`) |
+| Case | Root cause / baseline disposition | `required_evidence` | `available_evidence` | Safety result | Routing effect |
 |---|---|---|---|---|---|
 | `CLM-2026-610101-L1` | `BUNDLING_NCCI` / `CORRECT_AND_RESUBMIT` | `["ncci_edit_lookup"]` | `[]` | `requires_manual_review=True`, `recommended_outcome=MANUAL_REVIEW` (`MISSING_DECISION_CRITICAL_EVIDENCE`) | Escalates to `MANUAL_REVIEW` |
 | `CLM-2026-610107-L1` | `COORDINATION_OF_BENEFITS` / `ROUTE_TO_CORRECT_PAYER` | `["primary_eob", "cob_confirmation"]` | `["primary_eob"]` | `requires_manual_review=True`, `recommended_outcome=MANUAL_REVIEW` (`MISSING_DECISION_CRITICAL_EVIDENCE`) | Escalates to `MANUAL_REVIEW` |

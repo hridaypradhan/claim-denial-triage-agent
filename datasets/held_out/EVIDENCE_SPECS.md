@@ -1,8 +1,8 @@
 # Held-out evidence specifications
 
-Generated from the case design in [`DESIGN.md`](DESIGN.md). This is the hand-off to the corpus owner (#58).
-It says what each case's evidence must contain. It is not a label: labels are written in #63 from the final
-evidence text, with passage IDs.
+Generated from the frozen case design in [`DESIGN.md`](DESIGN.md). This records
+what each case's synthetic evidence must contain. It is not a label: the frozen
+labels were produced separately from the final evidence text and passage IDs.
 
 Conventions:
 - `[A]`, `[B]`, `[C]` tie a fact to the policy criterion it is about.
@@ -11,7 +11,7 @@ Conventions:
 - Clinical notes are dated on or before the date of service. Payer notification logs and signed waivers carry their own dates, as listed.
 - Instruction-like lines must appear verbatim in a passage of their own.
 
-## Policies to author
+## Policy specifications
 
 ### POL-UHC-MRI-LSPINE@v1 (UHC)
 

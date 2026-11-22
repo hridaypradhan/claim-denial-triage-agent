@@ -1,1104 +1,226 @@
 # Claim Denial Triage Agent
 
-A hybrid agentic AI system for evidence-grounded triage of denied outpatient medical claims. The project combines a deterministic Python core with bounded LLM tool use, evidence retrieval, safety validation, and human review.
+A bounded, evidence-grounded system for triaging synthetic denied outpatient
+claims. It combines deterministic rules with a hosted language model, read-only
+evidence tools, deterministic safety checks, a second model verification step,
+grounded appeal drafting, and human review.
 
-> **Project status:** Active academic capstone. The deterministic baseline,
-> shared contracts, local retrieval tools, safety validator, bounded runtime,
-> an OpenAI-compatible hosted-model transport, and a production-shaped local
-> integration with durable canonical traces are runnable and tested.
-> Tool-less, same-run evidence-verification and grounded appeal-drafting
-> orchestration boundaries are also implemented and tested; insertion into
-> the full end-to-end runner, final evaluation, and the final report remain
-> in progress.
+> **Status:** The planned implementation and frozen held-out evaluation are
+> complete. The repository is an academic prototype: it uses synthetic data,
+> never submits a claim or appeal, and leaves every output `PENDING_REVIEW` for
+> a person.
 
-## Problem
+## Why this project exists
 
-Outpatient practices lose recoverable revenue when denied claims are triaged late or incorrectly. A reviewer must determine why a claim was denied, what action is appropriate, what evidence is missing, and whether a filing deadline is still open.
+Denied claims must be reviewed quickly and consistently. A reviewer needs to
+identify the denial cause, determine an allowed response, find supporting
+evidence, check the filing deadline, and escalate uncertainty rather than
+guessing. This project tests whether a tightly controlled agent can help with
+that work without weakening deterministic safety rules.
 
-This project is designed to produce a review package for an accounts-receivable specialist. It does **not** submit claims or appeals, connect to a live payer or EHR, or make an autonomous final decision.
-
-## Current and target architecture
-
-The solid path below is implemented in the local integrated demonstration.
-Dashed nodes are tracked final-phase extensions; they are not required to
-describe the current Milestone 2 runtime as implemented.
+## How it works
 
 ```mermaid
 flowchart TD
-    A[Denied claim] --> B[Validate input]
-    B --> C[Deterministic baseline rules]
-    C --> D{Rule-decidable?}
-    D -- Yes --> S[Deterministic structural checks]
-    D -- "No: policy missing or inapplicable" --> J[Manual review]
-    D -- "No: evidence-dependent" --> E[Initialize case state]
-
-    subgraph Agent["Bounded LLM agent: at most 6 planning turns and 10 tool calls"]
-        E --> P[Plan next step]
-        P --> T[Call tool]
-        T --> U[Update criteria assessments]
-        U -- Missing evidence --> P
-        U -- Supported decision --> R[Decision or MANUAL_REVIEW]
-        U -- Budget exhausted --> R
-    end
-
-    T <--> F[Common dispatcher for read-only tools]
-    F --> G[(Policy and encounter evidence)]
-    F -. route authorization pending .-> I[(Eligibility evidence)]
-
-    R --> S
-    S -- Rule-only finding --> O{Outcome?}
-    S -- Evidence-dependent finding --> V[Semantic check: tool-less LLM verifier]
-    V --> O
-    O -- Not appealable --> K[Report only]
-    O -- Critical failure --> J
-    O -- Eligible appeal --> W[Draft appeal from verified evidence]
-    W --> X{Draft supported?}
-    X -- Yes --> L[Report: PENDING_REVIEW]
-    X -- No --> J
-    K --> L
-    J --> L
-    L -.-> Q[(Audit trace saved separately)]
-    L --> H[Human review: edit, approve, or reject]
-    H --> Z[Save outputs]
-
-    M[Hosted execution entry point] --> P
-
-    classDef planned stroke-dasharray: 5 5,fill:#fff;
-    class I,V,W,X planned;
+    A[A synthetic denied claim arrives] --> B[Rules check the claim and deadline]
+    B -- Rules can safely decide --> H[Prepare a review package]
+    B -- More evidence is needed --> C[AI asks for allowed records]
+    C --> D[AI proposes a reason and next step]
+    D --> E[Code checks the evidence, citations, and deadline]
+    E -- Safe and supported --> F[A second AI check reviews the proposal]
+    E -- Missing or unsafe --> G[Explain why specialist review is needed]
+    F -- Agrees --> I[Draft a letter only when an appeal is supported]
+    F -- Disagrees or fails --> G
+    I --> H
+    G --> H
+    H --> J[A person reviews the result]
 ```
 
-The model will be used only where evidence interpretation is necessary. Exact and safety-critical behavior—including input validation, deadline arithmetic, permitted dispositions, citation checks, and final approval state—remains under deterministic control.
+The language model may plan, request authorized evidence, verify a proposal,
+and draft from validated evidence. Code still controls tool access, deadlines,
+allowed dispositions, citation resolution, budgets, final validation, and the
+human-review state. A model timeout, malformed response, missing evidence, or
+disagreement fails closed to manual review; there is no scripted or alternate-
+model fallback in hosted execution.
 
-## What is implemented
+### Example: a denied MRI claim
 
-### Runnable deterministic baseline
+Suppose a synthetic MRI claim is denied as not medically necessary:
 
-The frozen stakeholder baseline currently provides:
+1. The rules recognize that the answer depends on the payer's policy and the
+   patient's documented symptoms, so they do not guess.
+2. The agent may request only the policy and notes listed for that claim.
+3. It proposes an appeal only if the retrieved passages support every required
+   policy criterion and the filing deadline is still open.
+4. Code checks the cited passages and deadline. A separate model then checks
+   the proposal without being allowed to retrieve anything new.
+5. If both checks pass, the system drafts a letter using only validated claims
+   and citations. A person still decides whether to use it.
 
-- Validation of synthetic professional outpatient claim JSON.
-- Mapping for 16 Claim Adjustment Reason Codes (CARCs) and 9 Remittance Advice Remark Codes (RARCs).
-- Ten root-cause categories plus explicit unknown/manual-review handling.
-- Payer-profile lookup with five illustrative payer profiles and a default fallback.
-- Rule-based disposition recommendations and action plans.
-- Deterministic filing-deadline calculation.
-- Human-readable text reports and structured JSON output.
-- Draft appeal letters for findings the baseline classifies as appealable.
-- Six labeled synthetic example claims.
-- Nine passing unit and regression tests.
+If a note is missing, two records conflict, a citation cannot be resolved, or a
+model call fails, the output instead explains why specialist review is needed.
 
-The unchanged comparison baseline is preserved under [`baseline/`](baseline/) and tagged as `baseline-v1`.
+See [Architecture](docs/architecture.md) for the technical component map.
 
-### Knowledge corpus v1
+## Final held-out evaluation
 
-The [`knowledge/`](knowledge/) directory contains the local evidence snapshot
-`knowledge-v1`, used by the integrated runtime demonstration and the Milestone 2
-pilot. Per-source SHA-256 hashes pin the exact bytes used by a run and make
-later corpus changes detectable. `knowledge-v1` adds the Dataset B encounter
-notes to `knowledge-v0` without changing any earlier file, so earlier passage
-IDs still resolve.
+The final experiment compared the frozen rule-based baseline with the hosted
+agent on 80 held-out synthetic cases. The baseline ran once and the agent ran
+three times per case. The agent used ASU Research Computing Voyager with
+`beam-1-0`; the full planning, verification, and drafting pipeline was enabled.
 
-The final snapshot is **`knowledge-v2`**, frozen for the final evaluation:
-`knowledge-v1` plus the held-out policies and evidence, with 92 sources
-in all. [`knowledge/SNAPSHOT_LOCK.json`](knowledge/SNAPSHOT_LOCK.json) records
-its manifest hash and the one document that is intentionally unavailable
-(`CLM-2026-710313`'s clinical note). Any change to the corpus now fails the
-tests and needs a new snapshot ID. The Milestone 2 results were produced on
-`knowledge-v1`, and none of the new sources changes their retrieval.
+| Measure | Rules only | Hosted agent |
+|---|---:|---:|
+| Joint root-cause and disposition accuracy | 42/80 (52.5%) | 60/80 (75.0%) in each repeat |
+| Selective accuracy when the system acted | 30/65 (46.2%) | 27/28, 27/29, 27/29 |
+| Critical safety errors | 47 | 4, 2, 2 |
+| Identical answers across all three agent repeats | n/a | 77/80 (96.3%) |
+| Accepted grounded appeal drafts | n/a | 11 per repeat |
 
-It contains:
+These results show a safety and accuracy improvement on this synthetic test
+set, not readiness for real billing or clinical use. The agent also sent more
+cases to manual review than the baseline. Five proposed citations were not in
+the same-run evidence bundle; deterministic validation rejected all affected
+decisions, so none reached a final review package.
 
-- A [manifest](knowledge/manifest.json) listing every source with its version, `sha256` hash, payer, procedure codes or claim ID, effective dates, and origin.
-- A synthetic medical policy for brain MRI (CPT 70551–70553) under the `BCBS_AZ` payer profile, with a criteria formula for each procedure code (`A AND B` for 70551 and 70552; `A AND B AND (C OR D)` for 70553). It is not the payer's actual policy.
-- A synthetic physical therapy policy (CPT 97110) under the `AETNA` payer profile in two dated versions, so the service date selects the criteria: v1 (`A AND B`) through 2026-03-31 and v2 (`A AND B AND C`) from 2026-04-01. It is not the payer's actual policy.
-- Two synthetic encounter documents for the example MRI claim `CLM-2026-005097`: a clinical note that documents criteria A and B but is silent on C and D, and a neurology progress note that documents C.
-- Thirteen synthetic encounter documents for the Dataset B pilot claims
-  `CLM-2026-620102` to `CLM-2026-620112`. They cover missing, explicitly
-  negative, and conflicting evidence, a prior imaging report, physical therapy
-  evaluations on either side of the policy version date, and a note containing
-  instruction-like text.
-- Eight synthetic held-out policies, none of them payer text: UHC lumbar spine
-  MRI, Cigna sleep testing, two dated Aetna knee MRI versions, Medicare Part B
-  vitamin D testing, UHC urgent advanced-imaging authorization, Aetna same-day
-  E/M with modifier 25, and BCBS Arizona sinus CT.
-- Thirty-three synthetic encounter documents for held-out batch A claims
-  `CLM-2026-710101` to `CLM-2026-710128`, including consult notes, a physical
-  therapy discharge summary, a home sleep test report, and signed waivers.
-- Thirty-three synthetic documents for held-out batch C claims
-  `CLM-2026-710301` to `CLM-2026-710325`, including emergency and urgent-care
-  notes, payer-notification logs, a scheduling record, progress and procedure
-  notes, and a decoy therapy note filed under a different claim. Batch B is
-  rule-based and has no documents; one listed batch C note is intentionally
-  absent.
-
-Every passage has a stable citation ID such as
-`POL-BCBSAZ-MRI-BRAIN@v1#P3`. The retrieval method and ID rules are recorded in
-[decision 0001](docs/decisions/0001-retrieval-method.md).
-`retrieve_policy_passages` matches one policy by payer, procedure, and service
-date, then ranks its passages with BM25. `ToolDispatcher` exposes it as
-`retrieve_medical_policy` and also provides `get_encounter_note`, which returns
-a claim's note as numbered, citable passages. It also provides
-`lookup_denial_code` and `get_payer_profile`, which read the frozen baseline
-tables. All four return the shared `ToolResult` contract. Policy and encounter
-retrieval are exercised by the integrated runtime. Agent routes that interpret
-denial evidence may call `lookup_denial_code`; authorization routes may also
-call `get_payer_profile` for payer-specific retro-authorization rules. Both
-tools are bound to the active claim's trusted denial and payer fields, while
-deterministic and manual-review routes authorize neither tool. An unknown CARC
-or unlisted payer returns `NO_MATCH`, not the baseline's default profile.
-`calculate_deadline` reports the run's filing deadline, its status, and days
-remaining or overdue from the trusted baseline finding, without recomputing
-it. It is wired into every run but available to the agent only on routes that
-interpret evidence for an appeal and carry a baseline filing deadline.
-
-`get_eligibility_evidence` returns a payer's eligibility response for the
-claim's own member account: coverage periods and citable passages such as
-`ELIG-PA-SYN-10104-UHC@v1#E2`. It reports evidence and never decides
-eligibility. Another payer may be queried, to check for other coverage. The
-synthetic records are in [`eligibility/`](eligibility/), a separate store
-frozen as `eligibility-v1` with its own lock, so the frozen `knowledge-v2`
-corpus is unchanged. Each retrieval in the evidence bundle records the
-eligibility snapshot it read, so a bundle lists every frozen store behind its
-evidence (`bundle.snapshot_ids`). Only development and demonstration claims
-have records (610104, 610105, 005097), and no held-out claim does. The router
-authorizes this tool only when an eligibility finding requires a missing
-`eligibility_response` and the claim supplies a trusted member account. The
-tool may query only the active payer or alternate coverage explicitly recorded
-on that claim. Recorded eligibility results and deterministic alternate-payer
-routes do not enter the agent.
-
-To check the corpus, or to freeze it for the final evaluation:
-
-```bash
-python -m claim_agent.tools.snapshot_freeze validate
-python -m claim_agent.tools.snapshot_freeze freeze --id <final-id> \
-  --unavailable "<CLAIM_ID>:<document_type>:<reason>"
-```
-
-`validate` checks every manifest hash, the manifest fields against each
-document, policy dates, codes, formulas, and version overlaps, encounter claim
-binding, passage IDs, and files missing from the manifest. `freeze` refuses a
-draft ID or an invalid corpus. It sets the final `snapshot_id` and writes
-`knowledge/SNAPSHOT_LOCK.json` with the manifest's SHA-256 and any evidence that
-is intentionally unavailable. After that, a test fails on any corpus change,
-including a source edited together with its manifest hash, so a changed corpus
-needs a new snapshot ID. Each evaluation run records `knowledge_snapshot_id`
-and the knowledge manifest's hash in its `run_manifest.json`.
-
-[`docs/evidence_coverage.md`](docs/evidence_coverage.md) maps each evidence
-failure mode (no match, version, unavailable, conflicting, timeout,
-instruction-like, cross-claim, and citation) to the tests that cover it.
-
-### Scripted offline agent runtime
-
-The agent package now provides an offline vertical slice for developing and verifying runtime behavior before production integrations are available:
-
-- A provider-independent model interface and deterministic scripted model.
-- Strict parsing of permitted structured model actions.
-- Explicit runtime phases and controlled state transitions.
-- Model-call, tool-call, repair, total-step, and elapsed-time budgets.
-- Repeated planning after allowlisted read-only tool observations.
-- Budget-limited correction of malformed or validation-rejected output; the
-  demonstration permits one attempt.
-- Deterministic decision validation through a temporary scripted boundary.
-- Append-only in-memory trace entries and explicit terminal reasons.
-- Conservative `MANUAL_REVIEW` results when the runtime cannot continue safely.
-- A command-line demonstration and an end-to-end integration test using only synthetic data.
-
-This vertical slice establishes runtime control flow; it is not a production
-claim-review system. Scripted boundaries remain for deterministic regression
-tests, while adapters connect the integrated path to the approved shared tool,
-routing, decision, validation, output, and durable trace contracts. Internal
-events remain an implementation detail; the canonical JSON Lines trace is the
-stable evaluation boundary.
-
-### Production-shaped local integration
-
-The integrated local runner now exercises one authorized synthetic claim
-through the merged project boundaries:
-
-- Typed `BaselineFinding` and `RouteDecision` inputs are checked before any
-  model or tool call.
-- The route-derived tool allowlist controls real local policy and encounter
-  retrieval.
-- A claim-bound dispatcher guard requires policy payer, procedure, and service
-  date—and encounter claim ID—to match the active claim before retrieval.
-- Retrieved passages are stored per run and passed to deterministic safety
-  validation.
-- Policy-criterion formulas use a purpose-built Boolean parser rather than
-  executable expression evaluation; malformed formulas fail closed.
-- The validated shared `AgentDecision` and `ValidationResult` are preserved as
-  audit artifacts.
-- Structured validation problems retain their stable code, field path,
-  message, and repairability flag when included in the bounded repair prompt.
-- Every run produces an `OutputPackage`; even accepted recommendations remain
-  `PENDING_REVIEW` and are never submitted automatically.
-
-The model is still scripted, so this flow is reproducible and requires no
-hosted-model credentials.
-
-Scripted and hosted clients share the same versioned, provider-neutral planning
-prompt. It limits every turn to one permitted structured action, treats
-retrieved text as untrusted data, confines evidence and citations to the
-current run, and requires manual review when support is incomplete or
-conflicting. The prompt version is recorded in each run configuration so a
-trace identifies the exact behavioral instructions used.
-
-Hosted runs use configuration version 0.3. Their canonical `RUN_STARTED`
-event records the provider and model IDs, sampling limits, reasoning effort,
-structured-response mode, disabled gateway addons, runtime budgets, tool
-allowlist, prompt version, and knowledge snapshot. Credentials are never part
-of this persisted configuration. Existing version-0.2 scripted configuration
-hashes remain unchanged.
-
-The runtime also provides a provider-neutral `HostedModelClient`. It translates
-the stable runtime request into a timeout-bounded transport request and maps
-provider text, request IDs, and token counts back into the runtime response.
-Its fake-transport tests run offline. An OpenAI Chat Completions-compatible
-transport now maps those requests to a configurable endpoint while disabling
-automatic SDK retries and provider-hosted tools. A frozen, non-secret model
-profile constructs the selected Voyager client and reads each developer's
-credential only from the local `CLAIM_AGENT_LLM_API_KEY` environment variable.
-The hosted CLI runs the same production-shaped case through this boundary,
-writes a uniquely named canonical trace by default, and prints a non-secret
-JSON summary. Its offline end-to-end tests inject a fake transport and require
-no credential or network access. The development-only Voyager comparison and
-validation selected `beam-1-0` for this bounded workflow; required ADR review
-remains pending.
-Hosted-call timeouts consume the attempted model-call budget, emit
-`MODEL_FAILED`, and produce an audited `MANUAL_REVIEW` package with terminal
-reason `model_timeout`.
-
-Schema-capable hosted models receive a strict runtime-action schema generated
-from the exact per-run tool allowlist and the shared `AgentDecision` contract.
-Every object is closed, every contract field is required, and the existing
-parser, tool guards, dispatcher validation, and deterministic decision
-validation still run after the provider returns structured JSON.
-
-The hosted integration connects that boundary to ASU Research Computing's
-Voyager gateway through one reusable OpenAI Chat Completions-compatible
-transport.
-Voyager is provider configuration rather than a model-specific transport.
-Normal tests will remain offline, each developer will use an individual local
-credential, gateway-added capabilities and automatic model selection will be
-disabled, and no hosted failure will fall back to the scripted model or another
-hosted model. A timeout, provider failure, or unusable response must instead
-produce an audited `MANUAL_REVIEW` outcome. The frozen runtime profile uses
-`beam-1-0`, selected by the development-only comparison described in
-[`decision 0003`](docs/decisions/0003-hosted-model-provider-and-selection.md).
-This selection means it was the safest compatible model in the tested
-shortlist under the deterministic, human-review boundary; it does not mean the
-model is approved for autonomous claim action.
-
-The first live smoke run confirmed Voyager connectivity, strict hosted
-actions, and local tool dispatch. It also exposed an integration gap: the
-model was authorized to retrieve encounter notes but was not given the
-claim's valid document IDs. Hosted evaluation now includes only trusted,
-claim-bound tool metadata from the knowledge manifest. A second smoke run
-confirmed correct policy retrieval and use of both valid encounter document
-IDs, but its final model request exceeded the original 30-second request
-limit. The comparison plan is therefore versioned as `hosted-comparison-v3`;
-it applies the same 60-second request limit to every candidate and allows up
-to 300 seconds for the whole bounded run. Earlier v1 and v2 smoke artifacts
-remain diagnostic evidence and are not comparison results.
-
-The first v3 smoke gate ran one identical case through all three provisional
-candidates. `mimo-v2-6-pro` produced valid actions and claim-bound tool calls
-but timed out before a decision. `glm-5-3` and `deepseek-v4-1-flash` each
-returned an invalid action and an invalid repair without reaching a tool call.
-All three failures closed safely to `MANUAL_REVIEW`, with no critical safety
-failure. The remaining comparison runs are paused until the candidate set
-contains models that can complete the required structured-action interface;
-these smoke artifacts are operational diagnostics, not selection results.
-
-The v4 compatibility set replaces the unsuccessful provisional candidates
-with `qwen35-397b-a17b`, `qwen36-27b`, and `beam-1-0`. Voyager lists Tools and
-Schema for all three, so every candidate now receives the same strict runtime
-action schema. The two Qwen models emphasize instruction following and tool
-use at different model sizes; Beam adds a high-scoring, always-reasoning
-alternative. V4 must pass the same one-case smoke gate before any full
-comparison begins.
-
-The first v4 Qwen 27B smoke produced a valid policy-tool action but consumed
-1,687 output tokens and roughly 60.6 seconds before that simple action; its
-next request timed out. Because Voyager counts thinking toward completion
-tokens, v5 sets `reasoning_effort` to `none` and caps completions at 2,048
-tokens for every candidate. The 60-second request limit remains the operational
-gate. The v4 artifact is diagnostic and is not scored.
-
-The v5 smoke gate produced valid strict-schema actions and valid tool calls
-for all three candidates, but no correct final decision. Beam completed without
-a provider failure yet requested manual review while a relevant, listed
-encounter document remained unqueried. `planning-v2` now requires an
-authorized, budgeted call for relevant available evidence before manual review
-based only on missing or insufficient evidence. V6 freezes that prompt change;
-it does not permit repeated or irrelevant retrieval.
-
-The v6 smoke gate then produced accepted decisions from Beam and Qwen 27B.
-Beam retrieved all relevant documents and grounded all four criterion findings
-in passages adjudicated for those criteria. Qwen 27B reached the correct root
-cause and disposition, but only two of four criterion findings cited evidence
-adjudicated for the matching criterion. The original scorer still gave both
-runs full citation credit because it checked only whether a citation had been
-retrieved. V7 corrects that evaluation gap by requiring a matching status and
-at least one adjudicated passage for each criterion. V6 artifacts remain
-diagnostic; live comparison resumes in a clean v7 output directory.
-
-The v7 smoke gate evaluated the same development case once with each frozen
-candidate. Beam completed an accepted, pending-review decision with the
-correct root cause and disposition, four of four criterion findings grounded
-in matching adjudicated passages, valid schema and tool calls, and no provider
-or safety failure. Qwen 27B repeated its two-of-four criterion grounding result
-because it did not retrieve the second encounter note. Qwen 397B retrieved all
-three sources but timed out on its final decision request. V8 therefore freezes
-Beam as the only candidate that passed the gate and validates it over all eight
-development cases with three repetitions each. The 24 v8 runs are validation
-evidence; v7 remains the comparative smoke-gate record.
-
-The first v8 missing-evidence case revealed an evaluation denominator defect:
-a correct direct manual-review request contains no proposed criterion
-assessments, but the scorer counted all absent assessments as grounding
-failures. V9 corrects the metric without changing the model configuration.
-Criterion grounding is scored only for runs that propose a decision; direct
-manual-review runs use the dedicated manual-review metric. An adjudicated
-`UNKNOWN` criterion with no supporting passage counts only when the proposed
-assessment is also `UNKNOWN` and has no citation. V8 artifacts remain
-diagnostic and are not mixed with the corrected v9 validation.
-
-The complete v9 validation did not accept Beam. Across 24 runs
-it achieved 62.5% joint accuracy, 78% criterion-evidence support, one provider
-failure, and six critical safety failures. All six safety failures came from
-three repetitions of one conflicting-evidence case: Beam retrieved only the
-physician note, omitted a listed same-day nursing note, and proposed an appeal
-that the validator accepted. V10 adds a deterministic completeness gate: a
-decision cannot be accepted until every encounter source listed for the active
-claim has been retrieved. The scorer also refuses to declare any winner with a
-nonzero critical-safety count. V9 remains the failed validation record.
-
-V10 reran all 24 Beam validation cases after adding the deterministic
-claim-source completeness gate. It completed with zero provider failures,
-zero critical safety failures, 100% schema validity, 100% tool validity, 100%
-citation precision, 75% joint accuracy, 75.93% criterion-evidence support, and
-75% repeated-run case stability. All six incorrect outcomes were conservative
-misses on two expected write-off cases; no unsafe decision was accepted. Under
-the frozen safety-first ranking, V10 selects `beam-1-0` for the bounded hosted
-runtime. The output remains `PENDING_REVIEW`, and named ADR reviewer approval
-is still required before the decision record becomes Accepted.
-
-### Implemented packages and remaining boundaries
-
-The repository is organized around the following implemented packages and
-explicitly tracked extension points:
-
-- [`src/claim_agent/contracts/`](src/claim_agent/contracts/) — shared data contracts.
-- [`src/claim_agent/tools/`](src/claim_agent/tools/) — typed, read-only evidence tools.
-- [`src/claim_agent/agent/`](src/claim_agent/agent/) — bounded runtime,
-  production-shaped adapters, and canonical traces.
-- [`src/claim_agent/agent/hosted/`](src/claim_agent/agent/hosted/) — the
-  provider-neutral hosted client, strict action schema, OpenAI-compatible
-  transport, selected Voyager configuration, and hosted runner; the V10
-  development validation is complete and ADR review remains pending.
-- [`src/claim_agent/safety/`](src/claim_agent/safety/) — deterministic validation and approval gates.
-- [`src/claim_agent/output/`](src/claim_agent/output/) — review reports and appeal preparation.
-- [`knowledge/`](knowledge/) — versioned policies and synthetic evidence (the frozen corpus above); [`eligibility/`](eligibility/) holds the separate eligibility records.
-- [`datasets/`](datasets/) — development, held-out, and labeling artifacts for
-  Datasets A and B. Labels follow the frozen
-  [annotation rubric](datasets/ANNOTATION_RUBRIC.md) (v0.1).
-- [`evaluation/`](evaluation/) — accepted trace examples plus the comparison
-  harness.
-
-End-to-end verifier and drafting integration and the full comparative
-evaluation remain incomplete rather than implied by directory names. The
-standalone hosted execution, tool-less verifier orchestration, and
-authorization-first grounded drafting orchestration are implemented. Deadline
-and eligibility authorization now use route-specific allowlists, trusted claim
-bindings, strict hosted schemas, and the integrated runtime. The current
-integrated runner still does not invoke verification and drafting after
-deterministic validation.
+The evaluation ran on frozen commit
+`7b48ac307d3a8f9b70c54c9dbd76e682526ce624`. Later commits preserve evidence or
+improve documentation and do not change the reported experiment. Exact counts,
+hashes, provider usage, limitations, and derivations are in the
+[final evidence record](evaluation/results/final-heldout-v1/EVIDENCE.md).
+See [Evaluation](docs/evaluation.md) for the experiment design and commands.
 
 ## Safety boundaries
 
-- Only synthetic data is used. No protected health information is included.
-- The system will not submit a claim, appeal, or patient bill.
-- Every report begins in a human-review state.
-- Missing, conflicting, unsupported, or unavailable evidence must lead to manual review.
-- Deadline requests are bound to the active finding's claim and service line;
-  eligibility requests are bound to the active member and explicitly recorded
-  payer identities. A cross-claim, cross-line, cross-member, or unapproved-payer
-  request fails closed. An approved payer with no record returns `NO_MATCH`
-  rather than guessed coverage.
-- Retrieved policy and clinical text is treated as untrusted data, not as instructions.
-- Illustrative payer rules must not be interpreted as verified contract terms.
-- Required-evidence safety evaluation (`src/claim_agent/safety/required_evidence.py`, documented in [`docs/contracts/required-evidence-safety.md`](docs/contracts/required-evidence-safety.md)) escalates missing decision-critical evidence (`ncci_edit_lookup`, `primary_eob`, `cob_confirmation`, and unrecognized tokens) to `MANUAL_REVIEW`, while allowing correction-supplied fields, helpful-but-nonessential documents (`updated_insurance_card`), and evidence-supported appeals to continue normal routing without overriding `DETERMINISTIC_ONLY` vs. `AGENT_REQUIRED` selection.
-- The router supplies only evidence explicitly recorded in trusted claim input:
-  attached document identifiers, a recorded eligibility verification, and an
-  affirmative primary-EOB flag. In the development pilot, this safety gate
-  changes only `CLM-2026-610101-L1` and `CLM-2026-610107-L1` from deterministic
-  actions to `MANUAL_REVIEW`; agent-routed and other deterministic cases retain
-  their prior route.
+- The repository contains synthetic records only; do not add patient data.
+- Tools are read-only and bound to the active claim, payer, procedure, and date.
+- Retrieved text is treated as untrusted data, not instructions.
+- Evidence and citation IDs are isolated to one run.
+- Missing, conflicting, unavailable, or unsupported evidence produces manual
+  review.
+- Deterministic validation runs before model verification and cannot be
+  overridden by a model.
+- The verifier has no tools and sees only the validated proposal and frozen
+  same-run evidence bundle.
+- Draft text is reconstructed from validated grounded claims; unsupported text
+  is discarded.
+- Every result remains `PENDING_REVIEW`. Nothing is approved or submitted
+  automatically.
+- Credentials and raw provider responses are excluded from committed artifacts.
 
-### Tool-less evidence verifier contract
+Detailed invariants are recorded in the
+[final safety audit](docs/safety-audit.md) and the
+[required-evidence contract](docs/contracts/required-evidence-safety.md).
 
-- The evidence verifier (`VerifierInput`, `VerifierReport`, `VerifierValidationResult`) has **no tool authority** (`authorized_tools` must be empty) and receives only a proposed `AgentDecision` plus the frozen same-run `EvidenceBundle` (providing `run_id`, `knowledge_snapshot_id`, `fingerprint()`, `passages`, and `check_citations()`).
-- Deterministic safety validation runs first and cannot be overridden: if `ValidationResult.outcome != ACCEPTED` or does not match the exact `proposed_decision`, verification fails closed to manual review.
-- Only a coherent `AGREE` report—with matching identities, resolved criterion IDs, resolved same-run citations, and empty `disputed_criterion_ids` and `unresolved_questions`—avoids escalation; `DISAGREE`, `UNCERTAIN`, `INVALID_OUTPUT`, `PROVIDER_FAILURE`, and `TIMEOUT` all require manual review.
-- The provider-independent verifier interface has no tool field. Its hosted
-  adapter always sends an empty tool allowlist and requests the strict
-  `VerifierReport` JSON schema through the same reusable OpenAI-compatible
-  transport used by planning.
-- Verifier prompts serialize only the validated proposed decision and its
-  frozen bundle, including the run ID, knowledge snapshot, and bundle
-  fingerprint. No prior conversation or free-form external evidence can be
-  added through the orchestration API.
-- Verifier requests, responses, sanitized failures, deterministic outcomes,
-  latency, token usage, prompt version, and evidence provenance are emitted
-  through the canonical trace adapter with `model_role=VERIFIER`.
-- Hosted verification uses the same local
-  `CLAIM_AGENT_LLM_API_KEY` setup documented below. There is no scripted-model
-  or alternate-model fallback: a timeout, provider failure, malformed output,
-  disagreement, or uncertainty produces an explicit manual-review result.
-- This component is reusable orchestration for the later end-to-end assembly;
-  the current integrated demonstration does not yet call it automatically.
+## Quick start
 
-### Grounded appeal-drafting orchestration
-
-- Post-decision drafting runs only after deterministic validation accepts the
-  exact proposed decision and the tool-less verifier returns a coherent
-  `AGREE` result for the same frozen evidence bundle.
-- The drafting model has no tool authority and receives only `DraftingInput`:
-  the accepted `ValidationResult`, matching `VerifierValidationResult`, and
-  same-run `EvidenceBundle`. Rejected or manual-review gates prevent the
-  drafting client from being called.
-- Hosted drafting requests the strict `AppealDraft` schema through the shared
-  OpenAI-compatible transport. Every result remains `PENDING_REVIEW`; no draft
-  is submitted, approved, or substituted with a scripted or alternate-model
-  fallback.
-- Deterministic validation requires resolvable same-run citations, exact
-  normalized quotes for grounded claim statements, and matching case
-  identities. After structured output parsing, code replaces provider-written
-  body prose with the deterministic rendering of those claims and citations;
-  unsupported claims therefore cannot enter the final body. Malformed,
-  unsupported, timed-out, or failed drafts produce no validated draft and
-  require manual review.
-- Drafting requests, provider responses, sanitized failures, validation
-  outcomes, latency, usage, prompt version, and bundle provenance enter the
-  canonical trace with `model_role=DRAFTER`. Canonical response events retain
-  audit identifiers and citations without storing appeal subject or body text.
-  Unparseable raw output is replaced by `[REDACTED]` plus a SHA-256 fingerprint
-  before durable trace persistence.
-- Normal tests use injected fake verifier and drafting clients and require no
-  hosted credential or network access. The current integrated demonstration
-  does not yet call this post-decision coordinator automatically.
-
-## Requirements
-
-The baseline itself has no third-party dependencies. The agent, retrieval,
-validation, and output packages use the dependencies pinned in
-[`requirements.txt`](requirements.txt), including Pydantic and the official
-OpenAI Python client used by the OpenAI-compatible hosted transport.
-
-The local demonstrations require:
+Requirements:
 
 - Python 3.9 or newer.
-- No model API key.
-- No network connection.
+- No network connection or API key for normal tests and scripted demos.
+- An individual ASU Voyager key only for live hosted commands.
 
-The OpenAI client is not imported by the frozen baseline and does not change
-its dependency-free execution path.
+Create an environment and install dependencies:
 
-## Setup
-
-Clone the repository and enter its root directory:
-
-```bash
-git clone <repository-url>
-cd claim-denial-triage-agent
-```
-
-Confirm Python is available:
-
-```bash
-python --version
-```
-
-On Windows, the Python launcher may be used instead:
-
-```powershell
-py -3 --version
-```
-
-No installation step is required to run the baseline.
-
-For agent development, create an isolated environment and install the agent
-dependencies.
-
-macOS or Linux (Bash/Zsh):
+macOS or Linux:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+export PYTHONPATH=./src
 ```
 
-Windows (PowerShell):
+Windows PowerShell:
 
 ```powershell
-py -3.13 -m venv .venv
+py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-```
-
-The `.venv` directory is ignored by Git. Normal agent tests remain offline and
-do not require a hosted-model credential.
-
-Hosted execution uses an individual ASU Research Computing Voyager key. Keep
-the key out of files and shell history by reading it into the current shell
-process.
-
-### Create and load a Voyager key
-
-1. Sign in to [ASU Research Computing Voyager](https://voyager.rc.asu.edu/)
-   with your ASU account.
-2. Open **My Profile**, select **Keys**, and choose **Create API key** under
-   **AI LLM API keys**.
-3. Give the key a purpose-specific name and copy the complete value when it is
-   displayed. Voyager shows the full secret only when a key is created or
-   rotated; the later key list shows only a masked prefix.
-4. If the complete value was not saved, rotate that key or create a replacement
-   and copy the newly displayed secret. Treat rotation as replacing the old
-   credential, and update any terminal that was using it.
-
-The key is pasted at a hidden prompt in the commands below. Nothing appears
-while pasting; press Enter once after pasting the complete value. The prompt
-label may end with a colon, but that colon is not part of the key.
-
-macOS or Linux (Bash/Zsh):
-
-```bash
-printf 'Voyager API key: '
-stty -echo
-IFS= read -r CLAIM_AGENT_LLM_API_KEY
-stty echo
-printf '\n'
-export CLAIM_AGENT_LLM_API_KEY
-```
-
-Windows (PowerShell):
-
-```powershell
-$secureKey = Read-Host 'Voyager API key' -AsSecureString
-$env:CLAIM_AGENT_LLM_API_KEY = [System.Net.NetworkCredential]::new('', $secureKey).Password
-```
-
-Verify that the current terminal has a plausible key without printing it.
-
-macOS or Linux (Bash/Zsh):
-
-```bash
-if [[ "$CLAIM_AGENT_LLM_API_KEY" == sk_* && ${#CLAIM_AGENT_LLM_API_KEY} -gt 20 ]]; then
-    echo 'Voyager key loaded'
-else
-    echo 'Voyager key is missing or appears incomplete'
-fi
-```
-
-Windows (PowerShell):
-
-```powershell
-if (
-    -not [string]::IsNullOrWhiteSpace($env:CLAIM_AGENT_LLM_API_KEY) -and
-    $env:CLAIM_AGENT_LLM_API_KEY.StartsWith('sk_') -and
-    $env:CLAIM_AGENT_LLM_API_KEY.Length -gt 20
-) {
-    'Voyager key loaded'
-} else {
-    'Voyager key is missing or appears incomplete'
-}
-```
-
-The variable disappears when that terminal closes. Never pass the key directly
-on a command line, commit it, share one team member's key, or place it in a
-trace, screenshot, issue, or pull request. Normal tests and the scripted
-demonstration do not read this variable. A missing key stops hosted execution
-before the run starts. An expired, revoked, or invalid key produces a provider
-authentication failure and must be replaced or rotated in Voyager.
-
-ASU Voyager access is required only for live hosted commands. A developer or
-grader without that access can still install the project, run every offline
-test, validate the frozen comparison plan, and run the scripted demonstrations.
-
-## Run the baseline tests
-
-From the repository root:
-
-```bash
-python -m unittest discover -s baseline/tests -p "test*.py" -v
-```
-
-On Windows, replace `python` with `py -3` if needed:
-
-```powershell
-py -3 -m unittest discover -s '.\baseline\tests' -p 'test*.py' -v
-```
-
-Expected result:
-
-```text
-Ran 9 tests
-OK
-```
-
-## Run the offline agent tests
-
-The agent runtime uses a `src` layout. From the repository root, expose that directory to Python and run the component and integration suites:
-
-```bash
-PYTHONPATH=src python -m unittest discover -s tests/agent -p "test*.py" -q
-PYTHONPATH=src python -m unittest discover -s tests/integration -p "test*.py" -q
-```
-
-In PowerShell:
-
-```powershell
 $env:PYTHONPATH = '.\src'
-python -m unittest discover -s '.\tests\agent' -p 'test*.py' -q
-python -m unittest discover -s '.\tests\integration' -p 'test*.py' -q
 ```
 
-The agent tests retain scripted boundaries for deterministic regression
-coverage. The integration suite also exercises the real local dispatcher,
-same-run evidence store, safety validator, and output package. Neither suite
-requires network access or model credentials.
-
-## Run the offline agent demonstration
-
-The demonstration runs a synthetic medical-necessity denial through policy retrieval, evidence-context updating, decision proposal, deterministic validation, and trace emission:
+Run the dependency-free frozen baseline:
 
 ```bash
-PYTHONPATH=src python -m claim_agent.agent.offline_runner --pretty
+python -m unittest discover -s baseline/tests -p "test*.py" -q
+python baseline/run_baseline.py --input baseline/examples/test2_medical_necessity.json --as-of 2026-09-06 --outdir .local-output/baseline-smoke
 ```
 
-In PowerShell:
-
-```powershell
-$env:PYTHONPATH = '.\src'
-python -m claim_agent.agent.offline_runner --pretty
-```
-
-The JSON output reports the terminal phase, reason, accepted decision, consumed budgets, and ordered trace-event names. All model, tool, and validation responses in this demonstration are predefined fixtures rather than production services.
-
-## Run the integrated local demonstration
-
-This command keeps the deterministic scripted model but uses the shared
-routing contracts, production-shaped local dispatcher, same-run evidence
-store, safety validator, and audited output package:
+Run an offline production-shaped demonstration:
 
 ```bash
-PYTHONPATH=src python -m claim_agent.agent.integrated_runner --pretty
-```
-
-In PowerShell:
-
-```powershell
-$env:PYTHONPATH = '.\src'
 python -m claim_agent.agent.integrated_runner --pretty
 ```
 
-The JSON includes retrieved passage IDs, the selected policy formula, ordered
-trace events, budget usage, and an `OutputPackage` whose approval state remains
-`PENDING_REVIEW`. To also create the immutable canonical JSON Lines trace used
-by evaluation, provide a local output directory and the exact commit being run:
+For the complete offline test suite, Voyager key handling, PowerShell
+equivalents, live hosted execution, and troubleshooting, use
+[Getting started](docs/getting-started.md).
 
-macOS or Linux (Bash/Zsh):
-
-```bash
-commit=$(git rev-parse HEAD)
-python -m claim_agent.agent.integrated_runner \
-    --pretty \
-    --trace-directory './artifacts/traces' \
-    --code-commit "$commit"
-```
-
-Windows (PowerShell):
-
-```powershell
-$commit = git rev-parse HEAD
-python -m claim_agent.agent.integrated_runner `
-    --pretty `
-    --trace-directory '.\artifacts\traces' `
-    --code-commit $commit
-```
-
-The generated `artifacts/traces/<run-id>.jsonl` file contains the reproducible
-run configuration, redacted model and tool events, validation results, timing,
-budget counters, and exactly one final outcome. Generated traces are local
-artifacts and should not be committed.
-
-## Run the hosted Voyager demonstration
-
-This command makes live model calls through the configured Voyager profile.
-Set the individual key as described in Setup, confirm the virtual environment
-is active, and record the exact commit in the trace:
-
-macOS or Linux (Bash/Zsh):
-
-```bash
-export PYTHONPATH=./src
-commit=$(git rev-parse HEAD)
-python -m claim_agent.agent.hosted_runner \
-    --pretty \
-    --code-commit "$commit"
-```
-
-Windows (PowerShell):
-
-```powershell
-$env:PYTHONPATH = '.\src'
-$commit = git rev-parse HEAD
-python -m claim_agent.agent.hosted_runner `
-    --pretty `
-    --code-commit $commit
-```
-
-The command writes an immutable trace under
-`.local-output/hosted-traces/` unless `--trace-directory` selects another
-local directory. Each invocation uses a timestamp-and-UUID run ID, so it does
-not overwrite an earlier trace. A missing key fails before the run starts and
-prints a concise JSON error. A timeout, provider failure, invalid response, or
-insufficient evidence fails closed to a traced `MANUAL_REVIEW` result; the
-runner never substitutes the scripted model or another hosted model.
-
-## Reproduce the hosted-model validation on development data
-
-The frozen development-only v10 plan validates the selected `beam-1-0`
-configuration on eight representative Dataset B cases with three repetitions.
-The earlier v7 smoke gate compared Beam with `qwen35-397b-a17b` and
-`qwen36-27b`; only Beam passed the compatibility and grounding gate. Each run
-receives valid claim-bound encounter document IDs and policy lookup fields
-from the trusted manifest. The total runtime budget is 300 seconds, with each
-provider request limited to 60 seconds. Validate the plan without credentials
-or network access:
-
-macOS or Linux (Bash/Zsh):
-
-```bash
-export PYTHONPATH=./src
-python -m evaluation.hosted_comparison
-```
-
-Windows (PowerShell):
-
-```powershell
-$env:PYTHONPATH = '.\src'
-python -m evaluation.hosted_comparison
-```
-
-The plan contains 24 case repetitions. A repetition can require as many as
-four bounded model calls, so 24 is not an API-request estimate. Live execution
-requires `--confirm-live` and an exact commit. It may be narrowed to a single
-case and repeat for a smoke test:
-
-macOS or Linux (Bash/Zsh):
-
-```bash
-commit=$(git rev-parse HEAD)
-python -m evaluation.run_hosted_comparison \
-    --model-id 'beam-1-0' \
-    --case-id 'CLM-2026-005097-L1' \
-    --repeat-index 1 \
-    --code-commit "$commit" \
-    --confirm-live
-```
-
-Windows (PowerShell):
-
-```powershell
-$commit = git rev-parse HEAD
-python -m evaluation.run_hosted_comparison `
-    --model-id 'beam-1-0' `
-    --case-id 'CLM-2026-005097-L1' `
-    --repeat-index 1 `
-    --code-commit $commit `
-    --confirm-live
-```
-
-Completed runs are skipped on a resumed command. A partial directory is never
-overwritten automatically and must be inspected before retrying. Artifacts are
-written under `.local-output/hosted-comparison/` and remain uncommitted. Score
-available progress without making provider calls:
-
-macOS or Linux (Bash/Zsh):
-
-```bash
-python -m evaluation.score_hosted_comparison --allow-partial
-```
-
-Windows (PowerShell):
-
-```powershell
-python -m evaluation.score_hosted_comparison --allow-partial
-```
-
-Partial reports never name a winner. Omitting `--allow-partial` requires all
-24 planned runs before applying the documented safety-first ranking and tie
-breakers. Only a complete report can support the model decision. The V10
-report selected Beam with zero critical safety and provider failures, while
-also recording its 75% joint accuracy and conservative write-off limitations.
-
-## Run the final repeated-run experiment
-
-[`evaluation/final_experiment.py`](evaluation/final_experiment.py) runs
-the baseline once and the hosted agent three times on every case of one frozen
-plan, [`evaluation/final_experiment_plan.json`](evaluation/final_experiment_plan.json).
-Before any run, it checks that:
-
-- the knowledge snapshot matches the plan and its lock;
-- the labels cover every case exactly once;
-- for held-out cases, every label file is frozen.
-
-Each run writes its prediction, output package, trace, and measurements
-(latency, model and tool calls, tokens, and cost when prices are set) to its
-own directory under `.local-output/final-experiment/`. It writes them to a
-temporary directory first and renames that into place only when the run is
-complete.
-
-Rerunning skips completed runs and never overwrites them. Failures are kept
-under `failures/`, and the rest of the experiment continues. A failure record
-keeps the exception type, a hash and the length of the message, and code
-locations. It never keeps the raw message text, which could echo provider
-content or keys. A changed plan, commit, dataset, label file, or snapshot needs
-a new experiment ID.
-
-```bash
-python -m evaluation.final_experiment check --plan evaluation/final_experiment_plan.json
-python -m evaluation.final_experiment run --plan evaluation/final_experiment_plan.json --code-commit "$(git rev-parse HEAD)" --confirm-live
-python -m evaluation.final_experiment score --plan evaluation/final_experiment_plan.json
-```
-
-`score` re-hashes the dataset, label, and knowledge files, and refuses if any
-of them differs from what `experiment.json` recorded. It also refuses until
-every planned run is complete. It then writes `results.json`, with:
-
-- accuracy, coverage, manual review, and critical safety errors for each
-  repeat;
-- for the agent, the safety errors only its traces can show (fabricated
-  citations, wrong-policy requests, and runs that stop without a result),
-  plus citation precision;
-- answer stability across repeats, and the operational totals.
-The tests use fake hosted responses on development data, and need no network
-or credentials.
-
-## Run the knowledge and retrieval tests
-
-These check that the manifest, source files, passage IDs, criteria, and per-procedure formulas in [`knowledge/`](knowledge/) are consistent, that policy matching and ranking behave as decision 0001 requires, and that the dispatcher validates requests and returns `ToolResult` records. The dispatcher tests need the agent dependencies in [`requirements.txt`](requirements.txt):
-
-```bash
-python -m pip install -r requirements.txt
-PYTHONPATH=src python -m unittest discover -s tests/tools -p "test*.py" -v
-```
-
-PowerShell equivalent:
-
-```powershell
-$env:PYTHONPATH = '.\src'
-py -3 -m pip install -r requirements.txt
-py -3 -m unittest discover -s '.\tests\tools' -p 'test*.py' -v
-```
-
-Expected result:
+## Repository map
 
 ```text
-Ran 171 tests
-OK
+baseline/                   Frozen rule-based comparison system
+datasets/                   Development and held-out synthetic cases and labels
+docs/                       Setup, architecture, evaluation, safety, and ADRs
+eligibility/                Versioned synthetic eligibility evidence
+evaluation/                 Pilot and final experiment harnesses and results
+knowledge/                  Versioned policy and encounter evidence
+src/claim_agent/agent/      Bounded planning and runtime orchestration
+  drafting/                 Grounded appeal drafting and validation handoff
+  hosted/                   Hosted clients, schemas, transport, and configuration
+  verification/             Tool-less evidence verification
+src/claim_agent/contracts/  Shared schemas and enums
+src/claim_agent/output/     Human-review package assembly
+src/claim_agent/safety/     Deterministic validation and escalation rules
+src/claim_agent/tools/      Read-only evidence tools and dispatcher
+tests/                      Component and integration tests
 ```
 
-## Run the pilot evaluation
+The frozen baseline remains isolated under `baseline/`. The main system uses a
+`src` layout; set `PYTHONPATH=src` (or the PowerShell equivalent above) before
+running its modules directly.
 
-The [`evaluation/`](evaluation/) harness for the Milestone 2 pilot
-scores each compared system against one case per denied service line. Two
-synthetic development datasets have independent labeler artifacts and separate
-adjudicated answer keys in [`datasets/labels/`](datasets/labels/), following
-the frozen [annotation rubric](datasets/ANNOTATION_RUBRIC.md):
+## Documentation
 
-- **Dataset A**, rule and safety triage (23 cases):
-  [`datasets/development/set_a/`](datasets/development/set_a/).
-- **Dataset B**, evidence-dependent policy review (12 CO-50
-  medical-necessity cases on `knowledge-v1`):
-  [`datasets/development/set_b/`](datasets/development/set_b/).
+- [Getting started](docs/getting-started.md) — setup, credentials, tests, and
+  runnable demonstrations.
+- [Architecture](docs/architecture.md) — execution flow, packages, boundaries,
+  and failure behavior.
+- [Evaluation](docs/evaluation.md) — development pilot, final experiment, and
+  evidence locations.
+- [Team development guide](docs/team-development-guide.md) — ownership,
+  handoffs, review rules, and evaluation controls.
+- [Architecture decisions](docs/decisions/) — retrieval, trace/configuration,
+  hosted provider, model selection, and failure policy.
+- [Final held-out evidence](evaluation/results/final-heldout-v1/EVIDENCE.md) —
+  frozen hashes and derivations for every reported result.
 
-Three systems are compared on both datasets:
+## Limitations
 
-- **S0 `scripted-agent`:** the real router, bounded runtime, retrieval tools,
-  validator, output-package builder, and canonical trace adapter. Its model
-  responses are case-specific deterministic scripts, so its results verify the
-  integrated system behavior but do not measure LLM generalization. Hosted-model
-  execution is deferred beyond Milestone 2.
-- **S1 `baseline-v1`:** the frozen rule-based baseline.
-- **S2 `escalate-all`:** the same router as S0, but every agent-routed case goes
-  to manual review instead of the agent.
-
-To run all three systems on both datasets and write the comparison, from the
-repository root:
-
-Set the source-module path for the current shell.
-
-macOS or Linux (Bash/Zsh):
-
-```bash
-export PYTHONPATH=./src
-```
-
-Windows (PowerShell):
-
-```powershell
-$env:PYTHONPATH = '.\src'
-```
-
-Then run the same commands on any platform:
-
-```text
-python -m evaluation.compare_pilot
-python -m unittest discover -s tests/evaluation -p "test*.py" -q
-```
-
-If the platform exposes Python as `python3` or `py -3`, substitute that
-launcher for `python` in both commands.
-
-The comparison command writes new artifacts under
-`.local-output/eval/m2-pilot/`, which Git ignores. Audit traces are immutable,
-so a rerun must use a fresh output directory, for example
-`python -m evaluation.compare_pilot --outdir .local-output/eval/m2-pilot-rerun`.
-It never overwrites the committed Milestone 2 evidence.
-
-The committed results are in
-[`evaluation/results/m2-pilot/`](evaluation/results/m2-pilot/):
-[`comparison.md`](evaluation/results/m2-pilot/comparison.md) has one
-three-system table per dataset, S0's agent-behavior metrics from its traces,
-and the labeler agreement (percent and Cohen's kappa).
-[`ANALYSIS.md`](evaluation/results/m2-pilot/ANALYSIS.md) has the comparison,
-the Milestone 1 targets, and the failure case. Each system's folder keeps its
-`predictions.jsonl`, `scores.json`, `results.md`, and `run_manifest.json`,
-which records the dataset and label hashes and the code commit. S0 and S2 also
-keep their output packages, and S0 keeps its canonical traces.
-
-To run one system on one dataset instead:
-
-```text
-python -m evaluation.run_pilot --manifest datasets/development/set_b/manifest.json --labels datasets/labels/set_b_development.adjudicated.json --experiment set-b-dev-escalate-all --system escalate-all
-```
-
-Results go to `.local-output/eval/<experiment>/`. Rates are reported with
-counts and 95% Wilson intervals. Critical safety errors that need a trace are
-reported as not measurable rather than zero; the comparison fills in S0's
-values from its traces. These are small synthetic development-pilot results,
-not held-out performance claims.
-
-## Run one reproducible example
-
-The following case is a synthetic brain MRI claim with a medical-necessity denial. The fixed `--as-of` date makes its deadline calculation reproducible.
-
-```bash
-python baseline/run_baseline.py \
-  --input baseline/examples/test2_medical_necessity.json \
-  --as-of 2026-09-06 \
-  --outdir .local-output/baseline-smoke
-```
-
-PowerShell equivalent:
-
-```powershell
-py -3 '.\baseline\run_baseline.py' `
-    --input '.\baseline\examples\test2_medical_necessity.json' `
-    --as-of '2026-09-06' `
-    --outdir '.\.local-output\baseline-smoke'
-```
-
-The expected primary result is:
-
-```text
-Disposition: APPEAL_WITH_DOCUMENTATION
-Root cause: MEDICAL_NECESSITY
-Deadline: 2027-01-07
-```
-
-The command writes a readable report and a structured JSON record to the selected output directory.
-
-## Run all baseline examples
-
-```bash
-python baseline/run_baseline.py \
-  --input baseline/examples \
-  --as-of 2026-09-06 \
-  --outdir .local-output/baseline-all \
-  --quiet
-```
-
-This processes the six labeled example claims. Generated local outputs are ignored by Git.
-
-## Baseline limitations
-
-The baseline is intentionally narrow. It cannot retrieve or interpret payer medical policies, read clinical notes, resolve nuanced evidence conflicts, or adaptively request missing documents. Its filing windows are illustrative, its code mapping is a working subset, and its labels are a small synthetic development set.
-
-These limitations define the work assigned to the agentic extension; they are not claims of real-world clinical or billing performance.
-
-## Planned agentic extension
-
-- [x] Freeze shared claim, evidence, tool, decision, and trace contracts and
-  connect the integrated runner to durable canonical trace emission.
-- [x] Wrap deterministic baseline findings and routing behind typed interfaces.
-- [x] Implement a validated common tool dispatcher.
-- [x] Add versioned payer-policy and encounter-note retrieval.
-- [x] Add bounded deadline and eligibility retrieval with route authorization.
-- [x] Implement a bounded planning loop with structured model outputs behind scripted offline boundaries.
-- [x] Connect typed routing, tool, validation, output, and canonical-trace adapters.
-- [x] Add criterion-level evidence assessment and resolvable citations.
-- [x] Add deterministic safety, citation, formula, and filing-deadline validation.
-- [x] Integrate required-evidence safety decisions into routing.
-- [x] Add the OpenAI-compatible hosted transport and strict action schemas.
-- [ ] Complete live hosted execution and freeze the selected model.
-- [x] Add standalone tool-less evidence-verification orchestration.
-- [x] Add standalone authorization-first grounded drafting orchestration.
-- [ ] Integrate verification and grounded drafting into the end-to-end runner.
-- [ ] Build development and held-out synthetic datasets.
-- [ ] Compare the agentic system against the unchanged baseline.
-- [ ] Conduct stakeholder review of representative system reports.
-
-The primary evaluation will compare joint root-cause/disposition accuracy, selective accuracy, resolution coverage, citation precision, unsupported assertions, consistency, latency, cost, and critical safety failures.
-
-## Repository structure
-
-```text
-baseline/                 Frozen deterministic comparison system
-datasets/                 Development, held-out, and label artifacts
-docs/reference/           Stakeholder proposal and project milestone
-docs/decisions/           Architecture decision records
-evaluation/               Evaluation and fault-injection harnesses
-knowledge/                Versioned policy and synthetic evidence corpus
-src/claim_agent/agent/    Bounded LLM orchestration
-  drafting/               Grounded drafting prompt, execution, trace, and gates
-  hosted/                 Hosted client, schemas, transport, and configuration
-  verification/           Tool-less evidence-verification orchestration
-src/claim_agent/contracts Shared schemas and enums
-src/claim_agent/output/   Reports and appeal preparation
-src/claim_agent/safety/   Deterministic validation and human-review gates
-src/claim_agent/tools/    Typed read-only tools and dispatcher
-tests/                    Agentic-system tests organized by component
-```
-
-## Development guide
-
-Team ownership, integration contracts, branch conventions, review responsibilities, and the phased implementation plan are documented in [the team development guide](docs/TEAM_DEVELOPMENT_GUIDE.md).
-
-Every pull request must either update the relevant documentation or state why no documentation change is needed. Update this README when setup, commands, capabilities, limitations, architecture, layout, status, or roadmap claims change. Update the team guide when ownership, interfaces, dependencies, evaluation procedures, or collaboration rules change. After merge, the pull-request author verifies both documents against the new `main`; missed updates are fixed through a follow-up documentation pull request, never by pushing directly to protected `main`.
+- All claims, policies, records, and labels are synthetic and intentionally
+  narrow.
+- The knowledge corpus covers selected payers, procedures, and denial types;
+  it is not a complete payer policy library.
+- Voyager and model availability are external dependencies for live runs.
+- The held-out set is large enough for a course comparison, not for clinical or
+  production validation.
+- High manual-review rates show that the system is deliberately conservative
+  and still requires human expertise.
+- This repository does not connect to an EHR, payer, clearinghouse, or billing
+  system.
 
 ## Team
 
-- Neha Kashyap
-- Hriday Pradhan
-- Silas Sangmin
-- Sachin Kothandaraman
+- Neha Kashyap — deterministic core and safety
+- Silas Sangmin — evidence and retrieval tools
+- Hriday Pradhan — agent runtime and hosted workflow
+- Sachin Kothandaraman — evaluation and observability
 
-Developed as a CSE 598 Agentic AI capstone project at Arizona State University.
+Developed for the CSE 598 Agentic AI capstone at Arizona State University.
 
 ## Disclaimer
 
-This repository is an educational prototype. It is not medical, legal, financial, coding, reimbursement, or payer-contract advice and must not be used to process real patient claims.
+This is an educational prototype. It is not medical, legal, financial,
+coding, reimbursement, or payer-contract advice and must not be used to process
+real patient claims.

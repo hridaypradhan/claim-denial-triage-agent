@@ -1,4 +1,4 @@
-"""Record same-run evidence bundles during an agent run (#59).
+"""Record same-run evidence bundles during an agent run.
 
 ``EvidenceBundleRecorder`` wraps the claim-bound tool dispatcher and records
 every retrieval call and every returned passage, with provenance taken from

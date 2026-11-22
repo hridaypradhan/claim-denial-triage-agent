@@ -1,4 +1,4 @@
-"""The ``calculate_deadline`` agent tool (#54).
+"""The read-only ``calculate_deadline`` agent tool.
 
 The filing deadline is computed once, by the frozen baseline, and carried into
 the run as ``BaselineFinding.filing_deadline`` and ``deadline_status``. The

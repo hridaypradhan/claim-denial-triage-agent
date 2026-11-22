@@ -1,6 +1,6 @@
 # Annotation Rubric
 
-- **Version:** 0.1, **frozen 2026-11-08** after review by Silas, Neha, and Hriday (PR #31). Changes now need a new version. Official scored runs also need adjudicated labels (§8).
+- **Version:** 0.1, **frozen 2026-11-08** after review by Silas, Neha, and Hriday. Changes need a new version. Official scored runs also need adjudicated labels (§8).
 - **Owner:** Sachin Kothandaraman (evaluation)
 - **Reviewers:** Neha Kashyap (safety rules and escalation), Silas Sangmin (evidence and passages)
 - **Matches:** shared contracts `0.1` (`src/claim_agent/contracts/schema.py`), the router, decision 0002, and Milestone 1 §6
