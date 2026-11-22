@@ -17,6 +17,14 @@ accepted appeal drafts by gold label: {'APPEAL_WITH_DOCUMENTATION': 33}
 1 DETERMINISTIC_ONLY WRITE_OFF
 2 DETERMINISTIC_ONLY WRITE_OFF
 3 DETERMINISTIC_ONLY WRITE_OFF
-== Provider usage of the 13 failed attempts (abandoned folders, not scored) ==
-{'attempts': 13, 'model_calls': 40, 'post_decision_calls': 7, 'input_tokens': 66331, 'output_tokens': 14240, 'usage_complete': True}
-total including failed attempts: calls 453 input 748708 output 157466
+== Provider usage, completed and scored runs (240) ==
+decision stage {'model_calls': 413, 'input_tokens': 682377, 'output_tokens': 143226}
+post-decision {'model_calls': 77, 'input_tokens': 295189, 'output_tokens': 75262}
+total {'model_calls': 490, 'input_tokens': 977566, 'output_tokens': 218488}
+== Provider usage, 13 failed attempts (abandoned folders, not scored) ==
+attempts 13 usage reported for every call True
+decision stage {'model_calls': 40, 'input_tokens': 66331, 'output_tokens': 14240}
+post-decision {'model_calls': 7, 'input_tokens': 28771, 'output_tokens': 7146}
+total {'model_calls': 47, 'input_tokens': 95102, 'output_tokens': 21386}
+== Provider usage, all attempts ==
+{'model_calls': 537, 'input_tokens': 1072668, 'output_tokens': 239874}

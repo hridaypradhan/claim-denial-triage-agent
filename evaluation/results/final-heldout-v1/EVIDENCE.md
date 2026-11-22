@@ -86,9 +86,10 @@ python evaluation/results/final-heldout-v1/derived_values.py .local-output/final
 | Citation precision 98.0% / 99.3% / 99.3%, pooled 435/440 = 98.9% | `A[n].trace_measures.citation_precision`; pooled in `D` |
 | Policy requests 41/41 | `A[n].trace_measures.policy_requests_matching_claim` |
 | Budget overruns 0; unterminated runs 0 | `A[n].trace_measures.budget_overruns`, `.unterminated_runs` |
-| Cost and latency **of the 240 completed and scored agent runs only**: 413 calls (77 post-decision), 682,377 input and 143,226 output tokens, median 23.1 s, p95 120.4 s | `systems.hosted-agent.operations` |
-| Provider usage of the 13 failed attempts (not scored, not in the row above): 40 calls (7 post-decision), 66,331 input and 14,240 output tokens; usage was reported for every call | `D`, from `runs/hosted-agent/*/*.abandoned-*/measurements.json` |
-| Total provider usage including failed attempts: 453 calls, 748,708 input and 157,466 output tokens | `D` (sum of the two rows above) |
+| Latency of the 240 completed and scored agent runs: median 23.1 s, p95 120.4 s (wall clock, whole pipeline) | `systems.hosted-agent.operations.wall_clock_ms_median`, `.wall_clock_ms_p95` |
+| Provider usage of the 240 completed and scored runs: **490 calls, 977,566 input and 218,488 output tokens**. That is the decision stage (413 calls, 682,377 / 143,226) plus the verifier and drafter (77 calls, 295,189 / 75,262) | `systems.hosted-agent.operations` (top level = decision stage) + `operations.post_decision`; summed in `D` |
+| Provider usage of the 13 failed attempts (not scored, not in the row above): **47 calls, 95,102 input and 21,386 output tokens**. That is the decision stage (40 calls, 66,331 / 14,240) plus post-decision (7 calls, 28,771 / 7,146); usage was reported for every call | `D`, from `runs/hosted-agent/*/*.abandoned-*/measurements.json` (top level + `post_decision`, checked against `pipeline`) |
+| Total provider usage including failed attempts: **537 calls, 1,072,668 input and 239,874 output tokens** | `D` (sum of the two rows above) |
 
 ### Poster
 

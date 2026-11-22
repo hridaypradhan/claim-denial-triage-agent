@@ -59,17 +59,33 @@ for i in (1, 2, 3):
     d = json.loads((B / f"runs/hosted-agent/CLM-2026-710220-L1/repeat-{i}/output-package.json").read_text(encoding="utf-8"))
     print(i, d.get("route_outcome"), d.get("disposition") or d.get("final_disposition"))
 
-print("== Provider usage of the 13 failed attempts (abandoned folders, not scored) ==")
-fa = {"attempts": 0, "model_calls": 0, "post_decision_calls": 0, "input_tokens": 0, "output_tokens": 0, "usage_complete": True}
+# Each run's measurements.json keeps decision-stage usage at the top level and
+# verifier/drafter usage under "post_decision"; "pipeline" is their sum.
+# results.json -> operations mirrors this: top-level = decision stage,
+# operations.post_decision = verifier and drafter.
+KEYS = ("model_calls", "input_tokens", "output_tokens")
+ops = r["systems"]["hosted-agent"]["operations"]
+done = {k: ops[k] + ops["post_decision"][k] for k in KEYS}
+print("== Provider usage, completed and scored runs (240) ==")
+print("decision stage", {k: ops[k] for k in KEYS})
+print("post-decision", {k: ops["post_decision"][k] for k in KEYS})
+print("total", done)
+
+print("== Provider usage, 13 failed attempts (abandoned folders, not scored) ==")
+dec = dict.fromkeys(KEYS, 0); post = dict.fromkeys(KEYS, 0); n = 0; complete = True
 for p in sorted((B / "runs").glob("*/*/*.abandoned-*/measurements.json")):
     m = json.loads(p.read_text(encoding="utf-8"))
-    fa["attempts"] += 1
-    fa["model_calls"] += m["model_calls"]
-    fa["post_decision_calls"] += m["post_decision"]["model_calls"]
-    fa["input_tokens"] += m["input_tokens"]
-    fa["output_tokens"] += m["output_tokens"]
-    fa["usage_complete"] &= m["token_usage_complete"]
-print(fa)
-ops = r["systems"]["hosted-agent"]["operations"]
-print("total including failed attempts: calls", ops["model_calls"] + fa["model_calls"],
-      "input", ops["input_tokens"] + fa["input_tokens"], "output", ops["output_tokens"] + fa["output_tokens"])
+    n += 1
+    for k in KEYS:
+        dec[k] += m[k]
+        post[k] += m["post_decision"][k]
+        assert m["pipeline"][k] == m[k] + m["post_decision"][k]
+    complete &= m["pipeline"]["token_usage_complete"]
+failed = {k: dec[k] + post[k] for k in KEYS}
+print("attempts", n, "usage reported for every call", complete)
+print("decision stage", dec)
+print("post-decision", post)
+print("total", failed)
+
+print("== Provider usage, all attempts ==")
+print({k: done[k] + failed[k] for k in KEYS})
