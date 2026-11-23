@@ -195,6 +195,8 @@ running its modules directly.
   hosted provider, model selection, and failure policy.
 - [Final held-out evidence](evaluation/results/final-heldout-v1/EVIDENCE.md) —
   frozen hashes and derivations for every reported result.
+- [Final poster](docs/reference/Group04_Poster.pdf) — the submitted 24 × 36 in
+  course poster summarizing the problem, system, and results.
 
 ## Limitations
 
